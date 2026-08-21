@@ -32,6 +32,15 @@ const liveUrgent = liveFind<Task>(sk, "tasks", { priority: "urgent" });
 
 StorekeeperDB is built for local prototype loops where UI and state shape change quickly. It is not a production database migration framework.
 
+## Public alpha docs
+
+- [Changelog](./CHANGELOG.md)
+- [Transaction model](./docs/TRANSACTION_MODEL.md)
+- [Browser storage boundary](./docs/BROWSER_BOUNDARY.md)
+- [Audit notes](./docs/AUDIT.md)
+- [Next work](./docs/NEXT_WORK.md)
+- [Todo example](./examples/todo.ts)
+
 ## What is magic?
 
 StorekeeperDB treats app state and derived structures differently.
