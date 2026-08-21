@@ -1,5 +1,117 @@
 # StorekeeperDB
 
-Initial repository marker.
+**Magic state for fast AI prototypes.**
 
-The implementation will land through a draft pull request from the pre-repo experiment branch.
+StorekeeperDB lets TypeScript apps mutate ordinary arrays and objects while SQLite quietly persists the source state behind the scenes. Useful scalar lookup paths are derived automatically when `find()` / `liveFind()` needs them. The app code does not design tables, columns, migrations, or indexes.
+
+```ts
+import { StorekeeperDB, liveFind } from "@storekeeper/db";
+
+type Task = {
+  title: string;
+  done: boolean;
+  priority?: "low" | "high" | "urgent";
+  tags?: string[];
+};
+
+const sk = new StorekeeperDB("app.sqlite");
+const tasks = sk.state<Task[]>("tasks", []);
+
+tasks.push({ title: "Write proposal", done: false, tags: [] });
+tasks[0]!.priority = "urgent";
+tasks[0]!.tags!.push("prototype");
+
+// Magic: scalar lookup paths are projected when useful.
+const urgent = sk.find<Task>("tasks", { priority: "urgent" });
+const liveUrgent = liveFind<Task>(sk, "tasks", { priority: "urgent" });
+```
+
+## Product rule
+
+> Magic by default. Explainable on demand. Source state is never silently deleted.
+
+StorekeeperDB is built for local prototype loops where UI and state shape change quickly. It is not a production database migration framework.
+
+## What is magic?
+
+StorekeeperDB treats app state and derived structures differently.
+
+```text
+source state JSON       = source of truth, do not silently delete
+projection / lookup     = derived information, can be evicted and rebuilt
+magic log / metadata    = debug surface, can be compacted
+```
+
+When `find()` or `liveFind()` uses a supported scalar path, StorekeeperDB may create a SQLite-backed projection. That projection is rebuildable. The original state remains stored as source JSON rows.
+
+## Debug surface
+
+Magic must be inspectable.
+
+```ts
+sk.status();
+sk.inspect("tasks");
+sk.explain("tasks", "priority");
+sk.debug().recentMagic();
+sk.debug().evict("tasks", ["priority"]);
+sk.debug().rebuild("tasks", ["priority"]);
+```
+
+## Honesty boundary
+
+This remains ordinary in-memory JavaScript:
+
+```ts
+const high = tasks.filter((task) => task.priority === "high");
+```
+
+StorekeeperDB does **not** claim to compile arbitrary JavaScript predicates into SQL. The supported large-list lookup path is:
+
+```ts
+const high = sk.find<Task>("tasks", { priority: "high" });
+```
+
+## Current alpha scope
+
+This public alpha baseline includes:
+
+- ordinary mutable array/object state
+- row-per-item SQLite persistence
+- common array mutators: `push`, `pop`, `shift`, `unshift`, `splice`, `sort`, `reverse`
+- nested object/array mutation persistence
+- scalar-path magic lookup projection
+- `signal()` / `liveFind()` for local realtime prototype flows
+- debug APIs: `status`, `inspect`, `explain`, `debug()`
+- loud failures for intentionally unsupported shape-breaking operations
+
+Known gaps:
+
+- Browser adapter is not implemented.
+- Real React DOM render tests are not implemented.
+- API is alpha and not frozen.
+- The larger v22 experiment has more lifecycle/decay machinery than this public baseline.
+
+## Requirements
+
+- Node.js `>=22.5`
+- Run Node with `--experimental-sqlite`
+
+```bash
+npm run build
+npm test
+npm run gate
+```
+
+## Package boundaries
+
+```text
+@storekeeper/db              -> default alpha runtime
+@storekeeper/db/core         -> core exports
+@storekeeper/db/node         -> Node-local runtime export
+@storekeeper/db/react        -> useSyncExternalStore-compatible adapter shape
+@storekeeper/db/experimental -> experimental async boundary placeholder
+```
+
+## License
+
+MIT
