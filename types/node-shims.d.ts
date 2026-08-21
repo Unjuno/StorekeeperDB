@@ -18,7 +18,6 @@ declare module "node:assert/strict" {
     deepEqual(actual: unknown, expected: unknown, message?: string): void;
     ok(value: unknown, message?: string): void;
     throws(fn: () => unknown, error?: RegExp, message?: string): void;
-    rejects(fn: () => Promise<unknown>, error?: RegExp, message?: string): Promise<void>;
   };
   export default assert;
 }
@@ -40,10 +39,15 @@ declare module "node:os" {
   export function tmpdir(): string;
 }
 
+declare module "node:perf_hooks" {
+  export const performance: { now(): number };
+}
+
 declare const console: {
   log(...args: unknown[]): void;
   error(...args: unknown[]): void;
 };
+
 declare const process: {
   hrtime: { bigint(): bigint };
   versions: { node: string };
@@ -51,9 +55,3 @@ declare const process: {
   arch: string;
   exit(code?: number): never;
 };
-
-declare module "node:perf_hooks" {
-  export const performance: { now(): number };
-}
-
-declare function setTimeout(handler: () => void, timeout?: number): unknown;
