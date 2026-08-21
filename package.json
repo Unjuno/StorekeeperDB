@@ -3,17 +3,49 @@
   "version": "0.1.0-alpha.0",
   "type": "module",
   "private": false,
-  "description": "Magic persistent state runtime for fast AI prototypes",
+  "description": "Magic persistent TypeScript state that quietly becomes SQLite-backed data for fast AI prototypes.",
   "license": "MIT",
-  "repository": { "type": "git", "url": "git+https://github.com/Unjuno/StorekeeperDB.git" },
-  "bugs": { "url": "https://github.com/Unjuno/StorekeeperDB/issues" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Unjuno/StorekeeperDB.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Unjuno/StorekeeperDB/issues"
+  },
   "homepage": "https://github.com/Unjuno/StorekeeperDB#readme",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "node --experimental-sqlite --test dist/test/*.test.js",
     "gate": "npm run build && node --experimental-sqlite dist/scripts/gate.js"
   },
-  "engines": { "node": ">=22.5" },
-  "exports": { ".": { "types": "./dist/src/index.d.ts", "import": "./dist/src/index.js" } },
-  "files": ["dist", "README.md", "LICENSE"]
+  "engines": {
+    "node": ">=22.5"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    },
+    "./core": {
+      "types": "./dist/src/core.d.ts",
+      "import": "./dist/src/core.js"
+    },
+    "./node": {
+      "types": "./dist/src/node.d.ts",
+      "import": "./dist/src/node.js"
+    },
+    "./react": {
+      "types": "./dist/src/react.d.ts",
+      "import": "./dist/src/react.js"
+    },
+    "./experimental": {
+      "types": "./dist/src/experimental.d.ts",
+      "import": "./dist/src/experimental.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ]
 }
