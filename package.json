@@ -3,59 +3,17 @@
   "version": "0.1.0-alpha.0",
   "type": "module",
   "private": false,
-  "description": "Magic persistent TypeScript state that quietly becomes SQLite-backed data for fast AI prototypes.",
+  "description": "Magic persistent state runtime for fast AI prototypes",
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Unjuno/StorekeeperDB.git"
-  },
-  "bugs": {
-    "url": "https://github.com/Unjuno/StorekeeperDB/issues"
-  },
+  "repository": { "type": "git", "url": "git+https://github.com/Unjuno/StorekeeperDB.git" },
+  "bugs": { "url": "https://github.com/Unjuno/StorekeeperDB/issues" },
   "homepage": "https://github.com/Unjuno/StorekeeperDB#readme",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "node --experimental-sqlite --test dist/test/*.test.js",
-    "experiment": "node --experimental-sqlite dist/scripts/experiment.js",
-    "gate": "npm run build && node --experimental-sqlite dist/scripts/gate.js",
-    "signal": "npm run build && node --experimental-sqlite dist/scripts/signal_experiment.js",
-    "react-adapter": "npm run build && node --experimental-sqlite dist/scripts/react_adapter_experiment.js",
-    "adapter": "npm run build && node --experimental-sqlite dist/scripts/adapter_experiment.js",
-    "cache": "npm run build && node --experimental-sqlite dist/scripts/cache_experiment.js",
-    "async-boundary": "npm run build && node dist/scripts/async_boundary_experiment.js",
-    "live": "npm run build && node --experimental-sqlite dist/scripts/live_experiment.js",
-    "inspect": "npm run build && node --experimental-sqlite dist/scripts/inspect_experiment.js",
-    "subscription": "npm run build && node --experimental-sqlite dist/scripts/subscription_experiment.js",
-    "react-preflight": "npm run build && node dist/scripts/react_preflight.js",
-    "package-boundary": "npm run build && node --experimental-sqlite dist/scripts/package_boundary_experiment.js",
-    "magic": "npm run build && node --experimental-sqlite dist/scripts/magic_experiment.js",
-    "magic-lifecycle": "npm run build && node --experimental-sqlite dist/scripts/magic_lifecycle_experiment.js",
-    "magic-decay": "npm run build && node --experimental-sqlite dist/scripts/magic_decay_experiment.js",
-    "metadata": "npm run build && node --experimental-sqlite dist/scripts/metadata_compaction_experiment.js"
+    "gate": "npm run build && node --experimental-sqlite dist/scripts/gate.js"
   },
-  "engines": {
-    "node": ">=22.5"
-  },
-  "exports": {
-    ".": {
-      "types": "./dist/src/index.d.ts",
-      "import": "./dist/src/index.js"
-    },
-    "./core": {
-      "types": "./dist/src/core.d.ts",
-      "import": "./dist/src/core.js"
-    },
-    "./node": {
-      "types": "./dist/src/node.d.ts",
-      "import": "./dist/src/node.js"
-    },
-    "./react": {
-      "types": "./dist/src/react.d.ts",
-      "import": "./dist/src/react.js"
-    },
-    "./experimental": {
-      "types": "./dist/src/experimental.d.ts",
-      "import": "./dist/src/experimental.js"
-    }
-  }
+  "engines": { "node": ">=22.5" },
+  "exports": { ".": { "types": "./dist/src/index.d.ts", "import": "./dist/src/index.js" } },
+  "files": ["dist", "README.md", "LICENSE"]
 }
