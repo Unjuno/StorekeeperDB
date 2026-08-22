@@ -8,6 +8,8 @@ import { act, create, type ReactTestRenderer, type TestRendererJSON } from "reac
 import { StorekeeperDB, liveFind, type Dict, type Signal, type Snapshot } from "../src/index.js";
 import { externalStore } from "../src/react.js";
 
+(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
 type Task = { title: string; done: boolean; priority?: "low" | "high" | "urgent" };
 
 function tempDb() {
