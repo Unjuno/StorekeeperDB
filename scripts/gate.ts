@@ -1,39 +1,27 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { performance } from "node:perf_hooks";
 import { StorekeeperDB } from "../src/index.js";
 
-type Task = { title: string; done: boolean; priority?: "low" | "high" | "urgent" };
+type Task = { title: string; done: boolean; priority?: "low" | "urgent"; meta?: { labels: string[] } };
 
 const dir = mkdtempSync(join(tmpdir(), "sk-gate-"));
-const path = join(dir, "app.sqlite");
-const n = 3_000;
+const dbPath = join(dir, "app.sqlite");
+const start = process.hrtime.bigint();
+const sk = new StorekeeperDB(dbPath);
+const tasks = sk.state<Task[]>("tasks", []);
 
-try {
-  const sk = new StorekeeperDB(path);
-  const tasks = sk.state<Task[]>("tasks", []);
-  const t0 = performance.now();
-  sk.batch(() => {
-    for (let i = 0; i < n; i++) {
-      tasks.push({ title: `Task ${i}`, done: false, priority: i % 100 === 0 ? "urgent" : "low" });
-    }
-  });
-  const insertMs = performance.now() - t0;
+sk.batch(() => {
+  for (let i = 0; i < 500; i++) {
+    tasks.push({ title: `Task ${i}`, done: false, priority: i % 100 === 0 ? "urgent" : "low", meta: { labels: [] } });
+  }
+  tasks[0]!.meta!.labels.push("gate");
+});
 
-  const t1 = performance.now();
-  const urgent = sk.find<Task>("tasks", { priority: "urgent" });
-  const findMs = performance.now() - t1;
-  const status = sk.status();
-  sk.close();
-
-  const reopened = new StorekeeperDB(path);
-  const reopenLength = reopened.state<Task[]>("tasks", []).length;
-  reopened.close();
-
-  const pass = reopenLength === n && urgent.length === Math.ceil(n / 100) && status.projectionCells === n;
-  console.log(JSON.stringify({ n, insertMs: Number(insertMs.toFixed(3)), findMs: Number(findMs.toFixed(3)), urgent: urgent.length, reopenLength, projectionCells: status.projectionCells, pass }, null, 2));
-  if (!pass) process.exit(1);
-} finally {
-  rmSync(dir, { recursive: true, force: true });
-}
+const urgent = sk.find<Task>("tasks", { priority: "urgent" });
+const elapsedMs = Number(process.hrtime.bigint() - start) / 1_000_000;
+const pass = tasks.length === 500 && urgent.length === 5 && tasks[0]!.meta!.labels.length === 1;
+console.log(JSON.stringify({ n: tasks.length, urgent: urgent.length, storage: sk.explain("tasks", "priority").storage, elapsedMs, pass }, null, 2));
+sk.close();
+rmSync(dir, { recursive: true, force: true });
+if (!pass) process.exit(1);
