@@ -18,6 +18,23 @@ export type StorekeeperOptions = {
   magic?: boolean;
 };
 
+export type DerivationSnapshot = {
+  state_key: string;
+  path: string;
+  state: string;
+  use_count: number;
+  storage_cost: number;
+};
+
+export type MagicLogRow = {
+  id: number;
+  action: string;
+  state_key: string;
+  path: string | null;
+  reason: string;
+  created_at: string;
+};
+
 export type StatusSnapshot = {
   states: number;
   items: number;
@@ -28,7 +45,7 @@ export type StatusSnapshot = {
 export type InspectSnapshot = {
   stateKey: string;
   itemCount: number;
-  derivations: unknown[];
+  derivations: DerivationSnapshot[];
   hardenedPaths: string[];
 };
 
