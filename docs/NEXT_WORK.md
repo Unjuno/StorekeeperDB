@@ -49,27 +49,30 @@ Delivered:
 - `docs/DEMO.md`.
 - Demo included in `release:check`.
 
-## Active work
-
 ### 5. React verification — #4
 
-Status: in progress.
+Status: merged.
 
-Scope:
+Delivered:
 
-- Add real React / `react-test-renderer` verification.
-- Validate `useSyncExternalStore` behavior.
-- Keep the core runtime independent of React.
+- Real React / `react-test-renderer` verification.
+- `useSyncExternalStore` behavior checked against `liveFind()`.
+- Core runtime remains independent of React.
+- `live()` / `liveFind()` snapshot caching hardened.
 
-## Open next work
+## Active work
 
 ### 6. Browser boundary experiment — #5
+
+Status: in progress.
 
 Scope:
 
 - Prototype async write-behind runtime separately from local SQLite.
 - Expose `flush()` as the durability barrier.
 - Do not claim browser semantics equal Node SQLite semantics.
+
+## Open next work
 
 ### 7. Full magic lifecycle re-import — #6
 
