@@ -1,6 +1,7 @@
 import { StorekeeperDB } from "./runtime.js";
 import type {
   DerivationSnapshot,
+  MagicLogRow,
   StorekeeperDebugAPI,
   StorekeeperGarbageCollectionOptions,
   StorekeeperGarbageCollectionResult,
@@ -17,7 +18,7 @@ type RuntimeInternals = {
 };
 
 type BaseDebugAPI = {
-  recentMagic(limit?: number): unknown[];
+  recentMagic(limit?: number): MagicLogRow[];
   derivations(stateKey?: string): DerivationSnapshot[];
   evict(stateKey: string, paths: string[]): void;
   rebuild(stateKey: string, paths: string[]): void;
