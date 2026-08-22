@@ -47,6 +47,14 @@ if (!prototype.__storekeeperDerivedLifecyclePatchApplied) {
       else runtime.derivationCache.clear();
     };
 
+    const protectedKey = (stateKey: string, path: string): string => `${stateKey}\u0000${path}`;
+
+    const protectedSet = (options: StorekeeperGarbageCollectionOptions): Set<string> => {
+      const paths = options.protectedPaths ?? [];
+      if (!options.stateKey || paths.length === 0) return new Set();
+      return new Set(paths.map((path) => protectedKey(options.stateKey!, path)));
+    };
+
     const markCold = (stateKey: string, paths: string[], reason = "debug mark cold"): void => {
       for (const path of paths) {
         runtime
@@ -73,18 +81,22 @@ if (!prototype.__storekeeperDerivedLifecyclePatchApplied) {
       let evicted = 0;
       let cold = 0;
       const seen = new Set<string>();
+      const keep = protectedSet(options);
       const initialRows = selectDerivations(options.stateKey);
 
-      const timeCandidates = options.force ? initialRows : initialRows.filter((row) => row.state === "cold");
+      const timeCandidates = (options.force ? initialRows : initialRows.filter((row) => row.state === "cold")).filter(
+        (row) => !keep.has(protectedKey(row.state_key, row.path)),
+      );
       for (const row of timeCandidates) {
         evictOne(row, options.force ? "debug forced derived garbage collection" : "cold derived projection garbage collection");
-        seen.add(`${row.state_key}\u0000${row.path}`);
+        seen.add(protectedKey(row.state_key, row.path));
         evicted++;
       }
 
       if (typeof options.maxDerivations === "number" && Number.isFinite(options.maxDerivations)) {
-        const remaining = selectDerivations(options.stateKey)
-          .filter((row) => !seen.has(`${row.state_key}\u0000${row.path}`))
+        const remaining = selectDerivations(options.stateKey).filter((row) => !seen.has(protectedKey(row.state_key, row.path)));
+        const evictable = remaining
+          .filter((row) => !keep.has(protectedKey(row.state_key, row.path)))
           .sort((a, b) => {
             const stateRank = (state: string) => (state === "cold" ? 0 : state === "hot" ? 2 : 1);
             return (
@@ -95,15 +107,15 @@ if (!prototype.__storekeeperDerivedLifecyclePatchApplied) {
             );
           });
         const over = Math.max(0, remaining.length - Math.max(0, Math.floor(options.maxDerivations)));
-        for (const row of remaining.slice(0, over)) {
+        for (const row of evictable.slice(0, over)) {
           evictOne(row, `derived projection budget exceeded: maxDerivations=${options.maxDerivations}`);
-          seen.add(`${row.state_key}\u0000${row.path}`);
+          seen.add(protectedKey(row.state_key, row.path));
           evicted++;
         }
       }
 
       if (options.markCold && !options.force) {
-        const rows = selectDerivations(options.stateKey).filter((row) => !seen.has(`${row.state_key}\u0000${row.path}`));
+        const rows = selectDerivations(options.stateKey).filter((row) => !seen.has(protectedKey(row.state_key, row.path)));
         for (const row of rows) {
           if (row.state !== "cold") {
             markCold(row.state_key, [row.path], "derived garbage collection marked projection cold");
