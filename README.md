@@ -46,6 +46,7 @@ The demo shows `json_only -> projection -> debug eviction -> rebuild`, live look
 
 - [Demo](./docs/DEMO.md)
 - [React verification](./docs/REACT_VERIFICATION.md)
+- [Magic lifecycle](./docs/MAGIC_LIFECYCLE.md)
 - [Changelog](./CHANGELOG.md)
 - [Release checklist](./docs/RELEASE.md)
 - [Transaction model](./docs/TRANSACTION_MODEL.md)
@@ -110,9 +111,15 @@ sk.status();
 sk.inspect("tasks");
 sk.explain("tasks", "priority");
 sk.debug().recentMagic();
+sk.debug().derivations("tasks");
+sk.debug().markCold("tasks", ["priority"]);
+sk.debug().collectGarbage({ stateKey: "tasks" });
+sk.debug().collectGarbage({ stateKey: "tasks", maxDerivations: 2 });
 sk.debug().evict("tasks", ["priority"]);
 sk.debug().rebuild("tasks", ["priority"]);
 ```
+
+See [Magic lifecycle](./docs/MAGIC_LIFECYCLE.md) for the current derived projection lifecycle boundary.
 
 ## Honesty boundary
 
@@ -137,6 +144,7 @@ This public alpha baseline includes:
 - common array mutators: `push`, `pop`, `shift`, `unshift`, `splice`, `sort`, `reverse`
 - nested object/array mutation persistence
 - scalar-path magic lookup projection
+- derived projection lifecycle debug APIs
 - `signal()` / `liveFind()` for local realtime prototype flows
 - React `useSyncExternalStore` adapter verification
 - experimental async write-behind boundary model
@@ -147,7 +155,7 @@ Known gaps:
 
 - Full browser adapter is not implemented.
 - API is alpha and not frozen.
-- The larger v22 experiment has more lifecycle/decay machinery than this public baseline.
+- Automatic lifecycle decay from the larger v22 experiment is not fully re-imported yet.
 
 ## Requirements
 
