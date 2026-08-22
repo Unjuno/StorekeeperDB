@@ -70,31 +70,43 @@ Delivered:
 - `flush()` defined as the durability barrier.
 - Dirty / clean / failed durability states covered by tests.
 
+### 7. Full magic lifecycle re-import — #6, first pass
+
+Status: merged.
+
+Delivered:
+
+- Manual derived projection lifecycle.
+- `debug().markCold()`.
+- `debug().collectGarbage()`.
+- Source rows remain after projection GC.
+- Budget-based projection eviction and rebuild.
+
 ## Active work
 
-### 7. Full magic lifecycle re-import — #6
+### 8. Automatic lifecycle decay — #6, second pass
 
 Status: in progress.
 
 Current pass:
 
-- Reintroduce manual derived projection lifecycle first.
-- Add `debug().markCold()`.
-- Add `debug().collectGarbage()`.
-- Verify source rows remain after projection GC.
-- Verify budget-based projection eviction and rebuild.
+- Add opt-in `decay` option.
+- Run derived GC after lookup-count intervals.
+- Enforce `maxDerivations` automatically.
+- Protect the current lookup path during the same GC pass.
+- Keep defaults conservative for alpha.
 
 ## Open next work
 
-### 8. Automatic lifecycle decay
+### 9. Time-based lifecycle decay
 
 Scope:
 
 - Add optional time-based cold marking.
-- Add optional periodic derived GC.
-- Keep defaults conservative for alpha.
+- Add optional periodic derived GC independent of lookup count.
+- Keep background behavior explicit; do not introduce hidden async work.
 
-### 9. Metadata compaction re-import
+### 10. Metadata compaction re-import
 
 Scope:
 
