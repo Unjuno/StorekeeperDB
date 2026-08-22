@@ -59,7 +59,15 @@ test("async write-behind failed flush keeps memory and pending writes", async ()
   tasks.push({ title: "Retry me", done: false, priority: "high" });
   storage.failNextSave("simulated browser storage failure");
 
-  await assert.rejects(() => sk.flush(), /simulated browser storage failure/);
+  let failed = false;
+  try {
+    await sk.flush();
+  } catch (error) {
+    failed = true;
+    assert.ok(error instanceof Error);
+    assert.equal(error.message, "simulated browser storage failure");
+  }
+  assert.equal(failed, true);
 
   assert.equal(tasks.length, 1);
   assert.equal(sk.find<Task>("tasks", { priority: "high" }).length, 1);
