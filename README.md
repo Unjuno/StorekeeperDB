@@ -47,6 +47,7 @@ The demo shows `json_only -> projection -> debug eviction -> rebuild`, live look
 - [Demo](./docs/DEMO.md)
 - [React verification](./docs/REACT_VERIFICATION.md)
 - [Magic lifecycle](./docs/MAGIC_LIFECYCLE.md)
+- [Automatic derived decay](./docs/DECAY.md)
 - [Changelog](./CHANGELOG.md)
 - [Release checklist](./docs/RELEASE.md)
 - [Transaction model](./docs/TRANSACTION_MODEL.md)
@@ -66,6 +67,23 @@ magic log / metadata    = debug surface, can be compacted
 ```
 
 When `find()` or `liveFind()` uses a supported scalar path, StorekeeperDB may create a SQLite-backed projection. That projection is rebuildable. The original state remains stored as source JSON rows.
+
+## Automatic derived decay
+
+Automatic decay is available but opt-in in the public alpha:
+
+```ts
+const sk = new StorekeeperDB("app.sqlite", {
+  decay: {
+    enabled: true,
+    collectEveryFinds: 4,
+    maxDerivations: 2,
+    markCold: true,
+  },
+});
+```
+
+This only touches rebuildable projection derivations. Source state rows are preserved, and the current lookup path is protected during the same GC pass. See [Automatic derived decay](./docs/DECAY.md).
 
 ## React adapter
 
@@ -145,6 +163,7 @@ This public alpha baseline includes:
 - nested object/array mutation persistence
 - scalar-path magic lookup projection
 - derived projection lifecycle debug APIs
+- opt-in automatic derived projection decay
 - `signal()` / `liveFind()` for local realtime prototype flows
 - React `useSyncExternalStore` adapter verification
 - experimental async write-behind boundary model
@@ -155,7 +174,7 @@ Known gaps:
 
 - Full browser adapter is not implemented.
 - API is alpha and not frozen.
-- Automatic lifecycle decay from the larger v22 experiment is not fully re-imported yet.
+- Full v22 metadata score compaction is not re-imported yet.
 
 ## Requirements
 
