@@ -60,29 +60,47 @@ Delivered:
 - Core runtime remains independent of React.
 - `live()` / `liveFind()` snapshot caching hardened.
 
-## Active work
-
 ### 6. Browser boundary experiment — #5
 
-Status: in progress.
+Status: merged.
 
-Scope:
+Delivered:
 
-- Prototype async write-behind runtime separately from local SQLite.
-- Expose `flush()` as the durability barrier.
-- Do not claim browser semantics equal Node SQLite semantics.
+- Experimental async write-behind runtime separated from local SQLite.
+- `flush()` defined as the durability barrier.
+- Dirty / clean / failed durability states covered by tests.
 
-## Open next work
+## Active work
 
 ### 7. Full magic lifecycle re-import — #6
 
+Status: in progress.
+
+Current pass:
+
+- Reintroduce manual derived projection lifecycle first.
+- Add `debug().markCold()`.
+- Add `debug().collectGarbage()`.
+- Verify source rows remain after projection GC.
+- Verify budget-based projection eviction and rebuild.
+
+## Open next work
+
+### 8. Automatic lifecycle decay
+
 Scope:
 
-- Reintroduce v20-v22 derived lifecycle features gradually:
-  - hot / cold derivation state
-  - derived storage budget
-  - automatic derived eviction
-  - metadata compaction
+- Add optional time-based cold marking.
+- Add optional periodic derived GC.
+- Keep defaults conservative for alpha.
+
+### 9. Metadata compaction re-import
+
+Scope:
+
+- Expand `compactMetadata()` beyond magic-log count trimming.
+- Reintroduce observation metadata compaction in a bounded way.
+- Avoid deleting source state or required projection state.
 
 ## Release posture
 
