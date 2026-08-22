@@ -16,7 +16,10 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "node --experimental-sqlite --test dist/test/*.test.js",
-    "gate": "npm run build && node --experimental-sqlite dist/scripts/gate.js"
+    "gate": "npm run build && node --experimental-sqlite dist/scripts/gate.js",
+    "check:exports": "node dist/scripts/release_check.js",
+    "pack:dry": "npm pack --dry-run",
+    "release:check": "npm run build && npm test && npm run gate && npm run check:exports && npm run pack:dry"
   },
   "engines": {
     "node": ">=22.5"
@@ -46,6 +49,8 @@
   "files": [
     "dist",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "CHANGELOG.md",
+    "docs"
   ]
 }

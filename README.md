@@ -35,6 +35,7 @@ StorekeeperDB is built for local prototype loops where UI and state shape change
 ## Public alpha docs
 
 - [Changelog](./CHANGELOG.md)
+- [Release checklist](./docs/RELEASE.md)
 - [Transaction model](./docs/TRANSACTION_MODEL.md)
 - [Browser storage boundary](./docs/BROWSER_BOUNDARY.md)
 - [Audit notes](./docs/AUDIT.md)
@@ -109,6 +110,7 @@ Known gaps:
 npm run build
 npm test
 npm run gate
+npm run release:check
 ```
 
 ## Package boundaries

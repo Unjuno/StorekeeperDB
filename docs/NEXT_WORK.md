@@ -28,9 +28,22 @@ Delivered:
 - Clearer debug output for magic projection changes.
 - Runtime hardening notes.
 
+## Active work
+
+### 3. Alpha release hygiene — #7
+
+Status: in progress.
+
+Scope:
+
+- Confirm package exports match actual files.
+- Add package dry-run and release checklist.
+- Keep publishing manual until the API boundary is intentionally accepted.
+- Decide whether to advance from `0.1.0-alpha.0` after more runtime work.
+
 ## Open next work
 
-### 3. React verification — #4
+### 4. React verification — #4
 
 Scope:
 
@@ -38,7 +51,7 @@ Scope:
 - Validate `useSyncExternalStore` behavior.
 - Keep the core runtime independent of React.
 
-### 4. Browser boundary experiment — #5
+### 5. Browser boundary experiment — #5
 
 Scope:
 
@@ -46,7 +59,7 @@ Scope:
 - Expose `flush()` as the durability barrier.
 - Do not claim browser semantics equal Node SQLite semantics.
 
-### 5. Full magic lifecycle re-import — #6
+### 6. Full magic lifecycle re-import — #6
 
 Scope:
 
@@ -56,15 +69,6 @@ Scope:
   - automatic derived eviction
   - metadata compaction
 
-### 6. Alpha release hygiene — #7
-
-Scope:
-
-- Confirm package exports match actual files.
-- Add package dry-run or release checklist.
-- Decide whether to advance from `0.1.0-alpha.0` after hardening.
-- Keep publishing manual until the API boundary is intentionally accepted.
-
 ## Release posture
 
 Keep `0.1.0-alpha.0` until:
@@ -73,3 +77,4 @@ Keep `0.1.0-alpha.0` until:
 - README matches actual public implementation.
 - Browser and React gaps are clearly documented.
 - The transaction model is either stable or explicitly scoped as alpha behavior.
+- `npm run release:check` passes on a clean checkout.
