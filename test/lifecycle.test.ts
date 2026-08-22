@@ -93,8 +93,9 @@ test("derived lifecycle garbage collection can enforce a projection budget", () 
     assert.equal(sk.status().items, 60);
 
     const after = new Set(debug.derivations("tasks").map((row) => row.path));
-    const evictedPath = before.find((path) => !after.has(path));
-    assert.ok(evictedPath);
+    const maybeEvictedPath = before.find((path) => !after.has(path));
+    if (!maybeEvictedPath) throw new Error("expected at least one evicted projection path");
+    const evictedPath = maybeEvictedPath;
     assert.equal(sk.explain("tasks", evictedPath).storage, "json_only");
     assert.ok(sk.find("tasks", { [evictedPath]: lookupValues[evictedPath]! }).length > 0);
     assert.equal(sk.explain("tasks", evictedPath).storage, "projection");
