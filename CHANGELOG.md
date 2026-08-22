@@ -22,6 +22,7 @@ Initial public alpha baseline plus first hardening passes.
 - Release checklist in `docs/RELEASE.md`.
 - Executable demo through `npm run demo`.
 - Real React verification for `@storekeeper/db/react` using `useSyncExternalStore` and `react-test-renderer`.
+- Experimental async write-behind boundary model through `@storekeeper/db/experimental`.
 - GitHub Actions CI.
 
 ### Hardened
@@ -31,13 +32,15 @@ Initial public alpha baseline plus first hardening passes.
 - Supported array mutators are covered by projection and reopen tests.
 - Nested object/array mutation persistence is covered by reopen tests.
 - Signal subscribers receive one notification after an outer batch commit.
+- `live()` and `liveFind()` cache snapshots so React `useSyncExternalStore` receives stable snapshot objects.
 - Magic log actions now use clearer names: `project_create`, `project_touch`, `project_evict`, and `project_rebuild`.
 - CI now runs `npm run release:check`, including export artifact checks, React verification, the executable demo, and `npm pack --dry-run`.
 
 ### Boundaries
 
 - This is an alpha baseline, not the full pre-repo v22 experiment.
-- Browser adapter is not implemented.
+- Full browser adapter is not implemented.
+- Browser-style async storage is explicitly modeled as write-behind; mutation return means memory changed, while `flush()` is the durability barrier.
 - API is not frozen.
 - Existing item and nested proxies captured before a failed batch are intentionally stale after rollback; re-read from the state list.
 - npm publishing remains manual and intentionally gated by the release checklist.
