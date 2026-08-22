@@ -76,6 +76,31 @@ import { externalStore } from "@storekeeper/db/react";
 
 `externalStore(signal)` returns the shape consumed by React's `useSyncExternalStore`. The alpha test suite verifies this with real React and `react-test-renderer` while keeping the core runtime independent of React.
 
+## Async browser boundary
+
+The Node runtime is synchronous and SQLite-backed. Browser-style storage is not claimed to have the same durability semantics.
+
+The experimental entrypoint contains a small write-behind boundary model:
+
+```ts
+import {
+  AsyncMemoryStorage,
+  ExperimentalAsyncWriteBehindRuntime,
+} from "@storekeeper/db/experimental";
+
+const storage = new AsyncMemoryStorage();
+const sk = new ExperimentalAsyncWriteBehindRuntime(storage);
+const tasks = await sk.state<{ title: string; done: boolean }[]>("tasks", []);
+
+tasks.push({ title: "Draft", done: false });
+
+sk.status(); // dirty: memory changed, async storage not durable yet
+await sk.flush();
+sk.status(); // clean: storage accepted the write
+```
+
+This is an experiment, not a full browser adapter. See [Browser storage boundary](./docs/BROWSER_BOUNDARY.md).
+
 ## Debug surface
 
 Magic must be inspectable.
@@ -114,12 +139,13 @@ This public alpha baseline includes:
 - scalar-path magic lookup projection
 - `signal()` / `liveFind()` for local realtime prototype flows
 - React `useSyncExternalStore` adapter verification
+- experimental async write-behind boundary model
 - debug APIs: `status`, `inspect`, `explain`, `debug()`
 - loud failures for intentionally unsupported shape-breaking operations
 
 Known gaps:
 
-- Browser adapter is not implemented.
+- Full browser adapter is not implemented.
 - API is alpha and not frozen.
 - The larger v22 experiment has more lifecycle/decay machinery than this public baseline.
 
@@ -144,7 +170,7 @@ npm run release:check
 @storekeeper/db/core         -> core exports
 @storekeeper/db/node         -> Node-local runtime export
 @storekeeper/db/react        -> useSyncExternalStore-compatible adapter shape
-@storekeeper/db/experimental -> experimental async boundary placeholder
+@storekeeper/db/experimental -> experimental async write-behind boundary
 ```
 
 ## License
