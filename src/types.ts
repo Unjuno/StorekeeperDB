@@ -13,9 +13,22 @@ export type Signal<T> = {
   subscribe(fn: () => void): () => void;
 };
 
+export type StorekeeperDecayOptions = {
+  /** Enables automatic collection of rebuildable derived projections. Defaults to false in the public alpha. */
+  enabled?: boolean;
+  /** Run derived GC after every N find() calls. Defaults to 100. */
+  collectEveryFinds?: number;
+  /** Mark remaining projections cold after a collection pass. Defaults to false. */
+  markCold?: boolean;
+  /** Keep at most this many active projection derivations. Defaults to Infinity. */
+  maxDerivations?: number;
+};
+
 export type StorekeeperOptions = {
   /** Prototype-first magic mode. When enabled, supported scalar lookups auto-create projections. */
   magic?: boolean;
+  /** Optional automatic cleanup policy for rebuildable derived projections. */
+  decay?: boolean | StorekeeperDecayOptions;
 };
 
 export type DerivationState = "hot" | "cold" | "evicted" | "materialized" | string;
@@ -46,6 +59,8 @@ export type StorekeeperGarbageCollectionOptions = {
   markCold?: boolean;
   /** Keep at most this many active projection derivations after collection. */
   maxDerivations?: number;
+  /** Paths that must not be evicted in this GC pass, usually the current lookup path. */
+  protectedPaths?: string[];
 };
 
 export type StorekeeperGarbageCollectionResult = {
