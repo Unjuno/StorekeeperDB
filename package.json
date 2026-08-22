@@ -16,6 +16,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "node --experimental-sqlite --test dist/test/*.test.js",
+    "test:react": "npm run build && node --experimental-sqlite --test dist/test/react.test.js",
     "gate": "npm run build && node --experimental-sqlite dist/scripts/gate.js",
     "demo": "npm run build && node --experimental-sqlite dist/scripts/demo.js",
     "demo:check": "node --experimental-sqlite dist/scripts/demo.js",
@@ -25,6 +26,10 @@
   },
   "engines": {
     "node": ">=22.5"
+  },
+  "devDependencies": {
+    "react": "^19.0.0",
+    "react-test-renderer": "^19.0.0"
   },
   "exports": {
     ".": {

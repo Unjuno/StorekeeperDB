@@ -45,6 +45,7 @@ The demo shows `json_only -> projection -> debug eviction -> rebuild`, live look
 ## Public alpha docs
 
 - [Demo](./docs/DEMO.md)
+- [React verification](./docs/REACT_VERIFICATION.md)
 - [Changelog](./CHANGELOG.md)
 - [Release checklist](./docs/RELEASE.md)
 - [Transaction model](./docs/TRANSACTION_MODEL.md)
@@ -64,6 +65,16 @@ magic log / metadata    = debug surface, can be compacted
 ```
 
 When `find()` or `liveFind()` uses a supported scalar path, StorekeeperDB may create a SQLite-backed projection. That projection is rebuildable. The original state remains stored as source JSON rows.
+
+## React adapter
+
+The React surface is intentionally thin:
+
+```ts
+import { externalStore } from "@storekeeper/db/react";
+```
+
+`externalStore(signal)` returns the shape consumed by React's `useSyncExternalStore`. The alpha test suite verifies this with real React and `react-test-renderer` while keeping the core runtime independent of React.
 
 ## Debug surface
 
@@ -102,13 +113,13 @@ This public alpha baseline includes:
 - nested object/array mutation persistence
 - scalar-path magic lookup projection
 - `signal()` / `liveFind()` for local realtime prototype flows
+- React `useSyncExternalStore` adapter verification
 - debug APIs: `status`, `inspect`, `explain`, `debug()`
 - loud failures for intentionally unsupported shape-breaking operations
 
 Known gaps:
 
 - Browser adapter is not implemented.
-- Real React DOM render tests are not implemented.
 - API is alpha and not frozen.
 - The larger v22 experiment has more lifecycle/decay machinery than this public baseline.
 
@@ -118,6 +129,7 @@ Known gaps:
 - Run Node with `--experimental-sqlite`
 
 ```bash
+npm install
 npm run build
 npm test
 npm run gate

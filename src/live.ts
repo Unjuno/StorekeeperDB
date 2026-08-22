@@ -1,9 +1,10 @@
-import type { Dict, JsonScalar, Signal } from "./types.js";
+import type { Dict, JsonScalar, Signal, Snapshot } from "./types.js";
 import { StorekeeperDB } from "./runtime.js";
 
 export function live<T, U>(signal: Signal<T>, selector: (value: T) => U) {
   let version = 0;
   let value = selector(signal.getSnapshot().value);
+  let snapshot: Snapshot<U> = { value, version };
   const listeners = new Set<() => void>();
   let stopUpstream: (() => void) | null = null;
 
@@ -12,12 +13,13 @@ export function live<T, U>(signal: Signal<T>, selector: (value: T) => U) {
     if (JSON.stringify(next) !== JSON.stringify(value)) {
       value = next;
       version++;
+      snapshot = { value, version };
       listeners.forEach((listener) => listener());
     }
   };
 
   return {
-    getSnapshot: () => ({ value, version }),
+    getSnapshot: () => snapshot,
     subscribe: (listener: () => void) => {
       listeners.add(listener);
       if (!stopUpstream) stopUpstream = signal.subscribe(recompute);

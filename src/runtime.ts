@@ -138,6 +138,7 @@ export class StorekeeperDB {
   liveFind<T extends Dict>(key: string, where: Partial<Record<keyof T & string, JsonScalar>>) {
     let version = 0;
     let value = this.find<T>(key, where);
+    let snapshot: Snapshot<T[]> = { value, version };
     const listeners = new Set<() => void>();
     let stopUpstream: (() => void) | null = null;
 
@@ -146,12 +147,13 @@ export class StorekeeperDB {
       if (JSON.stringify(next) !== JSON.stringify(value)) {
         value = next;
         version++;
+        snapshot = { value, version };
         listeners.forEach((listener) => listener());
       }
     };
 
     return {
-      getSnapshot: () => ({ value, version }),
+      getSnapshot: () => snapshot,
       subscribe: (listener: () => void) => {
         listeners.add(listener);
         if (!stopUpstream) stopUpstream = this.subscribe(key, recompute);

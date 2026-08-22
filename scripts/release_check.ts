@@ -66,6 +66,7 @@ const publicDocs = [
   "LICENSE",
   "CHANGELOG.md",
   "docs/DEMO.md",
+  "docs/REACT_VERIFICATION.md",
   "docs/RELEASE.md",
   "docs/TRANSACTION_MODEL.md",
   "docs/BROWSER_BOUNDARY.md",
