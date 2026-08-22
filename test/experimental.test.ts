@@ -64,8 +64,8 @@ test("async write-behind failed flush keeps memory and pending writes", async ()
     await sk.flush();
   } catch (error) {
     failed = true;
-    assert.ok(error instanceof Error);
-    assert.equal(error.message, "simulated browser storage failure");
+    const message = error instanceof Error ? error.message : String(error);
+    assert.equal(message, "simulated browser storage failure");
   }
   assert.equal(failed, true);
 
