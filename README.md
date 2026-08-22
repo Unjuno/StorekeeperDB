@@ -32,8 +32,19 @@ const liveUrgent = liveFind<Task>(sk, "tasks", { priority: "urgent" });
 
 StorekeeperDB is built for local prototype loops where UI and state shape change quickly. It is not a production database migration framework.
 
+## Demo
+
+Run the executable demo:
+
+```bash
+npm run demo
+```
+
+The demo shows `json_only -> projection -> debug eviction -> rebuild`, live lookup updates, and source-state preservation. See [Demo](./docs/DEMO.md).
+
 ## Public alpha docs
 
+- [Demo](./docs/DEMO.md)
 - [Changelog](./CHANGELOG.md)
 - [Release checklist](./docs/RELEASE.md)
 - [Transaction model](./docs/TRANSACTION_MODEL.md)
@@ -110,6 +121,7 @@ Known gaps:
 npm run build
 npm test
 npm run gate
+npm run demo
 npm run release:check
 ```
 
