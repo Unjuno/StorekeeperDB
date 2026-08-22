@@ -2,13 +2,13 @@
 
 This document keeps the next StorekeeperDB work explicit after the initial public alpha baseline.
 
-## Immediate next PRs
+## Completed public setup
 
 ### 1. Public alpha polish
 
-Status: this document set.
+Status: merged.
 
-Scope:
+Delivered:
 
 - Changelog.
 - Transaction model.
@@ -18,14 +18,19 @@ Scope:
 
 ### 2. Runtime hardening
 
-Scope:
+Status: merged.
+
+Delivered:
 
 - Explicit stale proxy behavior after failed `batch()`.
-- More nested rollback tests.
-- Projection consistency after every supported array mutator.
-- Better debug output for magic projection changes.
+- Nested rollback tests.
+- Projection consistency after supported array mutators.
+- Clearer debug output for magic projection changes.
+- Runtime hardening notes.
 
-### 3. React verification
+## Open next work
+
+### 3. React verification — #4
 
 Scope:
 
@@ -33,7 +38,7 @@ Scope:
 - Validate `useSyncExternalStore` behavior.
 - Keep the core runtime independent of React.
 
-### 4. Browser boundary experiment
+### 4. Browser boundary experiment — #5
 
 Scope:
 
@@ -41,7 +46,7 @@ Scope:
 - Expose `flush()` as the durability barrier.
 - Do not claim browser semantics equal Node SQLite semantics.
 
-### 5. Full magic lifecycle re-import
+### 5. Full magic lifecycle re-import — #6
 
 Scope:
 
@@ -50,6 +55,15 @@ Scope:
   - derived storage budget
   - automatic derived eviction
   - metadata compaction
+
+### 6. Alpha release hygiene — #7
+
+Scope:
+
+- Confirm package exports match actual files.
+- Add package dry-run or release checklist.
+- Decide whether to advance from `0.1.0-alpha.0` after hardening.
+- Keep publishing manual until the API boundary is intentionally accepted.
 
 ## Release posture
 
