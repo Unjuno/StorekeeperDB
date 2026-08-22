@@ -5,6 +5,11 @@ type PackageExport = {
   import?: string;
 };
 
+type CompletePackageExport = {
+  types: string;
+  import: string;
+};
+
 type PackageJson = {
   name?: string;
   version?: string;
@@ -22,6 +27,14 @@ const requireFile = (path: string): void => {
   if (!existsSync(path)) fail(`missing required file: ${path}`);
 };
 
+const requireExport = (pkg: PackageJson, exportName: string): CompletePackageExport => {
+  const entry = pkg.exports?.[exportName];
+  if (!entry) fail(`missing export entry: ${exportName}`);
+  if (!entry.import) fail(`missing import path for export: ${exportName}`);
+  if (!entry.types) fail(`missing types path for export: ${exportName}`);
+  return { import: entry.import, types: entry.types };
+};
+
 const pkg = JSON.parse(readFileSync("package.json", "utf8")) as PackageJson;
 
 if (pkg.name !== "@storekeeper/db") fail(`unexpected package name: ${pkg.name ?? "<missing>"}`);
@@ -35,10 +48,7 @@ for (const entry of expectedFileEntries) {
 
 const expectedExports = [".", "./core", "./node", "./react", "./experimental"];
 for (const exportName of expectedExports) {
-  const entry = pkg.exports?.[exportName];
-  if (!entry) fail(`missing export entry: ${exportName}`);
-  if (!entry.import) fail(`missing import path for export: ${exportName}`);
-  if (!entry.types) fail(`missing types path for export: ${exportName}`);
+  const entry = requireExport(pkg, exportName);
   requireFile(entry.import.replace(/^\.\//, ""));
   requireFile(entry.types.replace(/^\.\//, ""));
 }
