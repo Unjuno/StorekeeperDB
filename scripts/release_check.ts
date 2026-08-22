@@ -29,10 +29,20 @@ const requireFile = (path: string): void => {
 
 const requireExport = (pkg: PackageJson, exportName: string): CompletePackageExport => {
   const entry = pkg.exports?.[exportName];
-  if (!entry) fail(`missing export entry: ${exportName}`);
-  if (!entry.import) fail(`missing import path for export: ${exportName}`);
-  if (!entry.types) fail(`missing types path for export: ${exportName}`);
-  return { import: entry.import, types: entry.types };
+  if (entry === undefined) fail(`missing export entry: ${exportName}`);
+
+  const importPath = entry.import;
+  const typesPath = entry.types;
+
+  if (typeof importPath !== "string" || importPath.length === 0) {
+    fail(`missing import path for export: ${exportName}`);
+  }
+
+  if (typeof typesPath !== "string" || typesPath.length === 0) {
+    fail(`missing types path for export: ${exportName}`);
+  }
+
+  return { import: importPath, types: typesPath };
 };
 
 const pkg = JSON.parse(readFileSync("package.json", "utf8")) as PackageJson;
