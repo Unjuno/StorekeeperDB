@@ -1,3 +1,3 @@
 import "./lifecycle.js";
 
-export { StorekeeperDB } from "./runtime.js";
+export { StorekeeperDB } from "./decay-runtime.js";
