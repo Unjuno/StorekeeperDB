@@ -18,5 +18,7 @@ export type {
   StorekeeperDecayOptions,
   StorekeeperGarbageCollectionOptions,
   StorekeeperGarbageCollectionResult,
+  StorekeeperMetadataCompactionOptions,
+  StorekeeperMetadataCompactionResult,
   StorekeeperOptions,
 } from "./types.js";

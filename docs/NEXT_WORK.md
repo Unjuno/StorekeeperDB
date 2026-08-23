@@ -82,23 +82,34 @@ Delivered:
 - Source rows remain after projection GC.
 - Budget-based projection eviction and rebuild.
 
+### 8. Automatic lifecycle decay — #6, second pass
+
+Status: merged.
+
+Delivered:
+
+- Opt-in `decay` option.
+- Lookup-count-triggered derived GC.
+- Automatic `maxDerivations` enforcement.
+- Current lookup path protection during the same GC pass.
+- Conservative alpha defaults.
+
 ## Active work
 
-### 8. Automatic lifecycle decay — #6, second pass
+### 9. Metadata compaction re-import — #6, third pass
 
 Status: in progress.
 
 Current pass:
 
-- Add opt-in `decay` option.
-- Run derived GC after lookup-count intervals.
-- Enforce `maxDerivations` automatically.
-- Protect the current lookup path during the same GC pass.
-- Keep defaults conservative for alpha.
+- Expand `compactMetadata()` beyond magic-log count trimming.
+- Add path observation count decay.
+- Drop low-value non-projection observations.
+- Preserve source rows, projection cells, and projection-backed observations.
 
 ## Open next work
 
-### 9. Time-based lifecycle decay
+### 10. Time-based lifecycle decay
 
 Scope:
 
@@ -106,13 +117,12 @@ Scope:
 - Add optional periodic derived GC independent of lookup count.
 - Keep background behavior explicit; do not introduce hidden async work.
 
-### 10. Metadata compaction re-import
+### 11. Metadata scoring policy
 
 Scope:
 
-- Expand `compactMetadata()` beyond magic-log count trimming.
-- Reintroduce observation metadata compaction in a bounded way.
-- Avoid deleting source state or required projection state.
+- Reintroduce fuller v22 metadata scoring policy only after the compactMetadata boundary is stable.
+- Keep source state and required projection state outside metadata scoring deletion.
 
 ## Release posture
 

@@ -68,6 +68,23 @@ export type StorekeeperGarbageCollectionResult = {
   evicted: number;
 };
 
+export type StorekeeperMetadataCompactionOptions = {
+  /** Keep only the newest N magic log rows. Set to Infinity or omit to skip log trimming. */
+  maxMagicLogEntries?: number;
+  /** Multiply observation read/write counts by this factor before optional deletion. */
+  pathCountDecayFactor?: number;
+  /** Delete non-projection observations whose decayed read/write counts are both <= this threshold. */
+  dropPathStatsBelow?: number;
+  /** Limit observation compaction to one state. Magic log trimming remains global. */
+  stateKey?: string;
+};
+
+export type StorekeeperMetadataCompactionResult = {
+  magicLogsDeleted: number;
+  pathsDecayed: number;
+  pathsDeleted: number;
+};
+
 export type StorekeeperDebugAPI = {
   recentMagic(limit?: number): MagicLogRow[];
   derivations(stateKey?: string): DerivationSnapshot[];
@@ -75,7 +92,7 @@ export type StorekeeperDebugAPI = {
   rebuild(stateKey: string, paths: string[]): void;
   markCold(stateKey: string, paths: string[], reason?: string): void;
   collectGarbage(options?: StorekeeperGarbageCollectionOptions): StorekeeperGarbageCollectionResult;
-  compactMetadata(limit?: number): { magicLogsDeleted: number };
+  compactMetadata(options?: number | StorekeeperMetadataCompactionOptions): StorekeeperMetadataCompactionResult;
 };
 
 export type StatusSnapshot = {

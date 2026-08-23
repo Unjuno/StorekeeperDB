@@ -48,6 +48,7 @@ The demo shows `json_only -> projection -> debug eviction -> rebuild`, live look
 - [React verification](./docs/REACT_VERIFICATION.md)
 - [Magic lifecycle](./docs/MAGIC_LIFECYCLE.md)
 - [Automatic derived decay](./docs/DECAY.md)
+- [Metadata compaction](./docs/METADATA_COMPACTION.md)
 - [Changelog](./CHANGELOG.md)
 - [Release checklist](./docs/RELEASE.md)
 - [Transaction model](./docs/TRANSACTION_MODEL.md)
@@ -84,6 +85,20 @@ const sk = new StorekeeperDB("app.sqlite", {
 ```
 
 This only touches rebuildable projection derivations. Source state rows are preserved, and the current lookup path is protected during the same GC pass. See [Automatic derived decay](./docs/DECAY.md).
+
+## Metadata compaction
+
+Magic logs and path observations are debug/planning metadata. They can be compacted without deleting source rows or active projection cells.
+
+```ts
+sk.debug().compactMetadata({
+  maxMagicLogEntries: 500,
+  pathCountDecayFactor: 0.5,
+  dropPathStatsBelow: 1,
+});
+```
+
+See [Metadata compaction](./docs/METADATA_COMPACTION.md).
 
 ## React adapter
 
@@ -133,6 +148,7 @@ sk.debug().derivations("tasks");
 sk.debug().markCold("tasks", ["priority"]);
 sk.debug().collectGarbage({ stateKey: "tasks" });
 sk.debug().collectGarbage({ stateKey: "tasks", maxDerivations: 2 });
+sk.debug().compactMetadata({ maxMagicLogEntries: 100 });
 sk.debug().evict("tasks", ["priority"]);
 sk.debug().rebuild("tasks", ["priority"]);
 ```
@@ -164,6 +180,7 @@ This public alpha baseline includes:
 - scalar-path magic lookup projection
 - derived projection lifecycle debug APIs
 - opt-in automatic derived projection decay
+- metadata compaction for magic logs and non-projection path observations
 - `signal()` / `liveFind()` for local realtime prototype flows
 - React `useSyncExternalStore` adapter verification
 - experimental async write-behind boundary model
@@ -174,7 +191,7 @@ Known gaps:
 
 - Full browser adapter is not implemented.
 - API is alpha and not frozen.
-- Full v22 metadata score compaction is not re-imported yet.
+- Full v22 metadata scoring policy is not re-imported yet.
 
 ## Requirements
 

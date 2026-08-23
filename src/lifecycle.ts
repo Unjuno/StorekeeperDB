@@ -5,6 +5,8 @@ import type {
   StorekeeperDebugAPI,
   StorekeeperGarbageCollectionOptions,
   StorekeeperGarbageCollectionResult,
+  StorekeeperMetadataCompactionOptions,
+  StorekeeperMetadataCompactionResult,
 } from "./types.js";
 
 type StatementLike = {
@@ -27,6 +29,10 @@ type BaseDebugAPI = {
 
 type PatchablePrototype = typeof StorekeeperDB.prototype & {
   __storekeeperDerivedLifecyclePatchApplied?: boolean;
+};
+
+type NormalizedMetadataCompactionOptions = Required<Omit<StorekeeperMetadataCompactionOptions, "stateKey">> & {
+  stateKey?: string;
 };
 
 const prototype = StorekeeperDB.prototype as PatchablePrototype;
@@ -53,6 +59,86 @@ if (!prototype.__storekeeperDerivedLifecyclePatchApplied) {
       const paths = options.protectedPaths ?? [];
       if (!options.stateKey || paths.length === 0) return new Set();
       return new Set(paths.map((path) => protectedKey(options.stateKey!, path)));
+    };
+
+    const numberFromFirstRow = (sql: string, ...args: unknown[]): number => {
+      const rows = runtime.prepare(sql).all(...args) as Array<Record<string, unknown>>;
+      return Number(rows[0]?.n ?? 0);
+    };
+
+    const changed = (result: unknown): number => Number((result as { changes?: number }).changes ?? 0);
+
+    const normalizeMetadataOptions = (
+      options: number | StorekeeperMetadataCompactionOptions = {},
+    ): NormalizedMetadataCompactionOptions => {
+      const objectOptions = typeof options === "number" ? { maxMagicLogEntries: options } : options;
+      return {
+        maxMagicLogEntries: objectOptions.maxMagicLogEntries ?? 100,
+        pathCountDecayFactor: objectOptions.pathCountDecayFactor ?? 1,
+        dropPathStatsBelow: objectOptions.dropPathStatsBelow ?? -1,
+        stateKey: objectOptions.stateKey,
+      };
+    };
+
+    const compactMetadata = (
+      input: number | StorekeeperMetadataCompactionOptions = {},
+    ): StorekeeperMetadataCompactionResult => {
+      const options = normalizeMetadataOptions(input);
+
+      const magicBefore = numberFromFirstRow("SELECT COUNT(*) AS n FROM __sk_magic_log");
+      if (Number.isFinite(options.maxMagicLogEntries) && options.maxMagicLogEntries >= 0) {
+        runtime
+          .prepare(
+            "DELETE FROM __sk_magic_log WHERE id IN (SELECT id FROM __sk_magic_log ORDER BY id DESC LIMIT -1 OFFSET ?)",
+          )
+          .run(Math.max(0, Math.floor(options.maxMagicLogEntries)));
+      }
+      const magicAfter = numberFromFirstRow("SELECT COUNT(*) AS n FROM __sk_magic_log");
+
+      let pathsDecayed = 0;
+      if (options.pathCountDecayFactor >= 0 && options.pathCountDecayFactor < 1) {
+        const sql = options.stateKey
+          ? "UPDATE __sk_paths SET read_count=CAST(read_count * ? AS INTEGER), write_count=CAST(write_count * ? AS INTEGER) WHERE state_key=?"
+          : "UPDATE __sk_paths SET read_count=CAST(read_count * ? AS INTEGER), write_count=CAST(write_count * ? AS INTEGER)";
+        const result = options.stateKey
+          ? runtime.prepare(sql).run(options.pathCountDecayFactor, options.pathCountDecayFactor, options.stateKey)
+          : runtime.prepare(sql).run(options.pathCountDecayFactor, options.pathCountDecayFactor);
+        pathsDecayed = changed(result);
+      }
+
+      let pathsDeleted = 0;
+      if (options.dropPathStatsBelow >= 0) {
+        const sql = options.stateKey
+          ? `DELETE FROM __sk_paths
+             WHERE state_key=?
+               AND read_count <= ?
+               AND write_count <= ?
+               AND NOT EXISTS (
+                 SELECT 1 FROM __sk_derivations d
+                 WHERE d.state_key=__sk_paths.state_key
+                   AND d.path=__sk_paths.path
+                   AND d.kind='projection'
+               )`
+          : `DELETE FROM __sk_paths
+             WHERE read_count <= ?
+               AND write_count <= ?
+               AND NOT EXISTS (
+                 SELECT 1 FROM __sk_derivations d
+                 WHERE d.state_key=__sk_paths.state_key
+                   AND d.path=__sk_paths.path
+                   AND d.kind='projection'
+               )`;
+        const result = options.stateKey
+          ? runtime.prepare(sql).run(options.stateKey, options.dropPathStatsBelow, options.dropPathStatsBelow)
+          : runtime.prepare(sql).run(options.dropPathStatsBelow, options.dropPathStatsBelow);
+        pathsDeleted = changed(result);
+      }
+
+      return {
+        magicLogsDeleted: magicBefore - magicAfter,
+        pathsDecayed,
+        pathsDeleted,
+      };
     };
 
     const markCold = (stateKey: string, paths: string[], reason = "debug mark cold"): void => {
@@ -132,6 +218,7 @@ if (!prototype.__storekeeperDerivedLifecyclePatchApplied) {
       ...base,
       markCold,
       collectGarbage,
+      compactMetadata,
     };
   };
 
