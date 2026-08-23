@@ -11,6 +11,7 @@ StorekeeperDB is currently an alpha package. Do not publish a package only becau
 - Browser runtime: not implemented
 - React runtime verification: covered by the test suite
 - Benchmark posture: observational timings, not a hard release gate
+- Alpha publish posture: manual only, `npm publish --tag alpha`, never `latest`
 
 ## Required checks before publishing
 
@@ -41,6 +42,15 @@ Run it manually when evaluating runtime-sensitive changes:
 ```bash
 npm run benchmark
 ```
+
+## Alpha decision policy
+
+Before publishing an alpha, read:
+
+- `docs/ALPHA_RELEASE_DECISION.md`
+- `docs/RELEASE_NOTES_0.1.0-alpha.0.md`
+
+The decision document states what is accepted for alpha and what remains explicitly out of scope. The release notes file is intended to be reused as a GitHub Release body.
 
 ## Package contents policy
 
@@ -80,6 +90,8 @@ Before any npm publish:
 - Confirm README examples match the current runtime.
 - Confirm `docs/MANUAL.md` matches the current public API.
 - Confirm `docs/BENCHMARKS.md` describes the benchmark without overclaiming latency guarantees.
+- Confirm `docs/ALPHA_RELEASE_DECISION.md` still reflects the accepted alpha boundary.
+- Confirm `docs/RELEASE_NOTES_0.1.0-alpha.0.md` is suitable for the GitHub release body.
 - Run `npm run benchmark` manually if release notes will mention runtime observations.
 - Confirm `CHANGELOG.md` describes the version being published.
 - Confirm open issues for browser, time-based decay, and metadata scoring are still accurately scoped.
