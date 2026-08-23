@@ -103,22 +103,33 @@ Delivered:
 - Benchmark documentation.
 - Benchmark timings scoped as observational, not a hard release gate.
 
+### 9. Alpha release decision
+
+Status: merged.
+
+Delivered:
+
+- Public alpha candidate decision record.
+- Draft release notes.
+- Manual publish boundary: alpha dist-tag only.
+- Release check validates decision and release notes documents exist.
+
 ## Active work
 
-### 9. Alpha release decision
+### 10. Final prepublish inspection
 
 Status: in progress.
 
 Scope:
 
-- Record whether `0.1.0-alpha.0` is acceptable as a public alpha candidate.
-- Add release notes suitable for a GitHub Release body.
-- Keep npm publishing manual and alpha-tagged.
-- Make `release:check` verify the decision and release notes docs exist.
+- Make release checks verify key public alpha wording, not only file existence.
+- Ensure `release:check` rejects accidental removal of alpha disclaimers.
+- Keep benchmark timing outside the release gate.
+- Keep npm publishing manual.
 
 ## Open next work
 
-### 10. Time-based lifecycle decay — #16
+### 11. Time-based lifecycle decay — #16
 
 Scope:
 
@@ -126,14 +137,14 @@ Scope:
 - Add optional periodic derived GC independent of lookup count.
 - Keep background behavior explicit; do not introduce hidden async work.
 
-### 11. Metadata scoring policy — #17
+### 12. Metadata scoring policy — #17
 
 Scope:
 
 - Reintroduce fuller v22 metadata scoring policy only after the compactMetadata boundary is stable.
 - Keep source state and required projection state outside metadata scoring deletion.
 
-### 12. Post-alpha publication follow-up
+### 13. Post-alpha publication follow-up
 
 Scope:
 
