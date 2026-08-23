@@ -120,6 +120,6 @@ It is a regression-facing alpha benchmark. The useful signal is the trend over t
 
 The benchmark is intentionally not part of `release:check` yet.
 
-Reason: benchmark timings are environment-sensitive. The release gate should remain deterministic and fast. Run `npm run benchmark` manually when evaluating runtime changes or preparing release notes.
+Reason: benchmark timings are environment-sensitive. The release gate should remain deterministic and fast. It is not a hard release latency gate. Run `npm run benchmark` manually when evaluating runtime changes or preparing release notes.
 
 A future PR can add benchmark artifacts or separate scheduled benchmark jobs once there is a stable baseline policy.
