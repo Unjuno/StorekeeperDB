@@ -47,6 +47,7 @@ The demo shows `json_only -> projection -> debug eviction -> rebuild`, live look
 - [Demo](./docs/DEMO.md)
 - [React verification](./docs/REACT_VERIFICATION.md)
 - [Magic lifecycle](./docs/MAGIC_LIFECYCLE.md)
+- [Magic re-import status](./docs/MAGIC_REIMPORT_STATUS.md)
 - [Automatic derived decay](./docs/DECAY.md)
 - [Metadata compaction](./docs/METADATA_COMPACTION.md)
 - [Changelog](./CHANGELOG.md)
@@ -191,7 +192,7 @@ Known gaps:
 
 - Full browser adapter is not implemented.
 - API is alpha and not frozen.
-- Full v22 metadata scoring policy is not re-imported yet.
+- Time-based lifecycle decay and richer metadata scoring are separate follow-up research items.
 
 ## Requirements
 
