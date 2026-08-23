@@ -29,7 +29,23 @@ This performs:
 4. Demo script.
 5. Export artifact check for all package subpaths.
 6. Public documentation file check.
-7. `npm pack --dry-run`.
+7. Prepublish wording inspection for the alpha boundary.
+8. `npm pack --dry-run`.
+
+## Prepublish wording inspection
+
+`release:check` includes a lightweight inspection of public release wording.
+
+It verifies that the public docs still say:
+
+- the release is an alpha, not a stable API release
+- publishing must use `npm publish --tag alpha`
+- the package must not be published as `latest`
+- the full browser adapter is not implemented
+- Node's `--experimental-sqlite` flag is required
+- benchmark timings are observational and not a hard release latency gate
+
+This check is intentionally conservative. It does not replace human review, but it prevents the most important alpha disclaimers from disappearing accidentally.
 
 ## Benchmark policy
 

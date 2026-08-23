@@ -79,7 +79,7 @@ The release branch should pass:
 npm run release:check
 ```
 
-This includes build, tests, gate, demo, export checks, documentation checks, and package dry-run.
+This includes build, tests, gate, demo, export checks, documentation checks, prepublish wording inspection, and package dry-run.
 
 Benchmark observations are available separately:
 
@@ -89,7 +89,7 @@ npm run benchmark
 
 The benchmark prints timing JSON but does not define production latency guarantees.
 
-## Known alpha gaps
+## Known gaps
 
 - API is not frozen.
 - Full browser adapter is not implemented.

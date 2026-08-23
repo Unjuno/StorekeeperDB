@@ -50,8 +50,9 @@ Initial public alpha baseline plus first hardening passes.
 - Metadata compaction preserves source rows, projection cells, and projection-backed path observations.
 - Benchmark script now performs semantic pass/fail checks while keeping latency as observational output.
 - Release checks now require alpha decision and release-note documentation to exist.
+- Release checks now verify key prepublish alpha wording: alpha-only tag, not latest, non-stable API, missing browser adapter, experimental SQLite flag, and observational benchmark posture.
 - Magic log actions now include `project_mark_cold` and `project_gc_evict` in addition to `project_create`, `project_touch`, `project_evict`, and `project_rebuild`.
-- CI now runs `npm run release:check`, including export artifact checks, React verification, the executable demo, lifecycle/decay/metadata tests, and `npm pack --dry-run`.
+- CI now runs `npm run release:check`, including export artifact checks, React verification, the executable demo, lifecycle/decay/metadata tests, prepublish wording inspection, and `npm pack --dry-run`.
 
 ### Boundaries
 
