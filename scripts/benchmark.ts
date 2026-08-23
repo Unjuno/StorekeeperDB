@@ -83,13 +83,7 @@ try {
   unsubscribe();
 
   const debug = sk.debug();
-  const compactMetadata = time(() =>
-    debug.compactMetadata({
-      maxMagicLogEntries: 25,
-      pathCountDecayFactor: 0.5,
-      dropPathStatsBelow: -1,
-    }),
-  );
+  const compactMetadata = time(() => debug.compactMetadata(25));
 
   const statusBeforeClose = sk.status();
   const priorityStorageBeforeClose = sk.explain("tasks", "priority").storage;
