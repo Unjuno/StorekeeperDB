@@ -289,4 +289,10 @@ Before treating a change as release-ready, run:
 npm run release:check
 ```
 
-This runs build, tests, gate, demo, benchmark check, export checks, and package dry-run.
+This runs build, tests, gate, demo, export checks, and package dry-run.
+
+Run the benchmark separately when evaluating runtime changes:
+
+```bash
+npm run benchmark
+```
