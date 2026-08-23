@@ -46,9 +46,9 @@ Initial public alpha baseline plus first hardening passes.
 - Automatic derived GC protects the path used by the current `find()` call from the same collection pass.
 - `debug().compactMetadata()` now trims magic logs, decays observation counters, and can delete low-value non-projection path observations.
 - Metadata compaction preserves source rows, projection cells, and projection-backed path observations.
-- Benchmark check now runs inside `release:check` as a semantic regression check.
+- Benchmark script now performs semantic pass/fail checks while keeping latency as observational output.
 - Magic log actions now include `project_mark_cold` and `project_gc_evict` in addition to `project_create`, `project_touch`, `project_evict`, and `project_rebuild`.
-- CI now runs `npm run release:check`, including export artifact checks, React verification, the executable demo, benchmark check, lifecycle/decay/metadata tests, and `npm pack --dry-run`.
+- CI now runs `npm run release:check`, including export artifact checks, React verification, the executable demo, lifecycle/decay/metadata tests, and `npm pack --dry-run`.
 
 ### Boundaries
 
@@ -57,6 +57,7 @@ Initial public alpha baseline plus first hardening passes.
 - Browser-style async storage is explicitly modeled as write-behind; mutation return means memory changed, while `flush()` is the durability barrier.
 - Automatic derived decay is opt-in and currently lookup-count-based, not wall-clock-time-based.
 - Benchmark timings are observational and not hard release thresholds.
+- Benchmark execution is manual for now and intentionally outside `release:check`.
 - Full v22 metadata scoring policy is not re-imported yet.
 - API is not frozen.
 - Existing item and nested proxies captured before a failed batch are intentionally stale after rollback; re-read from the state list.
