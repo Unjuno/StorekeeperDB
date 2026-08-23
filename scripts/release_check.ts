@@ -15,6 +15,7 @@ type PackageJson = {
   version?: string;
   private?: boolean;
   files?: string[];
+  scripts?: Record<string, string>;
   exports?: Record<string, PackageExport>;
 };
 
@@ -25,6 +26,16 @@ const fail = (message: string): never => {
 
 const requireFile = (path: string): void => {
   if (!existsSync(path)) fail(`missing required file: ${path}`);
+};
+
+const readText = (path: string): string => {
+  requireFile(path);
+  return readFileSync(path, "utf8");
+};
+
+const requireText = (path: string, requiredText: string): void => {
+  const text = readText(path);
+  if (!text.includes(requiredText)) fail(`${path} must include: ${requiredText}`);
 };
 
 const requireExport = (pkg: PackageJson, exportName: string): CompletePackageExport => {
@@ -46,8 +57,12 @@ const requireExport = (pkg: PackageJson, exportName: string): CompletePackageExp
 const pkg = JSON.parse(readFileSync("package.json", "utf8")) as PackageJson;
 
 if (pkg.name !== "@storekeeper/db") fail(`unexpected package name: ${pkg.name ?? "<missing>"}`);
-if (!pkg.version?.includes("alpha")) fail(`alpha release must use an alpha version: ${pkg.version ?? "<missing>"}`);
+if (pkg.version !== "0.1.0-alpha.0") fail(`unexpected alpha version: ${pkg.version ?? "<missing>"}`);
 if (pkg.private !== false) fail("package.json private must be false for public alpha dry-run checks");
+if (!pkg.scripts?.["release:check"]?.includes("pack:dry")) fail("release:check must include pack:dry");
+if (pkg.scripts?.["release:check"]?.includes("benchmark:check")) {
+  fail("release:check must not include benchmark:check while benchmark timing is observational");
+}
 
 const expectedFileEntries = ["dist", "README.md", "LICENSE", "CHANGELOG.md", "docs"];
 for (const entry of expectedFileEntries) {
@@ -84,10 +99,29 @@ const publicDocs = [
 
 for (const path of publicDocs) requireFile(path);
 
+const requiredPublicText: Array<[string, string]> = [
+  ["README.md", "It is not a production database migration framework."],
+  ["README.md", "Full browser adapter is not implemented."],
+  ["README.md", "Run Node with `--experimental-sqlite`"],
+  ["docs/ALPHA_RELEASE_DECISION.md", "public alpha candidate"],
+  ["docs/ALPHA_RELEASE_DECISION.md", "not a stable API release"],
+  ["docs/ALPHA_RELEASE_DECISION.md", "npm publish --tag alpha"],
+  ["docs/ALPHA_RELEASE_DECISION.md", "Do not publish as `latest`"],
+  ["docs/RELEASE.md", "npm publish --tag alpha"],
+  ["docs/RELEASE.md", "Do not publish from this checklist automatically."],
+  ["docs/RELEASE_NOTES_0.1.0-alpha.0.md", "Known gaps"],
+  ["docs/RELEASE_NOTES_0.1.0-alpha.0.md", "Full browser adapter is not implemented"],
+  ["docs/BROWSER_BOUNDARY.md", "flush()"],
+  ["docs/BENCHMARKS.md", "not a hard release latency gate"],
+];
+
+for (const [path, requiredText] of requiredPublicText) requireText(path, requiredText);
+
 console.log(JSON.stringify({
   packageName: pkg.name,
   version: pkg.version,
   checkedExports: expectedExports.length,
   checkedDocs: publicDocs.length,
+  checkedPublicText: requiredPublicText.length,
   pass: true,
 }, null, 2));
