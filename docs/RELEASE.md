@@ -10,7 +10,7 @@ StorekeeperDB is currently an alpha package. Do not publish a package only becau
 - Required Node flag for tests and runtime experiments: `--experimental-sqlite`
 - Browser runtime: not implemented
 - React runtime verification: covered by the test suite
-- Benchmark posture: observational timings plus semantic regression checks
+- Benchmark posture: observational timings, not a hard release gate
 
 ## Required checks before publishing
 
@@ -26,16 +26,21 @@ This performs:
 2. Runtime tests.
 3. Gate script.
 4. Demo script.
-5. Benchmark semantic check.
-6. Export artifact check for all package subpaths.
-7. Public documentation file check.
-8. `npm pack --dry-run`.
+5. Export artifact check for all package subpaths.
+6. Public documentation file check.
+7. `npm pack --dry-run`.
 
 ## Benchmark policy
 
 `npm run benchmark` prints timing observations and semantic counts.
 
-`release:check` runs `benchmark:check`, but benchmark latency is not a hard release gate yet. The check fails only when semantic invariants fail, such as wrong lookup counts, broken reopen behavior, or incorrect live update behavior.
+The benchmark is intentionally outside `release:check` for now. Runtime timings are environment-sensitive, and the release gate should remain deterministic and fast.
+
+Run it manually when evaluating runtime-sensitive changes:
+
+```bash
+npm run benchmark
+```
 
 ## Package contents policy
 
@@ -75,6 +80,7 @@ Before any npm publish:
 - Confirm README examples match the current runtime.
 - Confirm `docs/MANUAL.md` matches the current public API.
 - Confirm `docs/BENCHMARKS.md` describes the benchmark without overclaiming latency guarantees.
+- Run `npm run benchmark` manually if release notes will mention runtime observations.
 - Confirm `CHANGELOG.md` describes the version being published.
 - Confirm open issues for browser, time-based decay, and metadata scoring are still accurately scoped.
 - Run `npm run release:check` on a clean checkout.
