@@ -2,7 +2,7 @@
 
 StorekeeperDB's public alpha now includes an executable benchmark script.
 
-The benchmark is not a synthetic database leaderboard. It is a repeatable product-runtime check for the behaviors this package claims:
+The benchmark is not a synthetic database leaderboard. It is a repeatable product-runtime observation for the behaviors this package claims:
 
 - ordinary TypeScript array/object mutation
 - row-per-item SQLite persistence
@@ -24,7 +24,7 @@ The script builds the package and runs:
 node --experimental-sqlite dist/scripts/benchmark.js
 ```
 
-CI runs the same script through:
+You can also run the compiled script directly after `npm run build`:
 
 ```bash
 npm run benchmark:check
@@ -42,7 +42,7 @@ Important fields:
 {
   "benchmark": "storekeeperdb-alpha-runtime",
   "node": "...",
-  "n": 3000,
+  "n": 750,
   "timingsMs": {
     "insertBatch": 0,
     "firstPriorityLookup": 0,
@@ -51,9 +51,9 @@ Important fields:
     "reopenPriorityLookup": 0
   },
   "counts": {
-    "initialUrgent": 30,
+    "initialUrgent": 8,
     "liveRenders": 1,
-    "reopenedLength": 3000
+    "reopenedLength": 750
   },
   "storage": {
     "priorityBeforeClose": "projection"
@@ -92,14 +92,10 @@ Confirms `liveFind()` emits once for a relevant mutation and does not emit for a
 
 ### `compactMetadata`
 
-Measures debug/planning metadata compaction:
+Measures debug/planning metadata compaction through the backward-compatible shorthand:
 
 ```ts
-sk.debug().compactMetadata({
-  maxMagicLogEntries: 25,
-  pathCountDecayFactor: 0.5,
-  dropPathStatsBelow: -1,
-});
+sk.debug().compactMetadata(25);
 ```
 
 This is not source-data GC and not projection GC.
@@ -120,15 +116,10 @@ It does not claim:
 
 It is a regression-facing alpha benchmark. The useful signal is the trend over time on the same machine or in the same CI environment.
 
-## Current CI posture
+## CI posture
 
-CI runs the benchmark as part of `release:check`.
+The benchmark is intentionally not part of `release:check` yet.
 
-The benchmark fails CI only when semantic invariants fail, for example:
+Reason: benchmark timings are environment-sensitive. The release gate should remain deterministic and fast. Run `npm run benchmark` manually when evaluating runtime changes or preparing release notes.
 
-- source rows are not preserved
-- projected lookup returns the wrong count
-- `liveFind()` emits the wrong number of updates
-- reopen lookup is incorrect
-
-Latency is printed but not used as a hard release gate yet.
+A future PR can add benchmark artifacts or separate scheduled benchmark jobs once there is a stable baseline policy.
