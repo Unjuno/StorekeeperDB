@@ -22,9 +22,10 @@
     "demo:check": "node --experimental-sqlite dist/scripts/demo.js",
     "benchmark": "npm run build && node --experimental-sqlite dist/scripts/benchmark.js",
     "benchmark:check": "node --experimental-sqlite dist/scripts/benchmark.js",
+    "consumer:smoke": "node --experimental-sqlite scripts/consumer_smoke.mjs",
     "check:exports": "node dist/scripts/release_check.js",
     "pack:dry": "npm pack --dry-run",
-    "release:check": "npm run build && npm test && npm run gate && npm run demo:check && npm run check:exports && npm run pack:dry"
+    "release:check": "npm run build && npm test && npm run gate && npm run demo:check && npm run check:exports && npm run pack:dry && npm run consumer:smoke"
   },
   "engines": {
     "node": ">=22.5"

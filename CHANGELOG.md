@@ -23,6 +23,7 @@ Initial public alpha baseline plus first hardening passes.
 - Public alpha manual in `docs/MANUAL.md`.
 - Benchmark documentation in `docs/BENCHMARKS.md`.
 - Executable benchmark through `npm run benchmark`.
+- Consumer install smoke test through `npm run consumer:smoke`.
 - Alpha release decision record in `docs/ALPHA_RELEASE_DECISION.md`.
 - Draft release notes in `docs/RELEASE_NOTES_0.1.0-alpha.0.md`.
 - Public alpha docs: manual, benchmarks, release decision, release notes, demo, React verification, magic lifecycle, automatic derived decay, metadata compaction, transaction model, browser boundary, audit notes, next-work plan, and todo example.
@@ -51,8 +52,9 @@ Initial public alpha baseline plus first hardening passes.
 - Benchmark script now performs semantic pass/fail checks while keeping latency as observational output.
 - Release checks now require alpha decision and release-note documentation to exist.
 - Release checks now verify key prepublish alpha wording: alpha-only tag, not latest, non-stable API, missing browser adapter, experimental SQLite flag, and observational benchmark posture.
+- Release checks now install the generated local tarball into a temporary consumer project and verify public subpath imports.
 - Magic log actions now include `project_mark_cold` and `project_gc_evict` in addition to `project_create`, `project_touch`, `project_evict`, and `project_rebuild`.
-- CI now runs `npm run release:check`, including export artifact checks, React verification, the executable demo, lifecycle/decay/metadata tests, prepublish wording inspection, and `npm pack --dry-run`.
+- CI now runs `npm run release:check`, including export artifact checks, React verification, the executable demo, lifecycle/decay/metadata tests, prepublish wording inspection, package dry-run, and consumer install smoke testing.
 
 ### Boundaries
 
@@ -63,6 +65,7 @@ Initial public alpha baseline plus first hardening passes.
 - Benchmark timings are observational and not hard release thresholds.
 - Benchmark execution is manual for now and intentionally outside `release:check`.
 - Alpha publishing remains manual and should use the `alpha` npm dist-tag only.
+- Consumer smoke verifies local tarball install behavior, not npm registry behavior.
 - Full v22 metadata scoring policy is not re-imported yet.
 - API is not frozen.
 - Existing item and nested proxies captured before a failed batch are intentionally stale after rollback; re-read from the state list.
