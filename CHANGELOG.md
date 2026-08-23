@@ -20,7 +20,10 @@ Initial public alpha baseline plus first hardening passes.
 - Nested object and array mutation persistence.
 - Loaded-memory rollback for failed outer `batch()` calls.
 - Prepared statement cache for repeated SQLite operations.
-- Public alpha docs: demo, React verification, magic lifecycle, automatic derived decay, metadata compaction, transaction model, browser boundary, audit notes, next-work plan, and todo example.
+- Public alpha manual in `docs/MANUAL.md`.
+- Benchmark documentation in `docs/BENCHMARKS.md`.
+- Executable benchmark through `npm run benchmark`.
+- Public alpha docs: manual, benchmarks, demo, React verification, magic lifecycle, automatic derived decay, metadata compaction, transaction model, browser boundary, audit notes, next-work plan, and todo example.
 - Runtime hardening notes in `docs/RUNTIME_HARDENING.md`.
 - Magic lifecycle notes in `docs/MAGIC_LIFECYCLE.md`.
 - Automatic derived decay notes in `docs/DECAY.md`.
@@ -43,6 +46,7 @@ Initial public alpha baseline plus first hardening passes.
 - Automatic derived GC protects the path used by the current `find()` call from the same collection pass.
 - `debug().compactMetadata()` now trims magic logs, decays observation counters, and can delete low-value non-projection path observations.
 - Metadata compaction preserves source rows, projection cells, and projection-backed path observations.
+- Benchmark script now performs semantic pass/fail checks while keeping latency as observational output.
 - Magic log actions now include `project_mark_cold` and `project_gc_evict` in addition to `project_create`, `project_touch`, `project_evict`, and `project_rebuild`.
 - CI now runs `npm run release:check`, including export artifact checks, React verification, the executable demo, lifecycle/decay/metadata tests, and `npm pack --dry-run`.
 
@@ -52,6 +56,8 @@ Initial public alpha baseline plus first hardening passes.
 - Full browser adapter is not implemented.
 - Browser-style async storage is explicitly modeled as write-behind; mutation return means memory changed, while `flush()` is the durability barrier.
 - Automatic derived decay is opt-in and currently lookup-count-based, not wall-clock-time-based.
+- Benchmark timings are observational and not hard release thresholds.
+- Benchmark execution is manual for now and intentionally outside `release:check`.
 - Full v22 metadata scoring policy is not re-imported yet.
 - API is not frozen.
 - Existing item and nested proxies captured before a failed batch are intentionally stale after rollback; re-read from the state list.
