@@ -92,22 +92,33 @@ Delivered across multiple PRs:
 
 See [Magic re-import status](./MAGIC_REIMPORT_STATUS.md).
 
+### 8. Manual and benchmark layer
+
+Status: merged.
+
+Delivered:
+
+- Public alpha manual.
+- Executable benchmark script.
+- Benchmark documentation.
+- Benchmark timings scoped as observational, not a hard release gate.
+
 ## Active work
 
-### 8. Alpha release decision
+### 9. Alpha release decision
 
-Status: next.
+Status: in progress.
 
 Scope:
 
-- Decide whether `0.1.0-alpha.0` is ready for an npm publish dry-run handoff.
-- Re-run release checklist after the lifecycle re-import closure PR.
-- Confirm README matches the implemented alpha exactly.
-- Keep publishing manual.
+- Record whether `0.1.0-alpha.0` is acceptable as a public alpha candidate.
+- Add release notes suitable for a GitHub Release body.
+- Keep npm publishing manual and alpha-tagged.
+- Make `release:check` verify the decision and release notes docs exist.
 
 ## Open next work
 
-### 9. Time-based lifecycle decay — #16
+### 10. Time-based lifecycle decay — #16
 
 Scope:
 
@@ -115,19 +126,29 @@ Scope:
 - Add optional periodic derived GC independent of lookup count.
 - Keep background behavior explicit; do not introduce hidden async work.
 
-### 10. Metadata scoring policy — #17
+### 11. Metadata scoring policy — #17
 
 Scope:
 
 - Reintroduce fuller v22 metadata scoring policy only after the compactMetadata boundary is stable.
 - Keep source state and required projection state outside metadata scoring deletion.
 
+### 12. Post-alpha publication follow-up
+
+Scope:
+
+- Verify published package install behavior from a clean consumer project.
+- Confirm GitHub release notes match the published tarball.
+- Track early user-facing friction in issues.
+- Decide when to move from alpha candidate to broader alpha use.
+
 ## Release posture
 
-Keep `0.1.0-alpha.0` until:
+`0.1.0-alpha.0` can be treated as a public alpha candidate only when:
 
 - CI passes consistently.
 - README matches actual public implementation.
 - Browser gaps are clearly documented.
 - The transaction model is either stable or explicitly scoped as alpha behavior.
 - `npm run release:check` passes on a clean checkout.
+- Alpha release decision notes are accepted by a maintainer.
