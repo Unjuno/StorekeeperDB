@@ -11,6 +11,7 @@ StorekeeperDB is currently an alpha package. Do not publish a package only becau
 - Browser runtime: not implemented
 - React runtime verification: covered by the test suite
 - Benchmark posture: observational timings, not a hard release gate
+- Consumer install posture: simulated through local `npm pack` tarball install
 - Alpha publish posture: manual only, `npm publish --tag alpha`, never `latest`
 
 ## Required checks before publishing
@@ -31,6 +32,34 @@ This performs:
 6. Public documentation file check.
 7. Prepublish wording inspection for the alpha boundary.
 8. `npm pack --dry-run`.
+9. Consumer install smoke test from a generated local tarball.
+
+## Consumer install smoke test
+
+`release:check` runs:
+
+```bash
+npm run consumer:smoke
+```
+
+This script creates a real local package tarball with `npm pack`, installs that tarball into a temporary consumer project, and imports the public subpaths:
+
+```text
+@storekeeper/db
+@storekeeper/db/core
+@storekeeper/db/node
+@storekeeper/db/react
+@storekeeper/db/experimental
+```
+
+It also checks a minimal runtime flow:
+
+- create source state
+- run a supported `find()`
+- read a `liveFind()` snapshot through the React adapter shape
+- run the experimental async write-behind `flush()` boundary
+
+This does not publish to npm and does not verify registry behavior. It verifies that the packed package is consumable from a clean local project.
 
 ## Prepublish wording inspection
 
@@ -109,6 +138,7 @@ Before any npm publish:
 - Confirm `docs/ALPHA_RELEASE_DECISION.md` still reflects the accepted alpha boundary.
 - Confirm `docs/RELEASE_NOTES_0.1.0-alpha.0.md` is suitable for the GitHub release body.
 - Run `npm run benchmark` manually if release notes will mention runtime observations.
+- Confirm `npm run consumer:smoke` passes if package boundary changes were made.
 - Confirm `CHANGELOG.md` describes the version being published.
 - Confirm open issues for browser, time-based decay, and metadata scoring are still accurately scoped.
 - Run `npm run release:check` on a clean checkout.
