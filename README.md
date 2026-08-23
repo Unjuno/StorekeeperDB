@@ -56,10 +56,16 @@ The benchmark prints JSON timings for insert, first projected lookup, repeated l
 
 For the current public alpha API and boundaries, see [Manual](./docs/MANUAL.md).
 
+## Alpha release posture
+
+`0.1.0-alpha.0` is a public alpha candidate, not a stable API release. Publishing remains manual and should use the `alpha` npm dist-tag only. See [Alpha release decision](./docs/ALPHA_RELEASE_DECISION.md) and [0.1.0-alpha.0 release notes](./docs/RELEASE_NOTES_0.1.0-alpha.0.md).
+
 ## Public alpha docs
 
 - [Manual](./docs/MANUAL.md)
 - [Benchmarks](./docs/BENCHMARKS.md)
+- [Alpha release decision](./docs/ALPHA_RELEASE_DECISION.md)
+- [0.1.0-alpha.0 release notes](./docs/RELEASE_NOTES_0.1.0-alpha.0.md)
 - [Demo](./docs/DEMO.md)
 - [React verification](./docs/REACT_VERIFICATION.md)
 - [Magic lifecycle](./docs/MAGIC_LIFECYCLE.md)
@@ -199,6 +205,7 @@ This public alpha baseline includes:
 - opt-in automatic derived projection decay
 - metadata compaction for magic logs and non-projection path observations
 - executable benchmark and public manual
+- alpha release decision notes
 - `signal()` / `liveFind()` for local realtime prototype flows
 - React `useSyncExternalStore` adapter verification
 - experimental async write-behind boundary model
