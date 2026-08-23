@@ -23,7 +23,9 @@ Initial public alpha baseline plus first hardening passes.
 - Public alpha manual in `docs/MANUAL.md`.
 - Benchmark documentation in `docs/BENCHMARKS.md`.
 - Executable benchmark through `npm run benchmark`.
-- Public alpha docs: manual, benchmarks, demo, React verification, magic lifecycle, automatic derived decay, metadata compaction, transaction model, browser boundary, audit notes, next-work plan, and todo example.
+- Alpha release decision record in `docs/ALPHA_RELEASE_DECISION.md`.
+- Draft release notes in `docs/RELEASE_NOTES_0.1.0-alpha.0.md`.
+- Public alpha docs: manual, benchmarks, release decision, release notes, demo, React verification, magic lifecycle, automatic derived decay, metadata compaction, transaction model, browser boundary, audit notes, next-work plan, and todo example.
 - Runtime hardening notes in `docs/RUNTIME_HARDENING.md`.
 - Magic lifecycle notes in `docs/MAGIC_LIFECYCLE.md`.
 - Automatic derived decay notes in `docs/DECAY.md`.
@@ -47,6 +49,7 @@ Initial public alpha baseline plus first hardening passes.
 - `debug().compactMetadata()` now trims magic logs, decays observation counters, and can delete low-value non-projection path observations.
 - Metadata compaction preserves source rows, projection cells, and projection-backed path observations.
 - Benchmark script now performs semantic pass/fail checks while keeping latency as observational output.
+- Release checks now require alpha decision and release-note documentation to exist.
 - Magic log actions now include `project_mark_cold` and `project_gc_evict` in addition to `project_create`, `project_touch`, `project_evict`, and `project_rebuild`.
 - CI now runs `npm run release:check`, including export artifact checks, React verification, the executable demo, lifecycle/decay/metadata tests, and `npm pack --dry-run`.
 
@@ -58,6 +61,7 @@ Initial public alpha baseline plus first hardening passes.
 - Automatic derived decay is opt-in and currently lookup-count-based, not wall-clock-time-based.
 - Benchmark timings are observational and not hard release thresholds.
 - Benchmark execution is manual for now and intentionally outside `release:check`.
+- Alpha publishing remains manual and should use the `alpha` npm dist-tag only.
 - Full v22 metadata scoring policy is not re-imported yet.
 - API is not frozen.
 - Existing item and nested proxies captured before a failed batch are intentionally stale after rollback; re-read from the state list.
