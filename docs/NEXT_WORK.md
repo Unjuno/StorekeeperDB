@@ -114,22 +114,34 @@ Delivered:
 - Manual publish boundary: alpha dist-tag only.
 - Release check validates decision and release notes documents exist.
 
+### 10. Final prepublish inspection
+
+Status: merged.
+
+Delivered:
+
+- Release checks verify key public alpha wording, not only file existence.
+- `release:check` rejects accidental removal of alpha disclaimers.
+- Benchmark timing remains outside the release gate.
+- npm publishing remains manual.
+
 ## Active work
 
-### 10. Final prepublish inspection
+### 11. Consumer install simulation
 
 Status: in progress.
 
 Scope:
 
-- Make release checks verify key public alpha wording, not only file existence.
-- Ensure `release:check` rejects accidental removal of alpha disclaimers.
-- Keep benchmark timing outside the release gate.
-- Keep npm publishing manual.
+- Build a local package tarball with `npm pack`.
+- Install the tarball into a temporary clean consumer project.
+- Import all public package subpaths from the installed package.
+- Run a minimal source state, `find()`, `liveFind()`, React-adapter-shape, and experimental async boundary smoke flow.
+- Keep this inside `release:check` because it verifies package consumability rather than timing.
 
 ## Open next work
 
-### 11. Time-based lifecycle decay — #16
+### 12. Time-based lifecycle decay — #16
 
 Scope:
 
@@ -137,14 +149,14 @@ Scope:
 - Add optional periodic derived GC independent of lookup count.
 - Keep background behavior explicit; do not introduce hidden async work.
 
-### 12. Metadata scoring policy — #17
+### 13. Metadata scoring policy — #17
 
 Scope:
 
 - Reintroduce fuller v22 metadata scoring policy only after the compactMetadata boundary is stable.
 - Keep source state and required projection state outside metadata scoring deletion.
 
-### 13. Post-alpha publication follow-up
+### 14. Post-alpha publication follow-up
 
 Scope:
 
