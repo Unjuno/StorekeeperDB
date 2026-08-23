@@ -69,6 +69,7 @@ const publicDocs = [
   "docs/REACT_VERIFICATION.md",
   "docs/MAGIC_LIFECYCLE.md",
   "docs/DECAY.md",
+  "docs/METADATA_COMPACTION.md",
   "docs/RELEASE.md",
   "docs/TRANSACTION_MODEL.md",
   "docs/BROWSER_BOUNDARY.md",
