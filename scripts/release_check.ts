@@ -67,6 +67,8 @@ const publicDocs = [
   "CHANGELOG.md",
   "docs/MANUAL.md",
   "docs/BENCHMARKS.md",
+  "docs/ALPHA_RELEASE_DECISION.md",
+  "docs/RELEASE_NOTES_0.1.0-alpha.0.md",
   "docs/DEMO.md",
   "docs/REACT_VERIFICATION.md",
   "docs/MAGIC_LIFECYCLE.md",
