@@ -75,9 +75,9 @@ try {
       `  const experimental = new ExperimentalAsyncWriteBehindRuntime(storage);\n` +
       `  const asyncTasks = await experimental.state("tasks", []);\n` +
       `  asyncTasks.push({ title: "Flush", done: false });\n` +
-      `  const beforeFlush = experimental.status().state;\n` +
+      `  const beforeFlush = experimental.status().durability;\n` +
       `  await experimental.flush();\n` +
-      `  const afterFlush = experimental.status().state;\n` +
+      `  const afterFlush = experimental.status().durability;\n` +
       `\n` +
       `  pass = urgent.length === 1 && snapshot.value.length === 1 && beforeFlush === "dirty" && afterFlush === "clean";\n` +
       `  sk.close();\n` +
