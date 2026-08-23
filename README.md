@@ -42,8 +42,24 @@ npm run demo
 
 The demo shows `json_only -> projection -> debug eviction -> rebuild`, live lookup updates, and source-state preservation. See [Demo](./docs/DEMO.md).
 
+## Benchmark
+
+Run the executable benchmark:
+
+```bash
+npm run benchmark
+```
+
+The benchmark prints JSON timings for insert, first projected lookup, repeated lookup, live update behavior, metadata compaction, and reopen lookup. CI runs `benchmark:check` as a semantic regression check, not as a hard latency gate. See [Benchmarks](./docs/BENCHMARKS.md).
+
+## Manual
+
+For the current public alpha API and boundaries, see [Manual](./docs/MANUAL.md).
+
 ## Public alpha docs
 
+- [Manual](./docs/MANUAL.md)
+- [Benchmarks](./docs/BENCHMARKS.md)
 - [Demo](./docs/DEMO.md)
 - [React verification](./docs/REACT_VERIFICATION.md)
 - [Magic lifecycle](./docs/MAGIC_LIFECYCLE.md)
@@ -182,6 +198,7 @@ This public alpha baseline includes:
 - derived projection lifecycle debug APIs
 - opt-in automatic derived projection decay
 - metadata compaction for magic logs and non-projection path observations
+- executable benchmark and public manual
 - `signal()` / `liveFind()` for local realtime prototype flows
 - React `useSyncExternalStore` adapter verification
 - experimental async write-behind boundary model
@@ -205,6 +222,7 @@ npm run build
 npm test
 npm run gate
 npm run demo
+npm run benchmark
 npm run release:check
 ```
 
