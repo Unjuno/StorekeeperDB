@@ -70,46 +70,44 @@ Delivered:
 - `flush()` defined as the durability barrier.
 - Dirty / clean / failed durability states covered by tests.
 
-### 7. Full magic lifecycle re-import — #6, first pass
+### 7. Full magic lifecycle re-import — #6
 
-Status: merged.
+Status: completed for public alpha.
 
-Delivered:
+Delivered across multiple PRs:
 
 - Manual derived projection lifecycle.
 - `debug().markCold()`.
 - `debug().collectGarbage()`.
 - Source rows remain after projection GC.
 - Budget-based projection eviction and rebuild.
-
-### 8. Automatic lifecycle decay — #6, second pass
-
-Status: merged.
-
-Delivered:
-
 - Opt-in `decay` option.
 - Lookup-count-triggered derived GC.
 - Automatic `maxDerivations` enforcement.
 - Current lookup path protection during the same GC pass.
-- Conservative alpha defaults.
+- `debug().compactMetadata()` for magic logs and path observations.
+- Path observation count decay.
+- Low-value non-projection observation deletion.
+- Source rows, projection cells, and projection-backed observations preserved by metadata compaction.
+
+See [Magic re-import status](./MAGIC_REIMPORT_STATUS.md).
 
 ## Active work
 
-### 9. Metadata compaction re-import — #6, third pass
+### 8. Alpha release decision
 
-Status: in progress.
+Status: next.
 
-Current pass:
+Scope:
 
-- Expand `compactMetadata()` beyond magic-log count trimming.
-- Add path observation count decay.
-- Drop low-value non-projection observations.
-- Preserve source rows, projection cells, and projection-backed observations.
+- Decide whether `0.1.0-alpha.0` is ready for an npm publish dry-run handoff.
+- Re-run release checklist after the lifecycle re-import closure PR.
+- Confirm README matches the implemented alpha exactly.
+- Keep publishing manual.
 
 ## Open next work
 
-### 10. Time-based lifecycle decay
+### 9. Time-based lifecycle decay — #16
 
 Scope:
 
@@ -117,7 +115,7 @@ Scope:
 - Add optional periodic derived GC independent of lookup count.
 - Keep background behavior explicit; do not introduce hidden async work.
 
-### 11. Metadata scoring policy
+### 10. Metadata scoring policy — #17
 
 Scope:
 
