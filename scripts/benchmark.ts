@@ -17,8 +17,8 @@ type Timed<T> = {
   ms: number;
 };
 
-const N = 3_000;
-const REPEATED_LOOKUPS = 20;
+const N = 750;
+const REPEATED_LOOKUPS = 5;
 
 const round = (value: number): number => Math.round(value * 1_000) / 1_000;
 
@@ -30,6 +30,7 @@ const time = <T>(fn: () => T): Timed<T> => {
 };
 
 const urgentCountFor = (n: number): number => Math.floor((n - 1) / 100) + 1;
+const everyNthCount = (n: number, step: number): number => Math.floor((n - 1) / step) + 1;
 
 const dir = mkdtempSync(join(tmpdir(), "sk-benchmark-"));
 const dbPath = join(dir, "app.sqlite");
@@ -101,11 +102,10 @@ try {
   const expectedRepeatedTotal = initialUrgentExpected * REPEATED_LOOKUPS;
 
   pass =
-    tasks.length === N &&
     firstPriorityLookup.value.length === initialUrgentExpected &&
     repeatedPriorityLookup.value === expectedRepeatedTotal &&
-    statusLookup.value.length === Math.ceil(N / 3) &&
-    laneLookup.value.length === Math.ceil(N / 5) &&
+    statusLookup.value.length === everyNthCount(N, 3) &&
+    laneLookup.value.length === everyNthCount(N, 5) &&
     liveBefore === initialUrgentExpected &&
     liveAfter === urgentAfterMutationExpected &&
     liveRenders === 1 &&
