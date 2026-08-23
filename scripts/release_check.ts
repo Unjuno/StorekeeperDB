@@ -55,14 +55,17 @@ const requireExport = (pkg: PackageJson, exportName: string): CompletePackageExp
 };
 
 const pkg = JSON.parse(readFileSync("package.json", "utf8")) as PackageJson;
+const releaseCheck = pkg.scripts?.["release:check"] ?? "";
 
 if (pkg.name !== "@storekeeper/db") fail(`unexpected package name: ${pkg.name ?? "<missing>"}`);
 if (pkg.version !== "0.1.0-alpha.0") fail(`unexpected alpha version: ${pkg.version ?? "<missing>"}`);
 if (pkg.private !== false) fail("package.json private must be false for public alpha dry-run checks");
-if (!pkg.scripts?.["release:check"]?.includes("pack:dry")) fail("release:check must include pack:dry");
-if (pkg.scripts?.["release:check"]?.includes("benchmark:check")) {
+if (!releaseCheck.includes("pack:dry")) fail("release:check must include pack:dry");
+if (!releaseCheck.includes("consumer:smoke")) fail("release:check must include consumer:smoke");
+if (releaseCheck.includes("benchmark:check")) {
   fail("release:check must not include benchmark:check while benchmark timing is observational");
 }
+if (typeof pkg.scripts?.["consumer:smoke"] !== "string") fail("missing consumer:smoke script");
 
 const expectedFileEntries = ["dist", "README.md", "LICENSE", "CHANGELOG.md", "docs"];
 for (const entry of expectedFileEntries) {
@@ -123,5 +126,6 @@ console.log(JSON.stringify({
   checkedExports: expectedExports.length,
   checkedDocs: publicDocs.length,
   checkedPublicText: requiredPublicText.length,
+  hasConsumerSmoke: true,
   pass: true,
 }, null, 2));
