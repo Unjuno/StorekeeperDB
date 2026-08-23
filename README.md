@@ -50,7 +50,7 @@ Run the executable benchmark:
 npm run benchmark
 ```
 
-The benchmark prints JSON timings for insert, first projected lookup, repeated lookup, live update behavior, metadata compaction, and reopen lookup. CI runs `benchmark:check` as a semantic regression check, not as a hard latency gate. See [Benchmarks](./docs/BENCHMARKS.md).
+The benchmark prints JSON timings for insert, first projected lookup, repeated lookup, live update behavior, metadata compaction, and reopen lookup. It is an observation tool, not a hard release latency gate. See [Benchmarks](./docs/BENCHMARKS.md).
 
 ## Manual
 
