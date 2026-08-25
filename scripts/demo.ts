@@ -24,11 +24,11 @@ try {
   const tasks = taskSignal.value;
 
   sk.batch(() => {
-    for (let i = 0; i < 250; i++) {
+    for (let i = 0; i < 50; i++) {
       tasks.push({
         title: `Task ${i}`,
         done: false,
-        priority: i % 25 === 0 ? "urgent" : "low",
+        priority: i % 5 === 0 ? "urgent" : "low",
         tags: [],
         meta: { score: i },
       });
@@ -91,14 +91,14 @@ try {
   const recentMagic = sk.debug().recentMagic(8).map((row) => row.action);
 
   const pass =
-    reopenedCount === 251 &&
+    reopenedCount === 51 &&
     urgentBefore.length === 10 &&
     liveBefore === 10 &&
     liveAfter === 11 &&
     liveRenders === 1 &&
     urgentAfterEvict.length === 11 &&
     sk.explain("tasks", "priority").storage === "projection" &&
-    sk.status().items === 251 &&
+    sk.status().items === 51 &&
     recentMagic.includes("project_evict");
 
   logStep("6_summary", {
