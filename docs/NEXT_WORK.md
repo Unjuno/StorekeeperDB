@@ -125,23 +125,33 @@ Delivered:
 - Benchmark timing remains outside the release gate.
 - npm publishing remains manual.
 
+### 11. Consumer install simulation
+
+Status: merged.
+
+Delivered:
+
+- Local package tarball install into a temporary clean consumer project.
+- Public package subpath import verification.
+- Minimal source state, `find()`, `liveFind()`, React-adapter-shape, and experimental async boundary smoke flow.
+- Included in `release:check` because it verifies package consumability rather than timing.
+
 ## Active work
 
-### 11. Consumer install simulation
+### 12. Release-check runtime slimming
 
 Status: in progress.
 
 Scope:
 
-- Build a local package tarball with `npm pack`.
-- Install the tarball into a temporary clean consumer project.
-- Import all public package subpaths from the installed package.
-- Run a minimal source state, `find()`, `liveFind()`, React-adapter-shape, and experimental async boundary smoke flow.
-- Keep this inside `release:check` because it verifies package consumability rather than timing.
+- Reduce oversized lifecycle / decay / gate / demo fixtures.
+- Preserve projection creation, GC, eviction, rebuild, and source-retention semantics.
+- Keep benchmark sizing unchanged because benchmark output is observational and manual.
+- Use CI runtime as the validation signal.
 
 ## Open next work
 
-### 12. Time-based lifecycle decay — #16
+### 13. Time-based lifecycle decay — #16
 
 Scope:
 
@@ -149,14 +159,14 @@ Scope:
 - Add optional periodic derived GC independent of lookup count.
 - Keep background behavior explicit; do not introduce hidden async work.
 
-### 13. Metadata scoring policy — #17
+### 14. Metadata scoring policy — #17
 
 Scope:
 
 - Reintroduce fuller v22 metadata scoring policy only after the compactMetadata boundary is stable.
 - Keep source state and required projection state outside metadata scoring deletion.
 
-### 14. Post-alpha publication follow-up
+### 15. Post-alpha publication follow-up
 
 Scope:
 
