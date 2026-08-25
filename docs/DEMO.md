@@ -28,7 +28,7 @@ The exact timings are not part of the contract. The important shape is:
 ```json
 {
   "step": "1_source_state_created",
-  "itemCount": 250,
+  "itemCount": 50,
   "priorityStorage": "json_only"
 }
 ```
@@ -45,7 +45,7 @@ The exact timings are not part of the contract. The important shape is:
 {
   "step": "4_debug_evict_removed_projection",
   "priorityStorage": "json_only",
-  "sourceItemsStillThere": 251
+  "sourceItemsStillThere": 51
 }
 ```
 
@@ -54,7 +54,7 @@ The exact timings are not part of the contract. The important shape is:
   "step": "5_find_rebuilt_projection",
   "urgentCount": 11,
   "priorityStorage": "projection",
-  "sourceItemsStillThere": 251
+  "sourceItemsStillThere": 51
 }
 ```
 
