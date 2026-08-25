@@ -53,6 +53,7 @@ Initial public alpha baseline plus first hardening passes.
 - Release checks now require alpha decision and release-note documentation to exist.
 - Release checks now verify key prepublish alpha wording: alpha-only tag, not latest, non-stable API, missing browser adapter, experimental SQLite flag, and observational benchmark posture.
 - Release checks now install the generated local tarball into a temporary consumer project and verify public subpath imports.
+- Release-check fixtures for lifecycle, decay, gate, and demo paths are smaller while preserving projection creation, GC, eviction, rebuild, and source-retention semantics.
 - Magic log actions now include `project_mark_cold` and `project_gc_evict` in addition to `project_create`, `project_touch`, `project_evict`, and `project_rebuild`.
 - CI now runs `npm run release:check`, including export artifact checks, React verification, the executable demo, lifecycle/decay/metadata tests, prepublish wording inspection, package dry-run, and consumer install smoke testing.
 
