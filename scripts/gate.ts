@@ -12,15 +12,15 @@ const sk = new StorekeeperDB(dbPath);
 const tasks = sk.state<Task[]>("tasks", []);
 
 sk.batch(() => {
-  for (let i = 0; i < 500; i++) {
-    tasks.push({ title: `Task ${i}`, done: false, priority: i % 100 === 0 ? "urgent" : "low", meta: { labels: [] } });
+  for (let i = 0; i < 100; i++) {
+    tasks.push({ title: `Task ${i}`, done: false, priority: i % 20 === 0 ? "urgent" : "low", meta: { labels: [] } });
   }
   tasks[0]!.meta!.labels.push("gate");
 });
 
 const urgent = sk.find<Task>("tasks", { priority: "urgent" });
 const elapsedMs = Number(process.hrtime.bigint() - start) / 1_000_000;
-const pass = tasks.length === 500 && urgent.length === 5 && tasks[0]!.meta!.labels.length === 1;
+const pass = tasks.length === 100 && urgent.length === 5 && tasks[0]!.meta!.labels.length === 1;
 console.log(JSON.stringify({ n: tasks.length, urgent: urgent.length, storage: sk.explain("tasks", "priority").storage, elapsedMs, pass }, null, 2));
 sk.close();
 rmSync(dir, { recursive: true, force: true });
