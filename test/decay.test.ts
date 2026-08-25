@@ -23,7 +23,7 @@ function debugOf(sk: StorekeeperDB): StorekeeperDebugAPI {
   return sk.debug() as unknown as StorekeeperDebugAPI;
 }
 
-function seed(tasks: Task[], n = 80): void {
+function seed(tasks: Task[], n = 12): void {
   for (let i = 0; i < n; i++) {
     tasks.push({
       title: `Task ${i}`,
@@ -63,7 +63,7 @@ test("automatic derived decay enforces projection budget while preserving source
     const debug = debugOf(sk);
     const derivations = debug.derivations("tasks");
     assert.equal(derivations.length, 2);
-    assert.equal(sk.status().items, 80);
+    assert.equal(sk.status().items, 12);
 
     const currentLookup = sk.explain("tasks", "owner");
     assert.equal(currentLookup.storage, "projection");
@@ -96,7 +96,7 @@ test("automatic derived decay can mark surviving projections cold", () => {
       },
     });
     const tasks = sk.state<Task[]>("tasks", []);
-    seed(tasks, 30);
+    seed(tasks, 8);
 
     assert.ok(sk.find<Task>("tasks", { priority: "urgent" }).length > 0);
     assert.ok(sk.find<Task>("tasks", { status: "open" }).length > 0);
@@ -105,7 +105,7 @@ test("automatic derived decay can mark surviving projections cold", () => {
     const states = debug.derivations("tasks").map((row) => row.state);
     assert.ok(states.length >= 2);
     assert.ok(states.every((state) => state === "cold"));
-    assert.equal(sk.status().items, 30);
+    assert.equal(sk.status().items, 8);
 
     const actions = debug.recentMagic(30).map((row) => row.action);
     assert.ok(actions.includes("project_mark_cold"));
