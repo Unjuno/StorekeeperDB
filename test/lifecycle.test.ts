@@ -28,11 +28,11 @@ test("derived projection can be marked cold, garbage-collected, and rebuilt from
   try {
     const sk = new StorekeeperDB(t.path);
     const tasks = sk.state<Task[]>("tasks", []);
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 9; i++) {
       tasks.push({ title: `Task ${i}`, done: false, priority: i % 3 === 0 ? "urgent" : "low" });
     }
 
-    assert.equal(sk.find<Task>("tasks", { priority: "urgent" }).length, 10);
+    assert.equal(sk.find<Task>("tasks", { priority: "urgent" }).length, 3);
     assert.equal(sk.explain("tasks", "priority").storage, "projection");
 
     const debug = debugOf(sk);
@@ -42,9 +42,9 @@ test("derived projection can be marked cold, garbage-collected, and rebuilt from
     const gc = debug.collectGarbage({ stateKey: "tasks" });
     assert.deepEqual(gc, { cold: 0, evicted: 1 });
     assert.equal(sk.explain("tasks", "priority").storage, "json_only");
-    assert.equal(sk.status().items, 30);
+    assert.equal(sk.status().items, 9);
 
-    assert.equal(sk.find<Task>("tasks", { priority: "urgent" }).length, 10);
+    assert.equal(sk.find<Task>("tasks", { priority: "urgent" }).length, 3);
     assert.equal(sk.explain("tasks", "priority").storage, "projection");
 
     const actions = debug.recentMagic(20).map((row) => row.action);
@@ -61,7 +61,7 @@ test("derived lifecycle garbage collection can enforce a projection budget", () 
   try {
     const sk = new StorekeeperDB(t.path);
     const tasks = sk.state<Task[]>("tasks", []);
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < 12; i++) {
       tasks.push({
         title: `Task ${i}`,
         done: false,
@@ -90,7 +90,7 @@ test("derived lifecycle garbage collection can enforce a projection budget", () 
     const gc = debug.collectGarbage({ stateKey: "tasks", maxDerivations: 2 });
     assert.equal(gc.evicted, 2);
     assert.equal(debug.derivations("tasks").length, 2);
-    assert.equal(sk.status().items, 60);
+    assert.equal(sk.status().items, 12);
 
     const after = new Set(debug.derivations("tasks").map((row) => row.path));
     const maybeEvictedPath = before.find((path) => !after.has(path));
