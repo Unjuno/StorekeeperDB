@@ -136,14 +136,15 @@ export class StorekeeperDB {
   }
 
   liveFind<T extends Dict>(key: string, where: Partial<Record<keyof T & string, JsonScalar>>) {
+    const snapshotFind = () => this.find<T>(key, where).map((item) => cloneJson(item));
     let version = 0;
-    let value = this.find<T>(key, where);
+    let value = snapshotFind();
     let snapshot: Snapshot<T[]> = { value, version };
     const listeners = new Set<() => void>();
     let stopUpstream: (() => void) | null = null;
 
     const recompute = () => {
-      const next = this.find<T>(key, where);
+      const next = snapshotFind();
       if (JSON.stringify(next) !== JSON.stringify(value)) {
         value = next;
         version++;
