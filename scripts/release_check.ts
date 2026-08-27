@@ -65,11 +65,15 @@ if (!releaseCheck.includes("consumer:smoke")) fail("release:check must include c
 if (!releaseCheck.includes("experiment:durable-session:check")) {
   fail("release:check must include experiment:durable-session:check");
 }
+if (!releaseCheck.includes("scenario:issue-tracker:check")) {
+  fail("release:check must include scenario:issue-tracker:check");
+}
 if (releaseCheck.includes("benchmark:check")) {
   fail("release:check must not include benchmark:check while benchmark timing is observational");
 }
 if (typeof pkg.scripts?.["consumer:smoke"] !== "string") fail("missing consumer:smoke script");
 if (typeof pkg.scripts?.["experiment:durable-session"] !== "string") fail("missing durable-session experiment script");
+if (typeof pkg.scripts?.["scenario:issue-tracker"] !== "string") fail("missing issue-tracker scenario script");
 
 const expectedFileEntries = ["dist", "README.md", "LICENSE", "CHANGELOG.md", "docs"];
 for (const entry of expectedFileEntries) {
@@ -90,6 +94,7 @@ const publicDocs = [
   "docs/README.md",
   "docs/ARCHITECTURE.md",
   "docs/DURABLE_VARIABLE_EXPERIMENT.md",
+  "docs/ISSUE_TRACKER_EVALUATION.md",
   "docs/MANUAL.md",
   "docs/EVALUATION_LOOP.md",
   "docs/BENCHMARKS.md",
@@ -117,6 +122,8 @@ const requiredPublicText: Array<[string, string]> = [
   ["docs/ARCHITECTURE.md", "durable variable runtime"],
   ["docs/ARCHITECTURE.md", "discoverable durable state"],
   ["docs/DURABLE_VARIABLE_EXPERIMENT.md", "two separate Node processes"],
+  ["docs/ISSUE_TRACKER_EVALUATION.md", "`find()` result mutation semantics"],
+  ["docs/ISSUE_TRACKER_EVALUATION.md", "Do not change runtime behavior in the same PR"],
   ["docs/EVALUATION_LOOP.md", "Simple persistence should feel automatic. Hard persistence problems must remain observable and controllable."],
   ["docs/ALPHA_RELEASE_DECISION.md", "public alpha candidate"],
   ["docs/ALPHA_RELEASE_DECISION.md", "not a stable API release"],
@@ -140,5 +147,6 @@ console.log(JSON.stringify({
   checkedPublicText: requiredPublicText.length,
   hasConsumerSmoke: true,
   hasDurableSessionExperiment: true,
+  hasIssueTrackerScenario: true,
   pass: true,
 }, null, 2));

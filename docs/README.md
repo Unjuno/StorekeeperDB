@@ -8,6 +8,7 @@ StorekeeperDB is a public alpha candidate. The current priority is product refin
 - [Architecture](./ARCHITECTURE.md) — runtime layers, durable-variable model, and architectural boundaries.
 - [Evaluation loop](./EVALUATION_LOOP.md) — how to evaluate and refine the product during alpha.
 - [Next work](./NEXT_WORK.md) — current priorities and deferred research.
+- [Issue tracker evaluation](./ISSUE_TRACKER_EVALUATION.md) — realistic application-shape evolution and query-semantics scenario.
 - [Benchmarks](./BENCHMARKS.md) — reproducible observations; timings are not release guarantees.
 - [Demo](./DEMO.md) — executable runtime walkthrough.
 

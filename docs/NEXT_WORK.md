@@ -21,29 +21,45 @@ See [Alpha evaluation loop](./EVALUATION_LOOP.md) and [Architecture](./ARCHITECT
 
 ## Active priorities
 
-### 1. Realistic application scenario — #24
+### 1. Decide `find()` snapshot vs durable-handle semantics — #29
 
-Status: next application-facing evaluation.
+Status: next product/API decision after #24.
 
-Build one small issue-tracker scenario that exercises StorekeeperDB as an application developer would, rather than as an implementation demo.
+The realistic issue-tracker scenario passed its compatible shape-evolution hypothesis, but confirmed a least-surprise problem:
 
-The scenario should include:
+```text
+state proxy mutation -> durable
+find() result mutation -> detached snapshot only
+```
 
-- state creation and ordinary mutation;
-- nested data;
-- `find()` or `liveFind()` where a scalar lookup is genuinely useful;
-- reopen / persistence verification;
-- at least one application-shape change or unsupported-operation boundary;
-- public package entrypoints only;
-- no internal imports or scenario-specific persistence workaround.
+The next PR must not simply make query results mutable. First compare three designs:
 
-Record all friction before changing the runtime.
+1. keep `find()` as a snapshot API and make that contract explicit/read-only;
+2. rename or supplement the query surface with explicit snapshot semantics;
+3. return durable handles and accept the resulting identity, lifecycle, live-query, rollback, and cache complexity.
 
-### 2. Durable variable / session bootstrap experiment — #26
+Prefer the smallest semantic surface that preserves StorekeeperDB's durable-variable mental model.
+
+### 2. Realistic application scenario — #24
+
+Status: PASS; merge/closure pending for the evaluation PR.
+
+Validated by CI #87 scenario output, CI #89 full release gate, and CI #91 after final result documentation:
+
+- two `IssueV1` rows survived close/reopen;
+- reopening as `IssueV2` required no repository layer, direct SQL, or manual table migration for optional JSON fields;
+- nested `priority`, `labels`, and `comments` persisted after another reopen;
+- scalar lookup created the expected projection;
+- mutation through the state proxy persisted;
+- mutation through a `find()` result was confirmed to be detached.
+
+See [Issue tracker evaluation](./ISSUE_TRACKER_EVALUATION.md).
+
+### 3. Durable variable / session bootstrap experiment — #26
 
 Status: initial cross-process experiment PASS; generalization remains uncertain.
 
-Validated by CI #83 through `npm run release:check`:
+Validated by CI #83 and final CI #85 through `npm run release:check`:
 
 - writer and reader run as separate Node processes;
 - writer persists a `__workspace` manifest plus additional durable states;
@@ -58,21 +74,6 @@ The immediate hypothesis passed for one controlled scenario: durable state plus 
 Do not infer that StorekeeperDB should become an agent-memory or orchestration framework. Do not reserve `__workspace` or add a workspace API after one passing scenario.
 
 Next evidence required: reuse the same bootstrap convention in at least one additional scenario without modifying the core specifically for that scenario.
-
-### 3. Convert findings into small PRs
-
-Status: follows scenario evidence.
-
-For each observed rough edge:
-
-1. classify the finding;
-2. decide whether the smallest fix belongs in runtime, public API, tests, docs, or an application-level convention;
-3. prefer simplification over API growth;
-4. add regression coverage when behavior changes;
-5. run the scenario again;
-6. run `npm run release:check` before merge.
-
-One PR should normally address one observed problem or one tightly related group.
 
 ### 4. Evaluate change amplification
 
@@ -91,9 +92,11 @@ For selected scenario changes, record:
 
 The purpose is not to manufacture a favorable line-count comparison. The purpose is to detect whether StorekeeperDB actually moves persistence concerns out of the early prototype loop or merely hides them until failure.
 
-## Architecture questions opened by #26
+## Confirmed architecture boundaries
 
-The session-bootstrap experiment distinguishes four scopes:
+### Variable lifetime
+
+The durable-session experiment distinguishes four scopes:
 
 ```text
 local value
@@ -102,14 +105,20 @@ durable state
 discoverable durable state
 ```
 
-Current working boundary after the first PASS:
+Current working boundary:
 
 - StorekeeperDB core owns durable local state;
 - a bootstrap manifest can provide discoverability above the core for at least one cross-process scenario;
 - checkpoint policy, agent memory, summarization, trust, context selection, and multi-agent coordination remain outside the core;
 - a first-class workspace/bootstrap API is not justified yet.
 
-The next useful falsification attempt is to apply the same convention in a second scenario and see whether the manifest shape remains stable or starts accumulating scenario-specific policy.
+### Application evolution
+
+The issue-tracker scenario establishes a narrower application result:
+
+- compatible optional JSON-field additions can evolve through ordinary durable proxy mutation without a separate migration layer in this scenario;
+- this does not establish incompatible schema evolution semantics;
+- `find()` is currently a snapshot boundary and must be treated as an explicit product decision rather than an implementation detail.
 
 ## Recently completed baseline
 
@@ -127,9 +136,10 @@ The current main branch already includes:
 - prepublish wording inspection;
 - clean consumer tarball install simulation;
 - slimmed release-check fixtures while preserving semantic coverage;
-- alpha evaluation-loop and documentation organization.
+- alpha evaluation-loop and documentation organization;
+- initial durable-session architecture experiment.
 
-This baseline is sufficient to stop treating missing infrastructure as the default reason to add more infrastructure.
+After the #24 evaluation PR merges, the issue-tracker scenario becomes part of this baseline as well.
 
 ## Deferred research
 
@@ -172,7 +182,7 @@ Publishing is not the current optimization target. If `0.1.0-alpha.0` is publish
 - README matches actual public implementation;
 - browser gaps are clearly documented;
 - transaction behavior is either stable or explicitly scoped as alpha behavior;
-- deterministic architecture experiments included in the release gate pass;
+- deterministic realistic scenarios and architecture experiments included in the release gate pass;
 - `npm run release:check` passes on a clean checkout;
 - alpha release decision notes are accepted by a maintainer.
 

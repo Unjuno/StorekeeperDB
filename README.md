@@ -60,6 +60,16 @@ npm run demo
 
 The demo shows `json_only -> projection -> debug eviction -> rebuild`, live lookup updates, and source-state preservation. See [Demo](./docs/DEMO.md).
 
+## Realistic issue tracker scenario
+
+Run the application-evolution scenario:
+
+```bash
+npm run scenario:issue-tracker
+```
+
+It creates a minimal issue model, closes/reopens the database, evolves the model with optional priority/labels/comments, exercises scalar lookup, and reopens again. The scenario deliberately records rough edges rather than hiding them; in particular it checks the current boundary that `find()` returns detached snapshots rather than persistent mutation handles. See [Issue tracker evaluation](./docs/ISSUE_TRACKER_EVALUATION.md).
+
 ## Durable session experiment
 
 Run the cross-process architecture experiment:
@@ -89,6 +99,7 @@ Primary alpha documents:
 - [Manual](./docs/MANUAL.md)
 - [Architecture](./docs/ARCHITECTURE.md)
 - [Alpha evaluation loop](./docs/EVALUATION_LOOP.md)
+- [Issue tracker evaluation](./docs/ISSUE_TRACKER_EVALUATION.md)
 - [Next work](./docs/NEXT_WORK.md)
 - [Benchmarks](./docs/BENCHMARKS.md)
 - [Alpha release decision](./docs/ALPHA_RELEASE_DECISION.md)
@@ -139,7 +150,7 @@ Included:
 - React `useSyncExternalStore` adapter verification;
 - experimental async write-behind boundary model;
 - inspectable debug APIs such as `status`, `inspect`, `explain`, and `debug()`;
-- executable demo, durable-session experiment, benchmark, consumer smoke, and release checks.
+- executable demo, realistic issue-tracker scenario, durable-session experiment, benchmark, consumer smoke, and release checks.
 
 Known gaps:
 
@@ -162,6 +173,7 @@ npm run build
 npm test
 npm run gate
 npm run demo
+npm run scenario:issue-tracker
 npm run experiment:durable-session
 npm run benchmark
 npm run release:check
