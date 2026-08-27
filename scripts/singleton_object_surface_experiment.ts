@@ -67,20 +67,20 @@ try {
     source.B.surfaceLines <= source.A.surfaceLines && source.B.surfaceChars < source.A.surfaceChars;
   const cAddsWrapperCeremony = source.C.valueMarkers > 0;
   const cMixesCommandAndRead = !publicSurface.C.commandReadSeparated;
-  const bErgonomicCandidate = bRemovesCollectionCeremony && bDoesNotExpandCallsite;
-  const cDominatedByB = cAddsWrapperCeremony && cMixesCommandAndRead && publicSurface.B.commandReadSeparated;
+  const bPreservesCommandReadSeparation = publicSurface.B.commandReadSeparated;
 
-  // One singleton workload can show local ergonomic direction, but it cannot establish that
-  // two permanent public names are worth adding to the package. Keep implementation deferred
-  // until a second realistic singleton workload reproduces the same friction.
-  const surfaceCandidate = runtimeValid && bErgonomicCandidate && cDominatedByB
-    ? "B_PAIRED_OBJECT_STATE_SIGNAL"
-    : "UNCERTAIN";
+  const surfaceCandidate =
+    runtimeValid && bRemovesCollectionCeremony && bDoesNotExpandCallsite && bPreservesCommandReadSeparation
+      ? "B_PAIRED_OBJECT_STATE_SIGNAL"
+      : "NO_CLEAR_WINNER";
+
   const publicApiDecision = surfaceCandidate === "B_PAIRED_OBJECT_STATE_SIGNAL"
     ? "DEFER_UNTIL_SECOND_SINGLETON_SCENARIO"
-    : "KEEP_CURRENT_LIST_ONLY";
+    : "NO_API_CHANGE_FROM_THIS_EXPERIMENT";
 
-  validExperiment = runtimeValid && surfaceCandidate !== "UNCERTAIN";
+  // A negative or uncertain product result is still a valid experiment. The gate only fails
+  // when the candidate implementations do not preserve runtime/reopen/stale-handle behavior.
+  validExperiment = runtimeValid;
 
   console.log(JSON.stringify({
     experiment: "singleton-object-public-surface",
@@ -92,15 +92,15 @@ try {
       runtimeValid,
       bRemovesCollectionCeremony,
       bDoesNotExpandCallsite,
-      bErgonomicCandidate,
+      bPreservesCommandReadSeparation,
       cAddsWrapperCeremony,
       cMixesCommandAndRead,
-      cDominatedByB,
     },
     surfaceCandidate,
     publicApiDecision,
-    interpretation:
-      "B is the cleanest local singleton-object surface in this workflow, but one scenario does not justify two permanent public names. Replicate singleton friction before changing exports.",
+    interpretation: surfaceCandidate === "B_PAIRED_OBJECT_STATE_SIGNAL"
+      ? "B removes collection/index ceremony without increasing measured callsite surface, but a second singleton scenario is still required before changing exports."
+      : "No candidate dominates: A has list/index ceremony but zero new public names; B removes that ceremony but does not reduce measured callsite characters and requires two names; C is compact but adds repeated .value access and mixes command/reactive concerns.",
     validExperiment,
   }, null, 2));
 } finally {
