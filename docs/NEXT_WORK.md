@@ -6,103 +6,152 @@ This document tracks current StorekeeperDB priorities. Historical implementation
 
 StorekeeperDB is a public alpha candidate in a product refinement / alpha hardening loop.
 
-The product direction is now more specific: StorekeeperDB is being evaluated as an **agent-oriented durable programming model for rapid TypeScript prototyping**. The target is not merely shorter database code. The target is to remove persistence architecture decisions from the coding agent's normal planning path wherever doing so remains safe and explainable.
+The product direction is agent-oriented: StorekeeperDB is being evaluated as a **durable programming model for rapid agent-generated TypeScript prototypes**. The target is not merely shorter database code. The target is to remove persistence architecture decisions from the coding agent's normal planning path wherever doing so remains safe and explainable.
 
 Working rule:
 
 > **Persistence should normally not enter the coding agent's planning loop. Hard persistence problems must remain observable and controllable.**
 
-See [Alpha evaluation loop](./EVALUATION_LOOP.md), [Architecture](./ARCHITECTURE.md), and [Agent decision-burden experiment](./AGENT_DECISION_BURDEN_EXPERIMENT.md).
+See [Alpha evaluation loop](./EVALUATION_LOOP.md), [Architecture](./ARCHITECTURE.md), [Agent decision-burden experiment](./AGENT_DECISION_BURDEN_EXPERIMENT.md), and [Agent project convention experiment](./AGENT_PROJECT_CONVENTION_EXPERIMENT.md).
 
 ## Active priorities
 
-### 1. Reduce agent-visible persistence decisions — follow-up to #46
+### 1. Test property rename as a durable-key migration boundary
 
-Status: **first decision-burden scenario is CANDIDATE PASS in CI #147.**
+Status: **highest priority after project-convention candidate PASS in CI #159.**
 
-The project-board experiment compared relational SQLite, JSON-blob SQLite, and StorekeeperDB using an auditable source-level decision manifest rather than hidden chain-of-thought.
-
-Conservative result after correcting one favorable StorekeeperDB omission:
+The reusable project convention reduced per-prototype persistence decisions in two different scenarios:
 
 ```text
-                     persistence lines   persistence decisions
-relational SQLite            19                    8
-JSON-blob SQLite             25                    8
-StorekeeperDB                14                    7
+project board      7 -> 5
+editor/workspace   7 -> 5
 ```
 
-All implementations passed the same reopen, compatible-evolution, and urgent-query checks.
+It removed explicit feature-level `state-keying` and `singleton-list-adaptation` by deriving durable keys from declaration property names and hiding one-item-list adaptation.
 
-StorekeeperDB's remaining explicit decisions were:
+This creates a new hard boundary:
+
+```ts
+{
+  settings: object(...)
+}
+```
+
+renamed to:
+
+```ts
+{
+  preferences: object(...)
+}
+```
+
+currently changes the derived durable key. Old state may therefore become undiscoverable even though ordinary application code sees a property rename.
+
+The next experiment must deliberately perform this incompatible rename and compare candidate treatments:
+
+1. fail loudly / require explicit migration;
+2. declaration alias such as `object(initial, { from: "settings" })`;
+3. stable durable identity separate from the property name;
+4. generated migration metadata above StorekeeperDB core.
+
+Do not make rename silently migrate by magic unless identity and conflict behavior are explicit.
+
+Primary question:
+
+> Did the convention truly remove state-keying from normal agent planning, or merely defer it until rename/evolution?
+
+### 2. Replicate the project convention in a third topology
+
+Status: **candidate direction, not public API.**
+
+CI #159 reused the same generic helper unchanged across:
+
+- task collection + singleton project settings;
+- revision collection + singleton document metadata.
+
+Measured per-prototype decisions:
 
 ```text
-compatible-state-evolution
-durable-query
-durable-state
-singleton-list-adaptation
-state-keying
-storekeeper-lifecycle
-storekeeper-runtime
+                     current StorekeeperDB   convention
+project board                  7                 5
+editor/workspace               7                 5
 ```
 
-The next experiment should ask which of these are truly product/domain decisions and which are repetitive infrastructure decisions that an agent-facing project convention can absorb.
+Reusable framework cost was reported separately:
 
-Candidate reductions to test without changing core storage semantics:
+```text
+agent-facing concepts   2
+internal mechanisms     4
+```
 
-1. **runtime/lifecycle convention** — can project-scoped setup remove repeated `new StorekeeperDB(path)` / close bookkeeping from generated feature code while preserving an explicit durability boundary?
-2. **state discovery/key convention** — can a known project/bootstrap manifest remove duplicated key bookkeeping without creating a central schema registry?
-3. **singleton/root adaptation** — can the agent avoid inventing one-item arrays without adding a misleading arbitrary-root model or unnecessary permanent API?
+Before exporting any project-store surface, test a third topology such as agent workspace/checkpoints or a multi-list workflow. The exact `openProjectStore/list/object` names are experiment placeholders only.
 
-Do not optimize for source characters alone. Measure the number of persistence-specific implementation obligations remaining after each convention.
+### 3. Evaluate incompatible model evolution beyond key rename
 
-### 2. Replicate agent decision burden in another prototype shape
+Status: planned.
 
-Status: planned; required before broad product claims.
+After key-identity semantics are understood, test deliberately incompatible value changes such as:
 
-The first scenario combines a task collection with singleton project settings. A second scenario should stress a different state topology, for example:
-
-- local content/editor draft with metadata + revision list;
-- small workflow/run tracker with checkpoints + events;
-- agent workspace state with bootstrap manifest + durable findings.
-
-Use the same decision-marker methodology and direct relational / JSON-blob baselines. A one-scenario 7 vs 8 difference is evidence, not a general productivity guarantee.
-
-### 3. Evaluate incompatible model evolution
-
-Status: planned after the agent-facing convention experiment.
-
-Test a deliberately incompatible change such as:
-
-- field rename;
 - scalar -> structured object;
 - enum narrowing;
-- required-field introduction.
+- required-field introduction;
+- declared state split/merge;
+- deletion of a declared state.
 
-The objective is to locate where persistence can no longer remain implicit and explicit migration/validation must re-enter the agent's planning architecture.
+The objective is to define exactly where persistence must re-enter the coding agent's planning loop.
 
 A clean explicit boundary is preferable to unsafe “migration-free” magic.
 
-### 4. Reuse durable-session bootstrap in a second scenario
+### 4. Reuse durable-session bootstrap with the project convention
 
-Status: initial cross-process experiment PASS; generalization remains uncertain.
+Status: initial cross-process bootstrap PASS; integration unproven.
 
-A writer and reader in separate Node processes can use one known bootstrap key to discover other durable states. This is now especially relevant to the agent-oriented direction because discoverability can reduce state-key planning burden.
+The existing `__workspace` bootstrap experiment shows that one known key can discover additional durable states across processes. A project declaration already contains a state namespace, so test whether bootstrap/discovery can be generated from that declaration without creating a second registry.
 
-Reuse the convention in a second realistic scenario without modifying StorekeeperDB core specifically for it before considering a first-class workspace/bootstrap API.
+Do not add a general workspace/agent-memory API until reuse is demonstrated.
 
 ## Current experimental evidence
 
+### Agent-facing durable project convention — #48
+
+Status: **CANDIDATE PASS in CI #159; experiment-only.**
+
+The same generic helper was reused unchanged in two scenarios. Both runtime paths preserved reopen durability, compatible evolution, singleton state, and queries.
+
+```text
+project board      7 -> 5 decisions; 14 -> 8 persistence lines
+editor/workspace   7 -> 5 decisions; 14 -> 8 persistence lines
+```
+
+The convention introduced two reusable agent-facing concepts:
+
+```text
+project-store
+shape-descriptor
+```
+
+and four reported internal mechanisms:
+
+```text
+derived-state-keys
+runtime-ownership
+singleton-adaptation
+state-reference-query
+```
+
+Interpretation:
+
+> A project-level declaration can absorb repeated state-key and singleton-storage decisions across multiple prototypes. This supports the architecture direction, not the exact API.
+
+Critical limitation: property-name-derived keys make rename persistence-significant.
+
 ### Agent persistence decision burden — #46
 
-Status: **CANDIDATE PASS in CI #147.**
+Status: **CANDIDATE PASS in CI #147 / final synchronized gate CI #153.**
 
 Against both direct-SQL baselines, StorekeeperDB used fewer persistence-specific decision categories in the project-board scenario: 7 vs 8, while also using 14 persistence-marked lines vs the strongest baseline's 19.
 
 This is an auditable implementation proxy, not a measurement of private reasoning tokens. The taxonomy was deliberately corrected from an initial 6 to 7 Storekeeper decisions by adding `compatible-state-evolution`.
-
-Interpretation:
-
-> StorekeeperDB moved some schema/bootstrap/serialization/write-plumbing decisions behind the durable-state runtime, but it has not eliminated persistence reasoning. The remaining agent-visible decisions are now concrete optimization targets.
 
 ### Singleton-object public surface — #44
 
@@ -114,7 +163,7 @@ B objectState/objectSignal   10 surface lines / 496 chars / 2 new names
 C objectHandle               10 surface lines / 418 chars / 1 new name + .value ceremony
 ```
 
-B removes list/index ceremony but did not dominate enough to justify permanent API. The agent-first framing changes the next question from “which callsite is shortest?” to “which convention removes a persistence decision?”
+This result is why singleton adaptation is currently tested as reusable project convention machinery rather than a standalone core API.
 
 ### Persistence-specific change amplification — #36
 
@@ -148,8 +197,6 @@ AND current durable-id membership
 AND exact current proxy identity
 ```
 
-This preserves reorder identity while invalidating displaced replacement handles.
-
 ### `find()` durable-handle semantics — #29
 
 Implemented in PR #35; final release gate passed in CI #113.
@@ -178,14 +225,28 @@ user intent
    ↓
 coding agent / prototype generator
    ↓
-agent-facing project convention      <- current simplification target
+agent-facing project convention
    ↓
 StorekeeperDB durable runtime
    ↓
 SQLite
 ```
 
-StorekeeperDB core should own durable local state and derived persistence machinery. Project/bootstrap conventions may reduce repetitive agent decisions above core. Conversation summarization, prompt policy, trust, agent identity, and multi-agent coordination remain separate concerns.
+StorekeeperDB core should own durable local state and derived persistence machinery. Project/bootstrap conventions may reduce repetitive per-prototype decisions above core. Conversation summarization, prompt policy, trust, agent identity, and multi-agent coordination remain separate concerns.
+
+### Decision amortization
+
+A reusable framework concept is different from a per-prototype persistence decision.
+
+The project convention experiment therefore reports both:
+
+```text
+per-prototype decisions
+reusable agent-facing concepts
+internal framework mechanisms
+```
+
+Do not hide helper implementation cost, but do not count a once-learned convention as if every generated prototype independently redesigned it.
 
 ### Variable lifetime
 
@@ -195,8 +256,6 @@ session/process value
 durable state
 discoverable durable state
 ```
-
-The durable-session experiment proves one bootstrap convention for moving from durable to discoverable durable state. It does not yet justify a general workspace API.
 
 ### Command / read boundary
 
@@ -209,17 +268,17 @@ reactive read plane
   liveFind()
 ```
 
-Close/reopen preserves durable data, not JavaScript proxy identity.
+The experiment project wrapper preserves the core scalar-predicate query restriction; it does not widen `find()` to arbitrary nested predicates.
 
 ### Root values
 
 Current public `state()` remains list-of-objects. The experiments do not authorize arbitrary-root support.
 
-The list-only shape is now also measured as an **agent decision cost** (`singleton-list-adaptation`), but the failed domination of candidate singleton APIs means the next move should test conventions/architecture rather than immediately add methods.
+The project convention can hide singleton list adaptation above core, but that does not change StorekeeperDB's underlying storage contract.
 
 ### Hard persistence boundaries
 
-The agent-first goal does not authorize hiding incompatible migration, corruption, concurrent writers, transaction failures, or durability uncertainty. When the runtime cannot preserve semantics safely, the persistence problem must become explicit.
+The agent-first goal does not authorize hiding incompatible migration, key rename, corruption, concurrent writers, transaction failures, or durability uncertainty. When the runtime cannot preserve semantics safely, the persistence problem must become explicit.
 
 ## Deferred research
 
