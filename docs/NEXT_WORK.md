@@ -21,7 +21,7 @@ See [Alpha evaluation loop](./EVALUATION_LOOP.md) and [Architecture](./ARCHITECT
 
 ## Active priorities
 
-### 1. Decide `find()` snapshot vs durable-handle semantics
+### 1. Decide `find()` snapshot vs durable-handle semantics — #29
 
 Status: next product/API decision after #24.
 
@@ -44,7 +44,7 @@ Prefer the smallest semantic surface that preserves StorekeeperDB's durable-vari
 
 Status: PASS; merge/closure pending for the evaluation PR.
 
-Validated by CI #87 scenario output and final CI #89 full release gate:
+Validated by CI #87 scenario output, CI #89 full release gate, and CI #91 after final result documentation:
 
 - two `IssueV1` rows survived close/reopen;
 - reopening as `IssueV2` required no repository layer, direct SQL, or manual table migration for optional JSON fields;
