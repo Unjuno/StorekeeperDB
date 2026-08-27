@@ -1,0 +1,137 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { mkdtempSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { StorekeeperDB, live } from "../src/index.js";
+
+type Task = {
+  title: string;
+  done: boolean;
+  priority?: "low" | "high" | "urgent";
+};
+
+function tempDb() {
+  const dir = mkdtempSync(join(tmpdir(), "sk-find-semantics-"));
+  return { path: join(dir, "app.sqlite"), cleanup: () => rmSync(dir, { recursive: true, force: true }) };
+}
+
+const cloneTask = (task: Task): Task => JSON.parse(JSON.stringify(task)) as Task;
+
+test("experiment: current find snapshots are detached while state-filter handles are durable", () => {
+  const t = tempDb();
+  try {
+    let sk = new StorekeeperDB(t.path);
+    const tasks = sk.state<Task[]>("tasks", []);
+    tasks.push({ title: "A", done: false, priority: "urgent" });
+
+    const snapshot = sk.find<Task>("tasks", { priority: "urgent" })[0]!;
+    snapshot.title = "snapshot-only";
+    assert.equal(tasks[0]!.title, "A");
+
+    const handles = tasks.filter((task) => task.priority === "urgent");
+    handles[0]!.title = "durable-handle";
+    handles.push({ title: "local-array-only", done: false, priority: "urgent" });
+
+    assert.equal(tasks.length, 1);
+    assert.equal(tasks[0]!.title, "durable-handle");
+    sk.close();
+
+    sk = new StorekeeperDB(t.path);
+    const reopened = sk.state<Task[]>("tasks", []);
+    assert.equal(reopened.length, 1);
+    assert.equal(reopened[0]!.title, "durable-handle");
+    sk.close();
+  } finally {
+    t.cleanup();
+  }
+});
+
+test("experiment: naive live durable handles alias previous snapshots", () => {
+  const t = tempDb();
+  try {
+    const sk = new StorekeeperDB(t.path);
+    const signal = sk.signal<Task[]>("tasks", []);
+    const tasks = signal.value;
+    tasks.push({ title: "A", done: false, priority: "urgent" });
+
+    const aliasLive = live(signal, (list) => list.filter((task) => task.priority === "urgent"));
+    let aliasRenders = 0;
+    const stopAlias = aliasLive.subscribe(() => { aliasRenders++; });
+    const aliasBefore = aliasLive.getSnapshot();
+
+    tasks[0]!.title = "B";
+
+    assert.equal(aliasRenders, 0);
+    assert.equal(aliasBefore.value[0]!.title, "B");
+    stopAlias();
+
+    const snapshotLive = live(signal, (list) =>
+      list.filter((task) => task.priority === "urgent").map(cloneTask),
+    );
+    let snapshotRenders = 0;
+    const stopSnapshot = snapshotLive.subscribe(() => { snapshotRenders++; });
+    const snapshotBefore = snapshotLive.getSnapshot();
+
+    tasks[0]!.title = "C";
+
+    assert.equal(snapshotRenders, 1);
+    assert.equal(snapshotBefore.value[0]!.title, "B");
+    assert.equal(snapshotLive.getSnapshot().value[0]!.title, "C");
+    stopSnapshot();
+    sk.close();
+  } finally {
+    t.cleanup();
+  }
+});
+
+test("experiment: durable handle identity survives reorder and rollback invalidates it", () => {
+  const t = tempDb();
+  try {
+    const sk = new StorekeeperDB(t.path);
+    const tasks = sk.state<Task[]>("tasks", []);
+    tasks.push({ title: "A", done: false, priority: "urgent" });
+    tasks.push({ title: "B", done: false, priority: "low" });
+
+    const handle = tasks.filter((task) => task.title === "A")[0]!;
+    tasks.reverse();
+    assert.equal(tasks[1], handle);
+
+    assert.throws(() => {
+      sk.batch(() => {
+        handle.title = "aborted";
+        throw new Error("abort");
+      });
+    }, /abort/);
+
+    assert.throws(() => { handle.title = "stale"; }, /Stale Storekeeper proxy/);
+    assert.equal(tasks.find((task) => task.priority === "urgent")!.title, "A");
+    sk.close();
+  } finally {
+    t.cleanup();
+  }
+});
+
+test("experiment: removed durable handles currently can resurrect deleted rows", () => {
+  const t = tempDb();
+  try {
+    let sk = new StorekeeperDB(t.path);
+    const tasks = sk.state<Task[]>("tasks", []);
+    tasks.push({ title: "A", done: false, priority: "urgent" });
+
+    const handle = tasks.filter((task) => task.priority === "urgent")[0]!;
+    tasks.splice(0, 1);
+    assert.equal(tasks.length, 0);
+
+    handle.title = "resurrected";
+    sk.close();
+
+    sk = new StorekeeperDB(t.path);
+    const reopened = sk.state<Task[]>("tasks", []);
+    assert.equal(reopened.length, 1);
+    assert.equal(reopened[0]!.title, "resurrected");
+    sk.close();
+  } finally {
+    t.cleanup();
+  }
+});
