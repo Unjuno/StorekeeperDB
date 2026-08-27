@@ -9,7 +9,7 @@ export function runCandidateC(path: string): CandidateRuntimeResult {
   let staleOldHandleRejected = false;
 
   let sk = new StorekeeperDB(path);
-  const project = objectHandle(sk, "project", initialProject()); // @surface @concept:object-handle @value
+  const project = objectHandle(sk, "project", initialProject()); // @surface @concept:object-handle
   const beforeVersion = project.getSnapshot().version; // @surface @reactive
   const unsubscribe = project.subscribe(() => { notifications++; }); // @surface @reactive
   const oldValue = project.value; // @surface @value
