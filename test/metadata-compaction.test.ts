@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { StorekeeperDB, type StorekeeperDebugAPI } from "../src/index.js";
+import { StorekeeperDB } from "../src/index.js";
 
 type Task = {
   title: string;
@@ -17,10 +17,6 @@ function tempDb() {
   return { path: join(dir, "app.sqlite"), cleanup: () => rmSync(dir, { recursive: true, force: true }) };
 }
 
-function debugOf(sk: StorekeeperDB): StorekeeperDebugAPI {
-  return sk.debug() as unknown as StorekeeperDebugAPI;
-}
-
 test("metadata compaction trims magic log without removing source state or projections", () => {
   const t = tempDb();
   try {
@@ -31,7 +27,7 @@ test("metadata compaction trims magic log without removing source state or proje
     }
 
     assert.equal(sk.find<Task>("tasks", { priority: "urgent" }).length, 10);
-    const debug = debugOf(sk);
+    const debug = sk.debug();
 
     for (let i = 0; i < 8; i++) {
       debug.evict("tasks", ["priority"]);
@@ -78,7 +74,7 @@ test("metadata compaction drops only non-projection observation rows", () => {
     assert.equal(sk.explain("tasks", "note").observed, true);
 
     const projectionCellsBefore = sk.status().projectionCells;
-    const compacted = debugOf(sk).compactMetadata({
+    const compacted = sk.debug().compactMetadata({
       stateKey: "tasks",
       maxMagicLogEntries: Number.POSITIVE_INFINITY,
       pathCountDecayFactor: 0,

@@ -42,6 +42,10 @@ export class StorekeeperDB extends BaseStorekeeperDB {
     this.decay = normalizeDecayOptions(options.decay);
   }
 
+  override debug(): StorekeeperDebugAPI {
+    return super.debug() as StorekeeperDebugAPI;
+  }
+
   override find<T extends Dict>(key: string, where: Partial<Record<keyof T & string, JsonScalar>>): T[] {
     const result = super.find<T>(key, where);
     this.maybeCollectDerivedGarbage(key, Object.keys(where));
@@ -56,7 +60,7 @@ export class StorekeeperDB extends BaseStorekeeperDB {
     if (this.lookupOperationsSinceDecay < interval) return;
     this.lookupOperationsSinceDecay = 0;
 
-    const debug = this.debug() as StorekeeperDebugAPI;
+    const debug = this.debug();
     debug.collectGarbage({
       stateKey,
       markCold: this.decay.markCold,
