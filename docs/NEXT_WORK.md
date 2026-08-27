@@ -12,59 +12,52 @@ See [Alpha evaluation loop](./EVALUATION_LOOP.md) and [Architecture](./ARCHITECT
 
 ## Active priorities
 
-### 1. Measure persistence-specific change amplification
+### 1. Replicate persistence-specific change amplification
 
-Status: **next experiment**.
+Status: **first experiment CANDIDATE PASS; generalization not established.**
 
-The core product hypothesis is stronger than “CRUD works.” StorekeeperDB is intended to reduce the amount of persistence-specific work required while an application model is changing quickly.
+CI #116 compared the same Issue V1 -> V2 compatible evolution using:
 
-The next experiment should implement the same small application change twice:
+1. minimal relational `node:sqlite`;
+2. minimal JSON-blob `node:sqlite`;
+3. StorekeeperDB.
 
-1. minimal plain SQLite baseline;
-2. StorekeeperDB using only public APIs.
-
-Do not intentionally overengineer the SQLite baseline.
-
-Recommended first specification change:
+Observed persistence-specific changed lines:
 
 ```text
-Issue V1
-- id
-- title
-- status
-
-        ↓ evolve
-
-Issue V2
-- id
-- title
-- status
-- priority
-- labels[]
-- comments[]
+relational SQLite  20
+JSON-blob SQLite   14
+StorekeeperDB       8
 ```
 
-Record:
+Against the strongest JSON-blob baseline, the annotated persistence-specific edit surface decreased from 14 to 8 changed lines (~42.9%). Raw all-source changed lines decreased from 40 to 34 (15%).
 
-- files touched;
-- persistence-specific lines added/changed;
-- schema/migration code;
-- repository/query mapping code;
-- serialization/deserialization code;
-- undocumented workarounds;
-- runtime failures;
-- implementation notes showing hidden persistence complexity;
-- elapsed implementation time only if measured under the same controlled procedure.
+However, V2 persistence-concept count was 4 vs 4 for JSON-blob and StorekeeperDB. JSON-blob introduced no new persistence concept in V2, while StorekeeperDB introduced `durable-query`.
 
-The important metric is **change amplification**, not total line count.
+Therefore the current evidence supports only the narrower claim:
 
-Working hypothesis:
+> StorekeeperDB reduced explicit persistence edit surface for this compatible prototype evolution; it did not demonstrate a lower persistence-concept count than a deliberately minimal JSON-blob design.
 
-> For compatible prototype model evolution, StorekeeperDB requires fewer persistence-specific edits and fewer persistence-specific concepts than a minimal direct-SQL baseline.
+See [Change amplification experiment](./CHANGE_AMPLIFICATION_EXPERIMENT.md).
 
-FAIL if StorekeeperDB-specific lifecycle/query workarounds grow enough to erase that advantage.
+Next evidence required: repeat the same measurement method on a structurally different application, preferably small CLI/project metadata state. Do not generalize the percentage from one scenario.
 
-### 2. Reuse durable-session bootstrap in a second scenario — #26
+### 2. Evaluate incompatible model evolution
+
+Status: planned after one replication of the compatible-change result.
+
+Test a deliberately incompatible change such as:
+
+- field rename;
+- scalar -> structured object;
+- enum narrowing;
+- required-field introduction.
+
+The objective is to locate the boundary where persistence can no longer remain implicit and explicit migration/validation must re-enter the application architecture.
+
+Do not optimize for “migration-free.” A clean, observable explicit boundary is preferable to unsafe magic.
+
+### 3. Reuse durable-session bootstrap in a second scenario — #26
 
 Status: initial cross-process experiment PASS; generalization remains uncertain.
 
@@ -74,26 +67,11 @@ Next evidence required: reuse the same bootstrap convention in a second realisti
 
 Do not reserve `__workspace` or add a workspace API yet.
 
-### 3. Evaluate incompatible model evolution
-
-Status: planned after compatible change-amplification baseline.
-
-The issue-tracker scenario only establishes compatible optional JSON-field additions. A later scenario should test one deliberately incompatible change, such as:
-
-- field rename;
-- scalar -> structured object;
-- enum narrowing;
-- required-field introduction.
-
-The goal is not to promise migration-free persistence. The goal is to identify where the “magic” must stop and an explicit migration/validation boundary must begin.
-
 ## Recently resolved product/API decisions
 
 ### `find()` durable-handle semantics — #29
 
-Status: implemented in PR #35 after focused experiments and blocker hardening.
-
-Selected contract:
+Status: implemented in PR #35; final release gate passed in CI #113.
 
 ```text
 state() item             -> durable handle
@@ -101,8 +79,6 @@ find() result item       -> durable handle
 find() result array      -> ordinary local array
 liveFind() result values -> detached stable snapshots
 ```
-
-The decision was not made by naming preference alone. PR #30 demonstrated that durable handles were viable but exposed two concrete blockers.
 
 ### Removed-handle invalidation — #31
 
@@ -115,19 +91,23 @@ rollback         -> stale
 removed member   -> readable detached reference, writes fail
 ```
 
-The runtime uses existing item ids + state membership + generation rather than a new public identity subsystem.
-
 ### Reactive snapshot separation — #32
 
 Status: PASS, fixed by PR #34; full release gate passed in CI #101.
 
-`liveFind()` owns detached snapshot cloning independently of `find()`. This prevents mutable proxy aliasing from changing old snapshots and suppressing reactive notifications.
+`liveFind()` owns detached snapshot cloning independently of `find()`.
 
 ### Realistic application scenario — #24
 
 Status: PASS.
 
-The issue-tracker scenario established compatible optional-field evolution without a repository layer, direct SQL, or manual table migration in that scenario. It also generated the `find()` semantics finding that led to #29.
+Compatible optional JSON-field evolution works in the tested issue tracker without a repository layer, direct SQL, or manual table migration. This does not establish incompatible migration semantics.
+
+### First change-amplification experiment — #36
+
+Status: CANDIDATE PASS in CI #116.
+
+The result is evidence for reduced explicit persistence edit surface in one compatible evolution scenario, not a general benchmark or proof of lower conceptual complexity.
 
 ## Confirmed architecture boundaries
 
@@ -163,7 +143,7 @@ Close/reopen preserves data, not JavaScript proxy identity.
 
 ### Application evolution
 
-Compatible optional JSON-field additions work in the tested issue-tracker scenario. This does not establish incompatible schema evolution semantics.
+Compatible optional JSON-field additions work in the tested issue-tracker scenario. The first comparison experiment suggests lower explicit persistence edit amplification, including against a JSON-blob direct-SQL baseline. Neither result establishes incompatible schema evolution semantics.
 
 ## Deferred research
 
