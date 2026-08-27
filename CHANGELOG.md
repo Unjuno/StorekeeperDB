@@ -28,6 +28,7 @@ Initial public alpha baseline plus iterative hardening from realistic evaluation
 - Root-state semantics experiment comparing list-only, singleton/object, and explicit cell directions without changing the public runtime API.
 - Singleton-object surface experiment comparing current list syntax, paired object state/signal helpers, and a combined handle without changing exports.
 - Agent persistence decision-burden experiment comparing relational SQLite, JSON-blob SQLite, and StorekeeperDB through auditable `@decision` markers.
+- Agent-facing project-convention experiment reusing one generic declaration layer across project-board and editor/workspace scenarios without changing public exports.
 - Consumer install smoke test through `npm run consumer:smoke`.
 - Real React verification using `useSyncExternalStore` and `react-test-renderer`.
 - Experimental async write-behind durability-boundary model through `@storekeeper/db/experimental`.
@@ -52,7 +53,7 @@ Initial public alpha baseline plus iterative hardening from realistic evaluation
 - Automatic derived GC protects the lookup path used by the current `find()` call from the same collection pass.
 - Metadata compaction preserves source rows, projection cells, and projection-backed observations.
 - Benchmark script performs semantic pass/fail checks while keeping latency observational.
-- Release checks run the cross-process durable-session experiment, change-amplification experiments, root-state/singleton probes, agent decision-burden experiment, and realistic issue-tracker scenario.
+- Release checks run the cross-process durable-session experiment, change-amplification experiments, root-state/singleton probes, agent decision-burden experiment, agent project-convention experiment, and realistic issue-tracker scenario.
 - Release checks install the generated tarball into a temporary consumer project and verify public subpath imports.
 - Release checks inspect key alpha wording and documented semantic boundaries before packaging.
 - README and next-work documentation prioritize realistic evaluation over promotion or speculative feature growth.
@@ -79,7 +80,13 @@ liveFind() result values -> detached stable snapshots
 - Agent decision-burden experiment CI #147 conservatively measured 8 decisions for relational SQLite, 8 for JSON-blob SQLite, and 7 for StorekeeperDB; persistence-marked source lines were 19, 25, and 14 respectively.
 - The Storekeeper count was deliberately corrected upward from an initial 6 to 7 by adding `compatible-state-evolution`, avoiding a favorable classification mismatch with the JSON-blob baseline.
 - The agent decision result is candidate evidence that StorekeeperDB can move some schema/bootstrap/serialization/write-plumbing choices behind the runtime. It is not a measurement of hidden chain-of-thought or a general productivity guarantee.
-- `singleton-list-adaptation` remains an explicit StorekeeperDB decision cost and a target for further agent-facing architecture experiments; no object-root API is authorized by this result alone.
+- `singleton-list-adaptation` remained an explicit StorekeeperDB decision cost after #46.
+- Agent project-convention experiment CI #159 reused one generic helper unchanged across project-board and editor/workspace scenarios and reduced per-prototype decisions from 7 to 5 in both; persistence-marked lines changed from 14 to 8 in both.
+- The reusable convention reports two agent-facing concepts (`project-store`, `shape-descriptor`) and four internal mechanisms separately; helper implementation cost is not treated as free.
+- The convention candidate removes feature-level `state-keying` and `singleton-list-adaptation` by deriving keys from declaration property names and adapting singleton objects internally.
+- The exact `openProjectStore/list/object` API is **not** authorized for export. The result supports a project-level architecture direction only.
+- Property-name-derived durable keys make declaration-property rename persistence-significant. A rename/migration experiment is required before a public project-store surface can be considered.
+- The convention's query wrapper was explicitly narrowed to StorekeeperDB's existing scalar-predicate `find()` contract after CI #158 exposed an overly broad prototype type.
 
 ### Boundaries
 
@@ -89,7 +96,9 @@ liveFind() result values -> detached stable snapshots
 - Close/reopen preserves durable data, not JavaScript proxy identity.
 - Compatible optional-field evolution is separate from incompatible schema migration semantics.
 - Decision-burden annotations are an auditable implementation proxy, not access to model chain-of-thought, reasoning tokens, or a universal cognitive metric.
-- The agent-first direction does not authorize hiding incompatible migrations, corruption, concurrent writers, transaction failures, or durability uncertainty.
+- Reusable framework concepts and per-prototype persistence decisions are reported separately; amortization does not make framework machinery free.
+- Deriving durable keys from declaration property names reduces normal key bookkeeping but makes property rename an incompatible persistence boundary unless alias/migration identity is specified.
+- The agent-first direction does not authorize hiding incompatible migrations, key renames, corruption, concurrent writers, transaction failures, or durability uncertainty.
 - Durable-session `__workspace` is an experiment convention, not a reserved core API.
 - The durable-variable experiment does not implement agent memory, checkpoint policy, trust, context selection, or multi-agent coordination.
 - Full browser adapter is not implemented.
