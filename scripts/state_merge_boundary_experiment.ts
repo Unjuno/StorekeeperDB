@@ -240,19 +240,22 @@ const executeMerge = (
   options: { policy?: ConflictPolicy; injectFailure?: boolean },
 ): string => {
   const { sk, manifestHolder, account, preferences, profile } = context;
-  if (account.length !== 1 || preferences.length !== 1 || profile.length !== 0) {
-    throw new Error("Merge migration requires one account source, one preferences source, and no profile target.");
-  }
-
-  const accountSource = account[0]!;
-  const preferencesSource = preferences[0]!;
-  const displayName = accountSource.displayName;
-  const compactMode = preferencesSource.compactMode;
-  const locale = resolveLocale(accountSource.locale, preferencesSource.locale, options.policy);
-  const accountProjectionPaths = sk.debug().derivations("account").map((row) => row.path);
-  const preferencesProjectionPaths = sk.debug().derivations("preferences").map((row) => row.path);
+  let selectedLocale = "";
 
   sk.batch(() => {
+    if (account.length !== 1 || preferences.length !== 1 || profile.length !== 0) {
+      throw new Error("Merge migration requires one account source, one preferences source, and no profile target.");
+    }
+
+    const accountSource = account[0]!;
+    const preferencesSource = preferences[0]!;
+    const displayName = accountSource.displayName;
+    const compactMode = preferencesSource.compactMode;
+    const locale = resolveLocale(accountSource.locale, preferencesSource.locale, options.policy);
+    selectedLocale = locale;
+    const accountProjectionPaths = sk.debug().derivations("account").map((row) => row.path);
+    const preferencesProjectionPaths = sk.debug().derivations("preferences").map((row) => row.path);
+
     profile.push({ id: "PROFILE", displayName, compactMode, locale });
     account.splice(0, account.length);
     preferences.splice(0, preferences.length);
@@ -274,7 +277,7 @@ const executeMerge = (
     if (options.injectFailure) throw new Error("injected merge migration failure");
   });
 
-  return locale;
+  return selectedLocale;
 };
 
 const establishSourceMetadata = (
