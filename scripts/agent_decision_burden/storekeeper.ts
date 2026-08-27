@@ -11,8 +11,8 @@ export function runStorekeeperDecisionBurden(path: string): DecisionBurdenRuntim
   sk.close(); // @persist @decision:storekeeper-lifecycle
 
   sk = new StorekeeperDB(path); // @persist @decision:storekeeper-lifecycle
-  const evolvedTasks = sk.state<TaskV2[]>("tasks", []); // @persist @decision:durable-state @decision:state-keying
-  const evolvedSettings = sk.state<ProjectSettingsV2[]>("project-settings", []); // @persist @decision:durable-state @decision:state-keying @decision:singleton-list-adaptation
+  const evolvedTasks = sk.state<TaskV2[]>("tasks", []); // @persist @decision:durable-state @decision:state-keying @decision:compatible-state-evolution
+  const evolvedSettings = sk.state<ProjectSettingsV2[]>("project-settings", []); // @persist @decision:durable-state @decision:state-keying @decision:singleton-list-adaptation @decision:compatible-state-evolution
   if (evolvedTasks.length !== 2 || evolvedSettings.length !== 1) throw new Error("Storekeeper failed V1 reopen.");
   evolvedTasks[0]!.labels = ["alpha"];
   evolvedSettings[0]!.preferences = { defaultView: "board" };
