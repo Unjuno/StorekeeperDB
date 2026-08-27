@@ -1,4 +1,4 @@
-import { StorekeeperDB } from "@storekeeper/db";
+import { StorekeeperDB, type Dict, type JsonScalar } from "@storekeeper/db";
 
 export type StateKind = "list" | "object";
 
@@ -28,6 +28,8 @@ type StateOf<S extends ProjectShape> = {
   [K in keyof S]: ValueOf<S[K]>;
 };
 
+type ScalarWhere<T extends Dict> = Partial<Record<keyof T & string, JsonScalar>>;
+
 type DurableBinding = {
   physicalKey: string;
   kind: StateKind;
@@ -52,6 +54,7 @@ export const renameObject = <T extends object>(initial: T, options: { from?: str
 
 export type RenameProjectStore<S extends ProjectShape> = {
   state: StateOf<S>;
+  find<T extends Dict>(state: T[], where: ScalarWhere<T>): T[];
   close(): void;
 };
 
@@ -59,13 +62,16 @@ const loadState = <S extends ProjectShape>(
   sk: StorekeeperDB,
   shape: S,
   physicalKeys: Record<string, string>,
+  keyByList: WeakMap<object, string>,
 ): StateOf<S> => {
   const loaded: Partial<StateOf<S>> = {};
   for (const logicalKey of Object.keys(shape) as Array<keyof S & string>) {
     const descriptor = shape[logicalKey]!;
     const physicalKey = physicalKeys[logicalKey]!;
     if (descriptor.kind === "list") {
-      (loaded as Record<string, unknown>)[logicalKey] = sk.state(physicalKey, descriptor.initial as object[]);
+      const state = sk.state(physicalKey, descriptor.initial as object[]);
+      (loaded as Record<string, unknown>)[logicalKey] = state;
+      keyByList.set(state, physicalKey);
       continue;
     }
 
@@ -77,6 +83,24 @@ const loadState = <S extends ProjectShape>(
     (loaded as Record<string, unknown>)[logicalKey] = holder[0]!;
   }
   return loaded as StateOf<S>;
+};
+
+const projectStore = <S extends ProjectShape>(
+  sk: StorekeeperDB,
+  shape: S,
+  physicalKeys: Record<string, string>,
+): RenameProjectStore<S> => {
+  const keyByList = new WeakMap<object, string>();
+  const state = loadState(sk, shape, physicalKeys, keyByList);
+  return {
+    state,
+    find<T extends Dict>(list: T[], where: ScalarWhere<T>): T[] {
+      const physicalKey = keyByList.get(list);
+      if (!physicalKey) throw new Error("Project query requires a list state owned by this project store.");
+      return sk.find<T>(physicalKey, where);
+    },
+    close: () => sk.close(),
+  };
 };
 
 const declarationKinds = (shape: ProjectShape): Record<string, StateKind> =>
@@ -110,7 +134,7 @@ export function openStrictRenameProjectStore<S extends ProjectShape>(path: strin
   }
 
   const physicalKeys = Object.fromEntries(declared.map((key) => [key, manifest.bindings[key]!.physicalKey]));
-  return { state: loadState(sk, shape, physicalKeys), close: () => sk.close() };
+  return projectStore(sk, shape, physicalKeys);
 }
 
 export function openAliasRenameProjectStore<S extends ProjectShape>(path: string, shape: S): RenameProjectStore<S> {
@@ -171,7 +195,7 @@ export function openAliasRenameProjectStore<S extends ProjectShape>(path: string
   }
 
   const physicalKeys = Object.fromEntries(declared.map((key) => [key, manifest.bindings[key]!.physicalKey]));
-  return { state: loadState(sk, shape, physicalKeys), close: () => sk.close() };
+  return projectStore(sk, shape, physicalKeys);
 }
 
 export function openStableIdProjectStore<S extends ProjectShape>(path: string, shape: S): RenameProjectStore<S> {
@@ -181,5 +205,5 @@ export function openStableIdProjectStore<S extends ProjectShape>(path: string, s
     const descriptor = shape[logicalKey]!;
     return [logicalKey, descriptor.id ?? logicalKey]; // @candidate-d-framework-public:stable-durable-id @candidate-d-framework-internal:stable-id-binding
   }));
-  return { state: loadState(sk, shape, physicalKeys), close: () => sk.close() };
+  return projectStore(sk, shape, physicalKeys);
 }
