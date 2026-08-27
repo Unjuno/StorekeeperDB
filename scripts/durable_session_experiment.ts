@@ -2,11 +2,11 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { StorekeeperDB, type Dict } from "../src/index.js";
+import { StorekeeperDB, type Dict } from "@storekeeper/db";
 
 const BOOTSTRAP_KEY = "__workspace";
 
- type WorkspaceManifest = {
+type WorkspaceManifest = {
   id: "workspace";
   schemaVersion: 1;
   currentGoal: string;
