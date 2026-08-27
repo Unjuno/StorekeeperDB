@@ -1,0 +1,53 @@
+# StorekeeperDB documentation
+
+StorekeeperDB is a public alpha candidate. The current priority is product refinement: use realistic scenarios, find rough edges, make the smallest justified fix, and re-verify behavior.
+
+## Start here
+
+- [Manual](./MANUAL.md) — current public alpha API and usage boundaries.
+- [Evaluation loop](./EVALUATION_LOOP.md) — how to evaluate and refine the product during alpha.
+- [Next work](./NEXT_WORK.md) — current priorities and deferred research.
+- [Benchmarks](./BENCHMARKS.md) — reproducible observations; timings are not release guarantees.
+- [Demo](./DEMO.md) — executable runtime walkthrough.
+
+## Product and safety boundaries
+
+- [Alpha release decision](./ALPHA_RELEASE_DECISION.md)
+- [Transaction model](./TRANSACTION_MODEL.md)
+- [Browser storage boundary](./BROWSER_BOUNDARY.md)
+- [Release checklist](./RELEASE.md)
+- [0.1.0-alpha.0 release notes](./RELEASE_NOTES_0.1.0-alpha.0.md)
+
+## Runtime and experiments
+
+These documents explain implementation experiments or narrower runtime behavior. They are useful when evaluating a specific subsystem, but are not the main entry point for new users.
+
+- [Magic lifecycle](./MAGIC_LIFECYCLE.md)
+- [Magic re-import status](./MAGIC_REIMPORT_STATUS.md)
+- [Automatic derived decay](./DECAY.md)
+- [Metadata compaction](./METADATA_COMPACTION.md)
+- [React verification](./REACT_VERIFICATION.md)
+- [Runtime hardening](./RUNTIME_HARDENING.md)
+- [Experiment summary](./EXPERIMENT_SUMMARY.md)
+- [Audit notes](./AUDIT.md)
+
+## Repository policy during alpha
+
+Prefer small pull requests that close one observed product gap. A change should normally be justified by a realistic scenario, a failing test, a documented ambiguity, or reproducible performance evidence.
+
+Avoid:
+
+- presenting the alpha as production-ready;
+- adding features without a demonstrated scenario;
+- treating benchmark timings as guarantees;
+- implying that the experimental async boundary is a complete browser adapter;
+- growing the public API when simplification or removal would solve the same problem.
+
+The default loop is:
+
+1. choose a realistic usage scenario;
+2. use the public API only;
+3. record friction, surprise, failure, documentation gaps, and performance roughness;
+4. make the smallest runtime, API, test, or documentation change that addresses the finding;
+5. run `npm run release:check` and any scenario-specific checks;
+6. record the result in the PR and update [Next work](./NEXT_WORK.md) when priorities change.
