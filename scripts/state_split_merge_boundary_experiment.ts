@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { DatabaseSync } from "node:sqlite";
-import { StorekeeperDB, type Dict } from "@storekeeper/db";
+import { StorekeeperDB, type Dict, type StorekeeperDebugAPI } from "@storekeeper/db";
 import {
   openAliasRenameProjectStore,
   renameObject,
@@ -162,6 +162,7 @@ const runExplicitMigration = (path: string) => {
   establishProfile(path);
 
   const sk = new StorekeeperDB(path);
+  const debug = sk.debug() as unknown as StorekeeperDebugAPI;
   const manifestHolder = sk.state<IdentityManifest[]>("__project_identity", [{
     id: "project-identity-manifest",
     bindings: {},
@@ -186,7 +187,7 @@ const runExplicitMigration = (path: string) => {
     const source = profile[0]!;
     const displayName = source.displayName;
     const compactMode = source.compactMode;
-    const projectionPaths = sk.debug().derivations("profile").map((row) => row.path);
+    const projectionPaths = debug.derivations("profile").map((row) => row.path);
 
     sk.batch(() => {
       account.push({ id: "ACCOUNT", displayName });
@@ -196,8 +197,8 @@ const runExplicitMigration = (path: string) => {
         account: { physicalKey: "account", kind: "object" },
         preferences: { physicalKey: "preferences", kind: "object" },
       };
-      sk.debug().evict("profile", projectionPaths);
-      sk.debug().compactMetadata({
+      debug.evict("profile", projectionPaths);
+      debug.compactMetadata({
         stateKey: "profile",
         pathCountDecayFactor: 0,
         dropPathStatsBelow: 0,
@@ -227,7 +228,7 @@ const runExplicitMigration = (path: string) => {
   const displayName = source.displayName;
   const compactMode = source.compactMode;
   const currentManifest = manifestHolder[0]!;
-  const projectionPaths = sk.debug().derivations("profile").map((row) => row.path);
+  const projectionPaths = debug.derivations("profile").map((row) => row.path);
 
   sk.batch(() => {
     account.push({ id: "ACCOUNT", displayName });
@@ -237,8 +238,8 @@ const runExplicitMigration = (path: string) => {
       account: { physicalKey: "account", kind: "object" },
       preferences: { physicalKey: "preferences", kind: "object" },
     };
-    sk.debug().evict("profile", projectionPaths);
-    sk.debug().compactMetadata({
+    debug.evict("profile", projectionPaths);
+    debug.compactMetadata({
       stateKey: "profile",
       pathCountDecayFactor: 0,
       dropPathStatsBelow: 0,
@@ -353,6 +354,7 @@ try {
       multipleSourceTargetCollectionsUntested: true,
       concurrentVersionOpenUntested: true,
       migrationPublicSurfaceUndecided: true,
+      debugCompactMetadataStaticTypeMismatchObserved: true,
       publicApiDecisionAuthorized: false,
     },
     validExperiment,
