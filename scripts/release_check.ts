@@ -126,7 +126,7 @@ const requiredPublicText: Array<[string, string]> = [
   ["docs/ARCHITECTURE.md", "discoverable durable state"],
   ["docs/ARCHITECTURE.md", "command-capable durable item handles"],
   ["docs/DURABLE_VARIABLE_EXPERIMENT.md", "two separate Node processes"],
-  ["docs/ISSUE_TRACKER_EVALUATION.md", "`find()` result item is a durable handle"],
+  ["docs/ISSUE_TRACKER_EVALUATION.md", "find() result item is a durable handle"],
   ["docs/ISSUE_TRACKER_EVALUATION.md", "find() result array remains local"],
   ["docs/FIND_SEMANTICS_EVALUATION.md", "hybrid durable-handle design selected and implemented"],
   ["docs/FIND_SEMANTICS_EVALUATION.md", "current state membership by durable item id"],
