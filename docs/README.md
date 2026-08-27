@@ -11,6 +11,7 @@ The current product direction is agent-oriented: reduce the persistence-specific
 - [Evaluation loop](./EVALUATION_LOOP.md) — how to evaluate and refine the product during alpha.
 - [Next work](./NEXT_WORK.md) — current priorities and deferred research.
 - [Agent decision-burden experiment](./AGENT_DECISION_BURDEN_EXPERIMENT.md) — auditable comparison of persistence-specific implementation decisions for agent-driven prototyping.
+- [Agent project convention experiment](./AGENT_PROJECT_CONVENTION_EXPERIMENT.md) — reusable declaration-layer experiment that reduces per-prototype state-key/singleton decisions in two scenarios.
 - [Issue tracker evaluation](./ISSUE_TRACKER_EVALUATION.md) — realistic compatible application-shape evolution and query-to-update scenario.
 - [`find()` semantics evaluation](./FIND_SEMANTICS_EVALUATION.md) — durable-handle vs snapshot decision record.
 - [Change amplification experiment](./CHANGE_AMPLIFICATION_EXPERIMENT.md) — first direct-SQL comparison for compatible model evolution.
@@ -32,6 +33,7 @@ The current product direction is agent-oriented: reduce the persistence-specific
 These documents record experimental evidence and narrower runtime behavior. They are useful for understanding why a contract exists and where it has not yet generalized.
 
 - [Agent decision-burden experiment](./AGENT_DECISION_BURDEN_EXPERIMENT.md)
+- [Agent project convention experiment](./AGENT_PROJECT_CONVENTION_EXPERIMENT.md)
 - [Change amplification experiment](./CHANGE_AMPLIFICATION_EXPERIMENT.md)
 - [CLI metadata replication](./CLI_METADATA_CHANGE_AMPLIFICATION_EXPERIMENT.md)
 - [Root-state semantics evaluation](./ROOT_STATE_SEMANTICS_EVALUATION.md)
