@@ -12,51 +12,59 @@ Working rule:
 
 > **Persistence should normally not enter the coding agent's planning loop. Hard persistence problems must remain observable and controllable.**
 
-See [Alpha evaluation loop](./EVALUATION_LOOP.md), [Architecture](./ARCHITECTURE.md), [Agent decision-burden experiment](./AGENT_DECISION_BURDEN_EXPERIMENT.md), [Agent project convention experiment](./AGENT_PROJECT_CONVENTION_EXPERIMENT.md), [Declaration key rename experiment](./DECLARATION_KEY_RENAME_EXPERIMENT.md), and [Collection rename + projection experiment](./COLLECTION_RENAME_PROJECTION_EXPERIMENT.md).
+See [Alpha evaluation loop](./EVALUATION_LOOP.md), [Architecture](./ARCHITECTURE.md), [Agent project convention experiment](./AGENT_PROJECT_CONVENTION_EXPERIMENT.md), [Declaration key rename experiment](./DECLARATION_KEY_RENAME_EXPERIMENT.md), [Collection rename + projection experiment](./COLLECTION_RENAME_PROJECTION_EXPERIMENT.md), and [Multi-step declaration rename experiment](./MULTI_STEP_DECLARATION_RENAME_EXPERIMENT.md).
 
 ## Active priorities
 
-### 1. Test a multi-step rename chain
+### 1. Test declared-state split/merge boundary
 
-Status: **highest priority after collection rename + projection candidate PASS in CI #175.**
+Status: **highest priority after multi-step rename candidate PASS in CI #183.**
 
-Issue #52 strengthened the one-shot alias model: a logical collection rename can keep one physical StorekeeperDB identity, including source rows and derived projection/path/derivation metadata.
+The identity model now passed:
 
-Next exercise:
+- one-shot object rename;
+- collection rename with an active projection;
+- repeated `settings -> preferences -> configuration` rename;
+- alias-free ordinary reopens;
+- failure-atomic negative cases for missing, stale, nonexistent, and kind-mismatched aliases.
+
+The next challenge is deliberately not one-to-one:
 
 ```text
-settings -> preferences -> configuration
+profile
+  ->
+account + preferences
 ```
 
-Use one explicit alias at each incompatible rename boundary and omit aliases on ordinary subsequent reopens.
+or the reverse.
 
 Required properties:
 
-1. exactly one durable physical state throughout;
-2. each rename requires only the immediately previous logical name;
-3. no requirement to remember the full historical alias chain at the application callsite;
-4. current manifest contains one current logical binding rather than accumulating duplicate logical names;
-5. ambiguous, reversed, missing, or conflicting aliases fail loudly;
-6. ordinary reopen after each rename requires no alias;
-7. a later rename still resolves to the original physical identity.
+1. naive remove+add without an explicit migration must fail before fresh target state is silently accepted;
+2. a one-to-one rename alias must not pretend to represent one-to-many or many-to-one transformation;
+3. any explicit migration candidate must own value transformation and atomicity;
+4. a failed transform must leave the old source valid;
+5. failed migration must not leave partial target state;
+6. successful source retirement/retention policy must be explicit;
+7. split/merge must not be inferred heuristically from shape, content, or declaration order.
 
 Primary question:
 
-> Is the identity manifest a minimal logical-to-physical identity layer, or merely a one-rename workaround that becomes a schema registry under repeated evolution?
+> Have we reached the point where a narrow durable-identity alias is no longer enough and real migration semantics must re-enter the coding agent's planning loop?
 
-### 2. Evaluate incompatible value evolution beyond key rename
+### 2. Evaluate incompatible value evolution
 
-Status: planned after rename-chain verification.
+Status: planned alongside or immediately after split/merge.
 
-Test deliberately incompatible value changes such as:
+Probe deliberately incompatible value changes such as:
 
 - scalar -> structured object;
 - enum narrowing;
 - required-field introduction;
-- declared state split/merge;
-- deletion of a declared state.
+- deletion of a declared state;
+- value transformation that cannot be expressed as compatible JSON shape evolution.
 
-The objective is to define exactly where persistence must re-enter the coding agent's planning loop. A clean explicit boundary is preferable to unsafe “migration-free” magic.
+The objective is to define exactly where persistence must become explicit. A clean, transactional migration boundary is preferable to unsafe “migration-free” magic.
 
 ### 3. Replicate the project convention in a third topology
 
@@ -76,9 +84,55 @@ Do not add a general workspace/agent-memory API until reuse is demonstrated.
 
 ## Current experimental evidence
 
+### Multi-step declaration rename — #54
+
+Status: **CANDIDATE PASS in CI #183; experiment-only.**
+
+Tested:
+
+```text
+settings -> preferences -> configuration
+```
+
+Each rename supplied only the immediately previous logical name. Ordinary reopens required no alias.
+
+Final manifest:
+
+```text
+configuration -> physical settings
+```
+
+Final physical source keys:
+
+```text
+settings only
+```
+
+Negative controls all rejected safely:
+
+- missing alias;
+- stale original `from: "settings"` during the second rename;
+- nonexistent alias source;
+- object/list kind mismatch;
+- expired `preferences` alias after `configuration` became current.
+
+After every failed attempt, the current value and manifest remained intact.
+
+Machine result:
+
+```text
+CANDIDATE_PASS_MULTI_STEP_RENAME_RETAINS_SINGLE_PHYSICAL_IDENTITY
+```
+
+Interpretation:
+
+> The tested manifest behaves as one current logical-to-physical identity binding rather than a rename-history registry. Previous logical names are consumed, while the original physical key remains stable.
+
+This resolves the repeated-rename uncertainty from #52 for the tested one-state chain. It does **not** establish split/merge or arbitrary value-migration semantics.
+
 ### Collection rename with active projection — #52
 
-Status: **CANDIDATE PASS in CI #175; experiment-only.**
+Status: **CANDIDATE PASS in CI #175 / final synchronized gate CI #181; merged in PR #53.**
 
 Scenario:
 
@@ -99,27 +153,15 @@ source rows under workItems             0
 workItems projection/path/derivation    0
 ```
 
-All behavioral checks passed:
-
-- renamed state preserved both items;
-- renamed `find()` returned durable item handles;
-- query-result array membership remained local;
-- mutating the projected field through a renamed query handle updated the existing projection;
-- no source or derived metadata leaked into the logical `workItems` namespace;
-- manifest persisted `workItems -> physical "tasks"`;
-- later reopen worked without repeating the alias.
-
 Machine result:
 
 ```text
 CANDIDATE_PASS_LOGICAL_RENAME_PRESERVES_PHYSICAL_DERIVED_STATE
 ```
 
-Interpretation:
+The successful path did not migrate projection metadata. It avoided migration by keeping physical durable identity stable while changing only the logical declaration name.
 
-> The successful path did not migrate projection metadata. It avoided migration by keeping physical durable identity stable while changing only the logical declaration name.
-
-This reduces candidate migration complexity, but repeated rename history remains untested.
+Repeated rename history was subsequently tested successfully by #54.
 
 ### Declaration property rename / durable identity — #50
 
@@ -147,22 +189,6 @@ C one-shot rename alias
 D stable durable id
   old value preserved     YES
   compatible-path cost    +1 explicit identity decision
-```
-
-Corrected decision comparison:
-
-```text
-compatible-path extra decisions
-A 0
-B 0
-C 0
-D 1
-
-rename-boundary extra decisions
-A 0  (unsafe)
-B 0  (rejects only)
-C 1
-D 0  (paid up front)
 ```
 
 Machine result:
@@ -200,23 +226,14 @@ JSON-blob SQLite   8
 StorekeeperDB      7
 ```
 
-Persistence-marked lines were 19, 25, and 14 respectively. This is an auditable implementation proxy, not a measurement of hidden reasoning.
+This is an auditable implementation proxy, not a measurement of hidden reasoning.
 
-### Singleton-object public surface — #44
+### Singleton/root and change-amplification evidence
 
-Status: **NO CLEAR WINNER in CI #144; no public API change.**
-
-Removing `[0]` ceremony alone did not justify permanent public methods. Singleton adaptation therefore remains project-convention machinery rather than a core API decision.
-
-### Change amplification — #36 / #38
-
-First issue-model scenario: candidate positive evidence, StorekeeperDB persistence-specific changed lines 8 vs 14 for the strongest JSON-blob baseline, concept count tied 4 vs 4.
-
-CLI metadata replication: mixed evidence, StorekeeperDB changed lines 8 vs 12 but concept count 5 vs 4 because the singleton-list boundary became visible.
-
-### Root-state semantics — #40 / #42
-
-A narrow singleton/object helper can reuse current lifecycle semantics, but broad arbitrary-root `state()` generalization remains unsupported. Direct replacement was hardened so writable item handles require current generation, durable-id membership, and exact current proxy identity.
+- Singleton-object surface #44: no clear winner; no public API change.
+- First change-amplification scenario #36: candidate positive evidence, StorekeeperDB 8 changed persistence lines vs 14 for strongest JSON-blob baseline, concept count tied 4 vs 4.
+- CLI metadata replication #38: mixed evidence, 8 vs 12 changed lines but 5 vs 4 concepts due to singleton-list boundary.
+- Root-state semantics #40/#42: narrow singleton/object adaptation can reuse current lifecycle semantics; broad arbitrary-root `state()` remains unsupported.
 
 ## Resolved command/read semantics
 
@@ -251,28 +268,27 @@ Current experiment evidence supports separating declaration naming from physical
 
 ```text
 logical declaration name
-  workItems
+  configuration
       |
       v
-identity binding
+current identity binding
       |
       v
 physical StorekeeperDB key
-  tasks
-      |
-      +-- source rows
-      +-- paths
-      +-- projections
-      +-- derivations
+  settings
 ```
 
-This is an experiment-layer concept only. It is not yet a public core contract.
+For queried collections, the same physical namespace also owns source rows, paths, projections, and derivations.
+
+The tested manifest keeps only the current logical binding; it does not preserve a rename-history chain.
+
+This remains an experiment-layer concept only. It is not yet a public core contract.
 
 ### Hard persistence boundaries
 
-The agent-first goal does not authorize hiding incompatible migration, durable identity rename, corruption, concurrent writers, transaction failures, or durability uncertainty. When the runtime cannot preserve semantics safely, the persistence problem must become explicit.
+The agent-first goal does not authorize hiding incompatible value transformation, split/merge, durable identity rename, corruption, concurrent writers, transaction failures, or durability uncertainty. When the runtime cannot preserve semantics safely, the persistence problem must become explicit.
 
-Automatic heuristic rename matching based on shape, content, or declaration order is not supported by current evidence.
+Automatic heuristic rename or split/merge matching based on shape, content, or declaration order is not supported by current evidence.
 
 ## Deferred research
 

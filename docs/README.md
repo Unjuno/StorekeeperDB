@@ -14,6 +14,7 @@ The current product direction is agent-oriented: reduce the persistence-specific
 - [Agent project convention experiment](./AGENT_PROJECT_CONVENTION_EXPERIMENT.md) — reusable declaration-layer experiment that reduces per-prototype state-key/singleton decisions in two scenarios.
 - [Declaration key rename experiment](./DECLARATION_KEY_RENAME_EXPERIMENT.md) — incompatible property-rename probe comparing silent reset, fail-loudly identity tracking, one-shot aliasing, and stable ids.
 - [Collection rename + projection experiment](./COLLECTION_RENAME_PROJECTION_EXPERIMENT.md) — verifies that a logical collection rename can retain one physical source/projection namespace.
+- [Multi-step declaration rename experiment](./MULTI_STEP_DECLARATION_RENAME_EXPERIMENT.md) — verifies repeated logical renames retain one physical identity without accumulating rename history.
 - [Issue tracker evaluation](./ISSUE_TRACKER_EVALUATION.md) — realistic compatible application-shape evolution and query-to-update scenario.
 - [`find()` semantics evaluation](./FIND_SEMANTICS_EVALUATION.md) — durable-handle vs snapshot decision record.
 - [Change amplification experiment](./CHANGE_AMPLIFICATION_EXPERIMENT.md) — first direct-SQL comparison for compatible model evolution.
@@ -38,6 +39,7 @@ These documents record experimental evidence and narrower runtime behavior. They
 - [Agent project convention experiment](./AGENT_PROJECT_CONVENTION_EXPERIMENT.md)
 - [Declaration key rename experiment](./DECLARATION_KEY_RENAME_EXPERIMENT.md)
 - [Collection rename + projection experiment](./COLLECTION_RENAME_PROJECTION_EXPERIMENT.md)
+- [Multi-step declaration rename experiment](./MULTI_STEP_DECLARATION_RENAME_EXPERIMENT.md)
 - [Change amplification experiment](./CHANGE_AMPLIFICATION_EXPERIMENT.md)
 - [CLI metadata replication](./CLI_METADATA_CHANGE_AMPLIFICATION_EXPERIMENT.md)
 - [Root-state semantics evaluation](./ROOT_STATE_SEMANTICS_EVALUATION.md)
