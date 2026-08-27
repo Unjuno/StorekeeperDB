@@ -68,6 +68,7 @@ if (!releaseCheck.includes("experiment:cli-change-amplification:check")) fail("r
 if (!releaseCheck.includes("experiment:root-state-semantics:check")) fail("release:check must include experiment:root-state-semantics:check");
 if (!releaseCheck.includes("experiment:singleton-object-surface:check")) fail("release:check must include experiment:singleton-object-surface:check");
 if (!releaseCheck.includes("experiment:agent-decision-burden:check")) fail("release:check must include experiment:agent-decision-burden:check");
+if (!releaseCheck.includes("experiment:agent-project-convention:check")) fail("release:check must include experiment:agent-project-convention:check");
 if (!releaseCheck.includes("scenario:issue-tracker:check")) fail("release:check must include scenario:issue-tracker:check");
 if (releaseCheck.includes("benchmark:check")) fail("release:check must not include benchmark:check while benchmark timing is observational");
 
@@ -79,6 +80,7 @@ const requiredScripts = [
   "experiment:root-state-semantics",
   "experiment:singleton-object-surface",
   "experiment:agent-decision-burden",
+  "experiment:agent-project-convention",
   "scenario:issue-tracker",
 ];
 for (const script of requiredScripts) {
@@ -110,6 +112,7 @@ const publicDocs = [
   "docs/CLI_METADATA_CHANGE_AMPLIFICATION_EXPERIMENT.md",
   "docs/ROOT_STATE_SEMANTICS_EVALUATION.md",
   "docs/AGENT_DECISION_BURDEN_EXPERIMENT.md",
+  "docs/AGENT_PROJECT_CONVENTION_EXPERIMENT.md",
   "docs/MANUAL.md",
   "docs/EVALUATION_LOOP.md",
   "docs/BENCHMARKS.md",
@@ -157,7 +160,12 @@ const requiredPublicText: Array<[string, string]> = [
   ["docs/AGENT_DECISION_BURDEN_EXPERIMENT.md", "does **not** inspect or claim access to model chain-of-thought"],
   ["docs/AGENT_DECISION_BURDEN_EXPERIMENT.md", "StorekeeperDB | **14** | **7**"],
   ["docs/AGENT_DECISION_BURDEN_EXPERIMENT.md", "singleton-list-adaptation"],
+  ["docs/AGENT_PROJECT_CONVENTION_EXPERIMENT.md", "CANDIDATE PASS in CI #159"],
+  ["docs/AGENT_PROJECT_CONVENTION_EXPERIMENT.md", "project board | 7 | **5** | 2"],
+  ["docs/AGENT_PROJECT_CONVENTION_EXPERIMENT.md", "property rename is now persistence-significant"],
+  ["docs/AGENT_PROJECT_CONVENTION_EXPERIMENT.md", "`find()` remains scalar-predicate-only"],
   ["docs/NEXT_WORK.md", "Persistence should normally not enter the coding agent's planning loop."],
+  ["docs/NEXT_WORK.md", "property-name-derived keys make rename persistence-significant"],
   ["docs/EVALUATION_LOOP.md", "Simple persistence should feel automatic. Hard persistence problems must remain observable and controllable."],
   ["docs/ALPHA_RELEASE_DECISION.md", "public alpha candidate"],
   ["docs/ALPHA_RELEASE_DECISION.md", "not a stable API release"],
@@ -186,6 +194,7 @@ console.log(JSON.stringify({
   hasRootStateSemanticsExperiment: true,
   hasSingletonObjectSurfaceExperiment: true,
   hasAgentDecisionBurdenExperiment: true,
+  hasAgentProjectConventionExperiment: true,
   hasIssueTrackerScenario: true,
   hasFindSemanticsDecision: true,
   pass: true,
