@@ -3,7 +3,7 @@
   "version": "0.1.0-alpha.0",
   "type": "module",
   "private": false,
-  "description": "Magic persistent TypeScript state that quietly becomes SQLite-backed data for fast AI prototypes.",
+  "description": "Magic persistent TypeScript state for fast-changing prototypes, backed by SQLite.",
   "license": "MIT",
   "repository": {
     "type": "git",
