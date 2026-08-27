@@ -17,13 +17,14 @@ type SourceMetrics = {
 const metricsFor = (path: string): SourceMetrics => {
   const lines = readFileSync(path, "utf8").split("\n");
   const surface = lines.filter((line) => line.includes("@surface"));
+  const codeOnly = surface.map((line) => line.split("// @surface", 1)[0]!.trim());
   const countMarker = (marker: string) => surface.filter((line) => line.includes(marker)).length;
   const concepts = [...new Set(
     surface.flatMap((line) => [...line.matchAll(/@concept:([a-z-]+)/g)].map((match) => match[1]!)),
   )].sort();
   return {
     surfaceLines: surface.length,
-    surfaceChars: surface.reduce((sum, line) => sum + line.trim().length, 0),
+    surfaceChars: codeOnly.reduce((sum, line) => sum + line.length, 0),
     collectionMarkers: countMarker("@collection"),
     indexMarkers: countMarker("@index"),
     valueMarkers: countMarker("@value"),
