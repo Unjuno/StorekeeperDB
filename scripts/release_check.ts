@@ -154,7 +154,7 @@ const requiredPublicText: Array<[string, string]> = [
   ["docs/ROOT_STATE_SEMANTICS_EVALUATION.md", "memoryDurableDivergenceAfterOldHandleWrite"],
   ["docs/ROOT_STATE_SEMANTICS_EVALUATION.md", "primitive mutable-reference"],
   ["docs/AGENT_DECISION_BURDEN_EXPERIMENT.md", "CANDIDATE PASS in CI #147"],
-  ["docs/AGENT_DECISION_BURDEN_EXPERIMENT.md", "does not inspect or claim access to model chain-of-thought"],
+  ["docs/AGENT_DECISION_BURDEN_EXPERIMENT.md", "does **not** inspect or claim access to model chain-of-thought"],
   ["docs/AGENT_DECISION_BURDEN_EXPERIMENT.md", "StorekeeperDB | **14** | **7**"],
   ["docs/AGENT_DECISION_BURDEN_EXPERIMENT.md", "singleton-list-adaptation"],
   ["docs/NEXT_WORK.md", "Persistence should normally not enter the coding agent's planning loop."],
