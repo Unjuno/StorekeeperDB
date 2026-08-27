@@ -5,6 +5,7 @@ StorekeeperDB is a public alpha candidate. The current priority is product refin
 ## Start here
 
 - [Manual](./MANUAL.md) — current public alpha API and usage boundaries.
+- [Architecture](./ARCHITECTURE.md) — runtime layers, durable-variable model, and architectural boundaries.
 - [Evaluation loop](./EVALUATION_LOOP.md) — how to evaluate and refine the product during alpha.
 - [Next work](./NEXT_WORK.md) — current priorities and deferred research.
 - [Benchmarks](./BENCHMARKS.md) — reproducible observations; timings are not release guarantees.
@@ -22,6 +23,7 @@ StorekeeperDB is a public alpha candidate. The current priority is product refin
 
 These documents explain implementation experiments or narrower runtime behavior. They are useful when evaluating a specific subsystem, but are not the main entry point for new users.
 
+- [Durable variable / session bootstrap experiment](./DURABLE_VARIABLE_EXPERIMENT.md)
 - [Magic lifecycle](./MAGIC_LIFECYCLE.md)
 - [Magic re-import status](./MAGIC_REIMPORT_STATUS.md)
 - [Automatic derived decay](./DECAY.md)
