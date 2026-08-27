@@ -23,6 +23,9 @@ Initial public alpha baseline plus iterative hardening from realistic evaluation
 - Public manual, architecture notes, evaluation loop, realistic issue-tracker scenario, durable-session experiment, benchmark documentation, and alpha release notes.
 - Cross-process durable-variable/bootstrap experiment through `npm run experiment:durable-session`.
 - Realistic issue-tracker evolution scenario through `npm run scenario:issue-tracker`.
+- Persistence-specific change-amplification experiment against minimal relational and JSON-blob SQLite baselines.
+- CLI metadata replication exposing the `singleton-list-boundary` concept cost.
+- Root-state semantics experiment comparing list-only, singleton/object, and explicit cell directions without changing the public runtime API.
 - Consumer install smoke test through `npm run consumer:smoke`.
 - Real React verification using `useSyncExternalStore` and `react-test-renderer`.
 - Experimental async write-behind durability-boundary model through `@storekeeper/db/experimental`.
@@ -45,17 +48,15 @@ Initial public alpha baseline plus iterative hardening from realistic evaluation
 - Automatic derived GC protects the lookup path used by the current `find()` call from the same collection pass.
 - Metadata compaction preserves source rows, projection cells, and projection-backed observations.
 - Benchmark script performs semantic pass/fail checks while keeping latency observational.
-- Release checks run the cross-process durable-session experiment and realistic issue-tracker scenario.
+- Release checks run the cross-process durable-session experiment, change-amplification experiments, root-state semantics probes, and realistic issue-tracker scenario.
 - Release checks install the generated tarball into a temporary consumer project and verify public subpath imports.
 - Release checks inspect key alpha wording and documented semantic boundaries before packaging.
 - README and next-work documentation prioritize realistic evaluation over promotion or speculative feature growth.
 
 ### Evaluation decisions
 
-- The initial issue-tracker evaluation showed that compatible optional JSON-field additions can evolve without a repository layer, direct SQL, or a manual table migration in that scenario.
-- The same scenario exposed detached `find()` results as a least-surprise problem.
-- A focused A/B/C experiment rejected snapshot-only `find()` as the preferred contract and did not justify adding a second public snapshot-query API.
-- The selected hybrid contract is:
+- Compatible issue-model evolution passed without a repository layer, direct SQL, or a manual table migration in that scenario.
+- Detached `find()` results were rejected as the preferred command/query contract. The selected hybrid contract is:
 
 ```text
 state() item             -> durable handle
@@ -64,14 +65,18 @@ find() result array      -> ordinary local array
 liveFind() result values -> detached stable snapshots
 ```
 
-- Two blockers were fixed before changing `find()`: removed-handle invalidation and reactive snapshot separation.
-- The next product experiment is persistence-specific change amplification against a minimal direct-SQL baseline.
+- Removed-handle invalidation and reactive snapshot separation were fixed before changing `find()`.
+- First change-amplification experiment: StorekeeperDB persistence-specific changed lines were 8 vs 14 for the strongest JSON-blob baseline; concept count was tied 4 vs 4. This is candidate evidence, not a general benchmark.
+- CLI metadata replication: StorekeeperDB persistence-specific changed lines were 8 vs 12 for JSON-blob SQLite, but concept count was worse 5 vs 4 because one logical record required the `singleton-list-boundary`.
+- Root-state semantics experiment CI #128 selected `PREFER_NARROW_SINGLETON_OBJECT_PROTOTYPE` as the current candidate direction. A public API has not been added.
+- The same root-state experiment rejected broad raw arbitrary-root `state()` generalization as unjustified: JavaScript primitive values cannot provide mutation-by-reference durability without an explicit cell/get-set/replacement model.
+- Root-state replacement probing exposed #42: a displaced old item proxy can currently remain writable when direct replacement reuses its durable id, causing loaded-memory/durable divergence. Runtime hardening takes priority over new root APIs.
 
 ### Boundaries
 
 - This is an alpha baseline, not the full pre-repo experiment history.
 - Root `state()` is currently an array-of-objects API, not arbitrary root values.
-- Durable item handles are writable only while their item id remains a member of the current loaded state generation.
+- Current durable item writability combines loaded generation and durable-id membership; #42 demonstrates that direct replacement also requires exact current-proxy invalidation semantics.
 - Close/reopen preserves durable data, not JavaScript proxy identity.
 - Compatible optional-field evolution is separate from incompatible schema migration semantics.
 - Durable-session `__workspace` is an experiment convention, not a reserved core API.
