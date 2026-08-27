@@ -22,13 +22,16 @@ Initial public alpha baseline plus first hardening passes.
 - Prepared statement cache for repeated SQLite operations.
 - Public alpha manual in `docs/MANUAL.md`.
 - Documentation index in `docs/README.md`.
+- Architecture model in `docs/ARCHITECTURE.md`, including local/session/durable/discoverable state boundaries.
 - Alpha product refinement process in `docs/EVALUATION_LOOP.md`.
+- Durable variable / cross-process bootstrap experiment in `docs/DURABLE_VARIABLE_EXPERIMENT.md` and `scripts/durable_session_experiment.ts`.
+- `npm run experiment:durable-session` and deterministic durable-session check in `release:check`.
 - Benchmark documentation in `docs/BENCHMARKS.md`.
 - Executable benchmark through `npm run benchmark`.
 - Consumer install smoke test through `npm run consumer:smoke`.
 - Alpha release decision record in `docs/ALPHA_RELEASE_DECISION.md`.
 - Draft release notes in `docs/RELEASE_NOTES_0.1.0-alpha.0.md`.
-- Public alpha docs: manual, evaluation loop, benchmarks, release decision, release notes, demo, React verification, magic lifecycle, automatic derived decay, metadata compaction, transaction model, browser boundary, audit notes, next-work plan, and todo example.
+- Public alpha docs: manual, architecture, evaluation loop, durable-variable experiment, benchmarks, release decision, release notes, demo, React verification, magic lifecycle, automatic derived decay, metadata compaction, transaction model, browser boundary, audit notes, next-work plan, and todo example.
 - Runtime hardening notes in `docs/RUNTIME_HARDENING.md`.
 - Magic lifecycle notes in `docs/MAGIC_LIFECYCLE.md`.
 - Automatic derived decay notes in `docs/DECAY.md`.
@@ -53,17 +56,22 @@ Initial public alpha baseline plus first hardening passes.
 - Metadata compaction preserves source rows, projection cells, and projection-backed path observations.
 - Benchmark script now performs semantic pass/fail checks while keeping latency as observational output.
 - Release checks now require alpha decision and release-note documentation to exist.
-- Release checks now verify the documentation index and alpha evaluation loop are included in the public package.
-- Release checks now verify key prepublish alpha wording: alpha-only tag, not latest, non-stable API, missing browser adapter, experimental SQLite flag, and observational benchmark posture.
+- Release checks now verify the documentation index, architecture document, alpha evaluation loop, and durable-variable experiment notes are included in the public package.
+- Release checks now run the cross-process durable-session bootstrap experiment.
+- Release checks now verify key prepublish alpha wording: alpha-only tag, not latest, non-stable API, missing browser adapter, experimental SQLite flag, observational benchmark posture, and durable-session architecture boundaries.
 - Release checks now install the generated local tarball into a temporary consumer project and verify public subpath imports.
 - Release-check fixtures for lifecycle, decay, gate, and demo paths are smaller while preserving projection creation, GC, eviction, rebuild, and source-retention semantics.
 - Magic log actions now include `project_mark_cold` and `project_gc_evict` in addition to `project_create`, `project_touch`, `project_evict`, and `project_rebuild`.
-- CI now runs `npm run release:check`, including export artifact checks, React verification, the executable demo, lifecycle/decay/metadata tests, prepublish wording inspection, package dry-run, and consumer install smoke testing.
+- CI now runs `npm run release:check`, including runtime tests, executable scenarios, export checks, prepublish wording inspection, package dry-run, and consumer install smoke testing.
 - README and next-work documentation now prioritize realistic alpha evaluation over promotion or speculative lifecycle feature growth.
 
 ### Boundaries
 
 - This is an alpha baseline, not the full pre-repo v22 experiment.
+- Root `state()` is currently an array-of-objects API, not arbitrary root values.
+- `find()` returns cloned snapshots rather than persistent proxy handles.
+- Durable source state can be evaluated across process boundaries, but `__workspace` is currently an experiment convention, not a reserved core API.
+- The durable-variable experiment does not implement agent memory, checkpoint policy, trust, context selection, or multi-agent coordination.
 - Full browser adapter is not implemented.
 - Browser-style async storage is explicitly modeled as write-behind; mutation return means memory changed, while `flush()` is the durability barrier.
 - Automatic derived decay is opt-in and currently lookup-count-based, not wall-clock-time-based.
