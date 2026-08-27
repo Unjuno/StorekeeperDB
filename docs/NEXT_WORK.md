@@ -153,6 +153,12 @@ source rows under workItems             0
 workItems projection/path/derivation    0
 ```
 
+Machine result:
+
+```text
+CANDIDATE_PASS_LOGICAL_RENAME_PRESERVES_PHYSICAL_DERIVED_STATE
+```
+
 The successful path did not migrate projection metadata. It avoided migration by keeping physical durable identity stable while changing only the logical declaration name.
 
 Repeated rename history was subsequently tested successfully by #54.
