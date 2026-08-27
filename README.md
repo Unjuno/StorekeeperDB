@@ -2,7 +2,7 @@
 
 **Magic persistence for fast-changing TypeScript prototypes.**
 
-StorekeeperDB lets TypeScript apps mutate ordinary arrays and objects while SQLite quietly persists source state behind the scenes. The product goal is to delay persistence architecture decisions while an application is still changing quickly: fewer tables, repository layers, migrations, and indexes need to be designed up front.
+StorekeeperDB lets TypeScript applications mutate ordinary-looking arrays and objects while SQLite persists source state behind the scenes. The product goal is to delay persistence architecture decisions while an application is changing quickly, without pretending that hard persistence problems disappear.
 
 ```ts
 import { StorekeeperDB, liveFind } from "@storekeeper/db";
@@ -19,9 +19,10 @@ const tasks = sk.state<Task[]>("tasks", []);
 
 tasks.push({ title: "Write proposal", done: false, tags: [] });
 tasks[0]!.priority = "urgent";
-tasks[0]!.tags!.push("prototype");
 
 const urgent = sk.find<Task>("tasks", { priority: "urgent" });
+urgent[0]!.done = true; // durable item-handle mutation
+
 const liveUrgent = liveFind<Task>(sk, "tasks", { priority: "urgent" });
 ```
 
@@ -29,11 +30,48 @@ const liveUrgent = liveFind<Task>(sk, "tasks", { priority: "urgent" });
 
 > Magic by default. Explainable on demand. Source state is never silently deleted.
 
-StorekeeperDB is built for local prototype loops where UI and state shape change quickly. It is not a production database migration framework.
+StorekeeperDB is built for local prototype loops where state shape changes quickly. It is not a production database migration framework.
 
-The intended abstraction is not “databases no longer exist.” It is “simple persistence should not dominate application architecture before it needs to.” Hard persistence problems such as transaction semantics, durability boundaries, incompatible shape changes, indexing cost, and recovery remain explicit when they matter.
+The intended abstraction is not “databases no longer exist.” It is “simple persistence should not dominate application architecture before it needs to.” Transaction semantics, durability boundaries, incompatible shape changes, indexing cost, recovery, and concurrency remain real engineering concerns.
 
-Architecturally, StorekeeperDB can also be viewed as extending the lifetime of application state beyond one process: local/session values can become durable source state. A separate **discoverable durable state** layer for process or agent-session bootstrap is experimental and is currently being evaluated as a convention above the core rather than as a new public API. See [Architecture](./docs/ARCHITECTURE.md) and [Durable variable experiment](./docs/DURABLE_VARIABLE_EXPERIMENT.md).
+## Core semantic contract
+
+StorekeeperDB now separates command-capable durable handles from reactive read snapshots.
+
+```text
+state() item             -> durable handle
+find() result item       -> durable handle
+find() result array      -> ordinary local array
+liveFind() result values -> detached stable snapshots
+```
+
+`find()` returns durable item handles. Mutating a matched item persists while that item remains a member of the current loaded state generation.
+
+```ts
+const [task] = sk.find<Task>("tasks", { priority: "urgent" });
+if (task) task.done = true;
+```
+
+The result array itself is not persistent. Changing query-result membership does not change source membership.
+
+```ts
+const urgent = sk.find<Task>("tasks", { priority: "urgent" });
+urgent.pop(); // local result array only; source state is unchanged
+```
+
+Handle lifetime is explicit:
+
+```text
+active member    -> readable + writable
+reordered member -> same handle remains writable
+rollback         -> old-generation handle is stale
+removed member   -> readable detached reference, writes fail
+close/reopen     -> data survives; JavaScript object identity does not
+```
+
+`liveFind()` intentionally uses detached snapshots so previous reactive snapshots do not alias later mutations. This keeps React-style external-store semantics stable while `find()` remains command-capable.
+
+See [`find()` semantics evaluation](./docs/FIND_SEMANTICS_EVALUATION.md) and [Architecture](./docs/ARCHITECTURE.md).
 
 ## Current development posture
 
@@ -50,29 +88,21 @@ The default loop is:
 
 See [Alpha evaluation loop](./docs/EVALUATION_LOOP.md) and [Next work](./docs/NEXT_WORK.md).
 
-## Demo
-
-Run the executable demo:
-
-```bash
-npm run demo
-```
-
-The demo shows `json_only -> projection -> debug eviction -> rebuild`, live lookup updates, and source-state preservation. See [Demo](./docs/DEMO.md).
-
 ## Realistic issue tracker scenario
 
-Run the application-evolution scenario:
+Run:
 
 ```bash
 npm run scenario:issue-tracker
 ```
 
-It creates a minimal issue model, closes/reopens the database, evolves the model with optional priority/labels/comments, exercises scalar lookup, and reopens again. The scenario deliberately records rough edges rather than hiding them; in particular it checks the current boundary that `find()` returns detached snapshots rather than persistent mutation handles. See [Issue tracker evaluation](./docs/ISSUE_TRACKER_EVALUATION.md).
+The scenario creates a minimal issue model, closes/reopens the database, evolves the model with optional priority/labels/comments, queries an issue, mutates it directly through the `find()` durable handle, and reopens again to verify persistence. It also verifies that modifying the query-result array does not modify source-state membership.
+
+See [Issue tracker evaluation](./docs/ISSUE_TRACKER_EVALUATION.md).
 
 ## Durable session experiment
 
-Run the cross-process architecture experiment:
+Run:
 
 ```bash
 npm run experiment:durable-session
@@ -80,39 +110,9 @@ npm run experiment:durable-session
 
 The writer and reader execute as separate Node processes against one temporary SQLite database. The reader initially knows only a bootstrap state key and discovers other durable state keys from the stored manifest. This evaluates durability plus discoverability; it does not claim StorekeeperDB is an agent-memory or orchestration framework.
 
-## Benchmark
-
-Run the executable benchmark:
-
-```bash
-npm run benchmark
-```
-
-The benchmark prints JSON timings for insert, first projected lookup, repeated lookup, live update behavior, metadata compaction, and reopen lookup. It is an observation tool, not a hard release latency gate. See [Benchmarks](./docs/BENCHMARKS.md).
-
-## Documentation
-
-Start with the [documentation index](./docs/README.md).
-
-Primary alpha documents:
-
-- [Manual](./docs/MANUAL.md)
-- [Architecture](./docs/ARCHITECTURE.md)
-- [Alpha evaluation loop](./docs/EVALUATION_LOOP.md)
-- [Issue tracker evaluation](./docs/ISSUE_TRACKER_EVALUATION.md)
-- [Next work](./docs/NEXT_WORK.md)
-- [Benchmarks](./docs/BENCHMARKS.md)
-- [Alpha release decision](./docs/ALPHA_RELEASE_DECISION.md)
-- [Release checklist](./docs/RELEASE.md)
-- [Transaction model](./docs/TRANSACTION_MODEL.md)
-- [Browser storage boundary](./docs/BROWSER_BOUNDARY.md)
-- [Changelog](./CHANGELOG.md)
-
-Implementation and experiment notes remain available from the documentation index rather than being presented as equal-priority entry points here.
-
 ## What is magic?
 
-StorekeeperDB treats application source state and derived lookup structures differently.
+StorekeeperDB treats source state and derived lookup structures differently.
 
 ```text
 source state JSON       = source of truth, do not silently delete
@@ -120,45 +120,50 @@ projection / lookup     = derived information, can be evicted and rebuilt
 magic log / metadata    = debug surface, can be compacted
 ```
 
-When `find()` or `liveFind()` uses a supported scalar path, StorekeeperDB may create a SQLite-backed projection. That projection is rebuildable. The original state remains stored as source JSON rows.
+When `find()` or `liveFind()` uses a supported scalar path, StorekeeperDB may create a SQLite-backed projection. The original state remains stored as source JSON rows.
 
-Ordinary in-memory JavaScript remains ordinary in-memory JavaScript:
-
-```ts
-const high = tasks.filter((task) => task.priority === "high");
-```
-
-StorekeeperDB does not claim to compile arbitrary JavaScript predicates into SQL. The supported large-list lookup path is explicit:
+StorekeeperDB does not compile arbitrary JavaScript predicates into SQL:
 
 ```ts
-const high = sk.find<Task>("tasks", { priority: "high" });
+const local = tasks.filter((task) => task.priority === "high");
+const projected = sk.find<Task>("tasks", { priority: "high" });
 ```
+
+## Demo and benchmark
+
+```bash
+npm run demo
+npm run benchmark
+```
+
+The benchmark is observational and does not define production latency guarantees. See [Benchmarks](./docs/BENCHMARKS.md).
 
 ## Current alpha scope
 
 Included:
 
-- ordinary mutable array/object state;
+- mutable list-of-object state;
 - row-per-item SQLite persistence;
 - common array mutators: `push`, `pop`, `shift`, `unshift`, `splice`, `sort`, `reverse`;
 - nested object/array mutation persistence;
-- scalar-path lookup projection through `find()` / `liveFind()`;
-- source-preserving derived projection eviction and rebuild;
-- opt-in automatic derived projection decay;
-- metadata compaction for debug/planning observations;
-- `signal()` / `liveFind()` for local realtime prototype flows;
+- durable item handles from `state()` and `find()`;
+- stable detached reactive snapshots from `liveFind()`;
+- scalar-path lookup projections;
+- source-preserving projection eviction/rebuild and opt-in derived decay;
+- metadata compaction;
+- `signal()` / `liveFind()` local realtime flows;
 - React `useSyncExternalStore` adapter verification;
 - experimental async write-behind boundary model;
-- inspectable debug APIs such as `status`, `inspect`, `explain`, and `debug()`;
-- executable demo, realistic issue-tracker scenario, durable-session experiment, benchmark, consumer smoke, and release checks.
+- inspectable `status`, `inspect`, `explain`, and `debug()` APIs;
+- executable scenarios, benchmark, consumer smoke, and release checks.
 
 Known gaps:
 
 - Root `state()` is currently an array-of-objects API, not arbitrary root values.
-- `find()` results are cloned snapshots, not persistent proxy handles.
 - Full browser adapter is not implemented.
 - API is alpha and not frozen.
-- Time-based lifecycle decay and richer metadata scoring are deferred research, not current product priorities.
+- Compatible JSON-field evolution does not eliminate incompatible-schema migration problems.
+- Time-based lifecycle decay and richer metadata scoring are deferred research.
 - The experimental async runtime is a durability-boundary model, not a production browser backend.
 - The durable-session bootstrap convention does not solve checkpoint policy, trust, multi-agent coordination, or context selection.
 
@@ -185,9 +190,25 @@ npm run release:check
 @storekeeper/db              -> default alpha runtime
 @storekeeper/db/core         -> core exports
 @storekeeper/db/node         -> Node-local runtime export
-@storekeeper/db/react        -> useSyncExternalStore-compatible adapter shape
+@storekeeper/db/react        -> useSyncExternalStore-compatible adapter
 @storekeeper/db/experimental -> experimental async write-behind boundary
 ```
+
+## Documentation
+
+Start with the [documentation index](./docs/README.md).
+
+Primary documents:
+
+- [Manual](./docs/MANUAL.md)
+- [Architecture](./docs/ARCHITECTURE.md)
+- [`find()` semantics evaluation](./docs/FIND_SEMANTICS_EVALUATION.md)
+- [Alpha evaluation loop](./docs/EVALUATION_LOOP.md)
+- [Issue tracker evaluation](./docs/ISSUE_TRACKER_EVALUATION.md)
+- [Next work](./docs/NEXT_WORK.md)
+- [Benchmarks](./docs/BENCHMARKS.md)
+- [Alpha release decision](./docs/ALPHA_RELEASE_DECISION.md)
+- [Release checklist](./docs/RELEASE.md)
 
 ## Release boundary
 
