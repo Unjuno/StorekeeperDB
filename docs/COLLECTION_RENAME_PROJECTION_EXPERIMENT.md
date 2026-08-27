@@ -2,7 +2,7 @@
 
 Issue: #52  
 PR: #53  
-Initial runtime CI: #175 PASS
+Status: **CANDIDATE PASS in CI #175; experiment-only.**
 
 ## Question
 
