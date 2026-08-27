@@ -74,6 +74,7 @@ if (!releaseCheck.includes("experiment:collection-rename-projection:check")) fai
 if (!releaseCheck.includes("experiment:multi-step-declaration-rename:check")) fail("release:check must include experiment:multi-step-declaration-rename:check");
 if (!releaseCheck.includes("experiment:state-split-merge-boundary:check")) fail("release:check must include experiment:state-split-merge-boundary:check");
 if (!releaseCheck.includes("experiment:state-merge-boundary:check")) fail("release:check must include experiment:state-merge-boundary:check");
+if (!releaseCheck.includes("experiment:scalar-to-object-evolution:check")) fail("release:check must include experiment:scalar-to-object-evolution:check");
 if (!releaseCheck.includes("scenario:issue-tracker:check")) fail("release:check must include scenario:issue-tracker:check");
 if (releaseCheck.includes("benchmark:check")) fail("release:check must not include benchmark:check while benchmark timing is observational");
 
@@ -91,6 +92,7 @@ const requiredScripts = [
   "experiment:multi-step-declaration-rename",
   "experiment:state-split-merge-boundary",
   "experiment:state-merge-boundary",
+  "experiment:scalar-to-object-evolution",
   "scenario:issue-tracker",
 ];
 for (const script of requiredScripts) {
@@ -128,6 +130,7 @@ const publicDocs = [
   "docs/MULTI_STEP_DECLARATION_RENAME_EXPERIMENT.md",
   "docs/STATE_SPLIT_MERGE_BOUNDARY_EXPERIMENT.md",
   "docs/STATE_MERGE_BOUNDARY_EXPERIMENT.md",
+  "docs/SCALAR_TO_OBJECT_VALUE_EVOLUTION_EXPERIMENT.md",
   "docs/MANUAL.md",
   "docs/EVALUATION_LOOP.md",
   "docs/BENCHMARKS.md",
@@ -204,13 +207,19 @@ const requiredPublicText: Array<[string, string]> = [
   ["docs/STATE_MERGE_BOUNDARY_EXPERIMENT.md", "metadataCountersExactlyRestored = true"],
   ["docs/STATE_MERGE_BOUNDARY_EXPERIMENT.md", "an atomic migration unit must include source reads and validation"],
   ["docs/STATE_MERGE_BOUNDARY_EXPERIMENT.md", "No public migration API is authorized by this result."],
+  ["docs/SCALAR_TO_OBJECT_VALUE_EVOLUTION_EXPERIMENT.md", "BOUNDARY CONFIRMED in CI #211"],
+  ["docs/SCALAR_TO_OBJECT_VALUE_EVOLUTION_EXPERIMENT.md", "BOUNDARY_CONFIRMED_SCALAR_TO_OBJECT_REQUIRES_EXPLICIT_VALUE_MIGRATION"],
+  ["docs/SCALAR_TO_OBJECT_VALUE_EVOLUTION_EXPERIMENT.md", "TypeScript declaration change alone does not migrate persisted semantic shape"],
+  ["docs/SCALAR_TO_OBJECT_VALUE_EVOLUTION_EXPERIMENT.md", "exactPhysicalRollback = true"],
+  ["docs/SCALAR_TO_OBJECT_VALUE_EVOLUTION_EXPERIMENT.md", "No public migration API is authorized by this result."],
   ["docs/NEXT_WORK.md", "Persistence should normally not enter the coding agent's planning loop."],
   ["docs/NEXT_WORK.md", "CANDIDATE_PREFER_EXPLICIT_RENAME_ALIAS_WITH_IDENTITY_MANIFEST"],
   ["docs/NEXT_WORK.md", "CANDIDATE_PASS_LOGICAL_RENAME_PRESERVES_PHYSICAL_DERIVED_STATE"],
   ["docs/NEXT_WORK.md", "CANDIDATE_PASS_MULTI_STEP_RENAME_RETAINS_SINGLE_PHYSICAL_IDENTITY"],
   ["docs/NEXT_WORK.md", "BOUNDARY_CONFIRMED_SPLIT_REQUIRES_EXPLICIT_ATOMIC_MIGRATION"],
   ["docs/NEXT_WORK.md", "BOUNDARY_CONFIRMED_MERGE_REQUIRES_EXPLICIT_CONFLICT_AWARE_MIGRATION"],
-  ["docs/NEXT_WORK.md", "Evaluate incompatible value evolution"],
+  ["docs/NEXT_WORK.md", "BOUNDARY_CONFIRMED_SCALAR_TO_OBJECT_REQUIRES_EXPLICIT_VALUE_MIGRATION"],
+  ["docs/NEXT_WORK.md", "Probe enum narrowing incompatible value evolution"],
   ["docs/EVALUATION_LOOP.md", "Simple persistence should feel automatic. Hard persistence problems must remain observable and controllable."],
   ["docs/ALPHA_RELEASE_DECISION.md", "public alpha candidate"],
   ["docs/ALPHA_RELEASE_DECISION.md", "not a stable API release"],
@@ -245,6 +254,7 @@ console.log(JSON.stringify({
   hasMultiStepDeclarationRenameExperiment: true,
   hasStateSplitMergeBoundaryExperiment: true,
   hasStateMergeBoundaryExperiment: true,
+  hasScalarToObjectEvolutionExperiment: true,
   hasIssueTrackerScenario: true,
   hasFindSemanticsDecision: true,
   pass: true,
