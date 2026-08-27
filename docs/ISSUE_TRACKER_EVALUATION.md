@@ -1,6 +1,6 @@
 # Realistic issue tracker evaluation
 
-Status: scenario implemented; validation pending on the experiment branch.
+Status: scenario PASS in CI #87; full release gate failed only on an exact wording check and is being re-run after that check was corrected.
 
 Issue: #24.
 
@@ -96,15 +96,47 @@ UNCERTAIN when:
 - one issue-tracker shape is insufficient to distinguish a general design property from scenario bias;
 - a finding is semantic rather than clearly defective and needs a product decision.
 
-## Findings to observe
+## Initial result — CI #87
 
-### F1 — compatible shape evolution
+The scenario itself completed successfully before the later release-document wording check failed.
 
-Expected classification: positive evidence if optional JSON fields can be added through ordinary mutation after reopen.
+Observed scenario output:
 
-### F2 — `find()` result mutation semantics
+```text
+initial rows after shape change       2
+urgent lookup results                 1
+reopened rows                         2
+compatible optional-field evolution  PASS
+priority projection creation          PASS
+find() mutation is detached           CONFIRMED
+nested evolved shape persisted        PASS
+durable proxy status persisted        PASS
+scenario                              PASS
+```
 
-Current implementation returns cloned values. The scenario deliberately checks that:
+The full CI #87 run failed later because `release_check.ts` searched for `find() result mutation semantics` while the document heading contains Markdown backticks around `find()`. That is release-gate wiring, not a scenario failure.
+
+### Product decision from this evidence
+
+The compatible-shape-evolution hypothesis passes for this scenario.
+
+However, the scenario also confirms a real semantic rough edge:
+
+> A value returned by `find()` looks mutable, but mutating it does not mutate the durable state.
+
+This finding should be separated into its own API decision rather than fixed in this evaluation PR.
+
+## Findings
+
+### F1 — compatible shape evolution: positive evidence
+
+Observed: existing `IssueV1` rows reopened as `IssueV2`, optional fields were absent as expected, and `priority`, `labels`, and `comments` were added through ordinary state-proxy mutation without direct SQL, a repository layer, or a manual table migration.
+
+Scope: this validates compatible optional JSON-field evolution only. It does not validate incompatible type changes, field renames, or long-lived migration policy.
+
+### F2 — `find()` result mutation semantics: surprise confirmed
+
+Current implementation returns cloned values. The scenario confirmed that:
 
 ```ts
 const issue = sk.find<IssueV2>("issues", { id: "ISSUE-1" })[0]!;
@@ -113,7 +145,13 @@ issue.status = "closed";
 
 does **not** mutate the durable state proxy.
 
-If confirmed, classify this as a **surprise / API-semantics finding**, not silently as success. The product question is whether `find()` should remain an explicit snapshot API or return durable handles.
+Classification: **surprise / API semantics**.
+
+The product question is whether `find()` should:
+
+1. remain a snapshot API and become explicitly read-only / documented as such;
+2. be renamed or supplemented with a more explicit snapshot-query API; or
+3. return durable mutation handles, accepting the additional identity/lifecycle complexity.
 
 Do not change runtime behavior in the same PR that first records this finding.
 
