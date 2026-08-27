@@ -73,6 +73,7 @@ if (!releaseCheck.includes("experiment:declaration-key-rename:check")) fail("rel
 if (!releaseCheck.includes("experiment:collection-rename-projection:check")) fail("release:check must include experiment:collection-rename-projection:check");
 if (!releaseCheck.includes("experiment:multi-step-declaration-rename:check")) fail("release:check must include experiment:multi-step-declaration-rename:check");
 if (!releaseCheck.includes("experiment:state-split-merge-boundary:check")) fail("release:check must include experiment:state-split-merge-boundary:check");
+if (!releaseCheck.includes("experiment:state-merge-boundary:check")) fail("release:check must include experiment:state-merge-boundary:check");
 if (!releaseCheck.includes("scenario:issue-tracker:check")) fail("release:check must include scenario:issue-tracker:check");
 if (releaseCheck.includes("benchmark:check")) fail("release:check must not include benchmark:check while benchmark timing is observational");
 
@@ -89,6 +90,7 @@ const requiredScripts = [
   "experiment:collection-rename-projection",
   "experiment:multi-step-declaration-rename",
   "experiment:state-split-merge-boundary",
+  "experiment:state-merge-boundary",
   "scenario:issue-tracker",
 ];
 for (const script of requiredScripts) {
@@ -125,6 +127,7 @@ const publicDocs = [
   "docs/COLLECTION_RENAME_PROJECTION_EXPERIMENT.md",
   "docs/MULTI_STEP_DECLARATION_RENAME_EXPERIMENT.md",
   "docs/STATE_SPLIT_MERGE_BOUNDARY_EXPERIMENT.md",
+  "docs/STATE_MERGE_BOUNDARY_EXPERIMENT.md",
   "docs/MANUAL.md",
   "docs/EVALUATION_LOOP.md",
   "docs/BENCHMARKS.md",
@@ -196,12 +199,18 @@ const requiredPublicText: Array<[string, string]> = [
   ["docs/STATE_SPLIT_MERGE_BOUNDARY_EXPERIMENT.md", "One-to-one rename aliasing is not a general migration mechanism."],
   ["docs/STATE_SPLIT_MERGE_BOUNDARY_EXPERIMENT.md", "The injected failure restored source, targets, manifest, and derived metadata."],
   ["docs/STATE_SPLIT_MERGE_BOUNDARY_EXPERIMENT.md", "No public migration API is authorized by this result."],
+  ["docs/STATE_MERGE_BOUNDARY_EXPERIMENT.md", "BOUNDARY CONFIRMED in CI #205"],
+  ["docs/STATE_MERGE_BOUNDARY_EXPERIMENT.md", "BOUNDARY_CONFIRMED_MERGE_REQUIRES_EXPLICIT_CONFLICT_AWARE_MIGRATION"],
+  ["docs/STATE_MERGE_BOUNDARY_EXPERIMENT.md", "metadataCountersExactlyRestored = true"],
+  ["docs/STATE_MERGE_BOUNDARY_EXPERIMENT.md", "an atomic migration unit must include source reads and validation"],
+  ["docs/STATE_MERGE_BOUNDARY_EXPERIMENT.md", "No public migration API is authorized by this result."],
   ["docs/NEXT_WORK.md", "Persistence should normally not enter the coding agent's planning loop."],
   ["docs/NEXT_WORK.md", "CANDIDATE_PREFER_EXPLICIT_RENAME_ALIAS_WITH_IDENTITY_MANIFEST"],
   ["docs/NEXT_WORK.md", "CANDIDATE_PASS_LOGICAL_RENAME_PRESERVES_PHYSICAL_DERIVED_STATE"],
   ["docs/NEXT_WORK.md", "CANDIDATE_PASS_MULTI_STEP_RENAME_RETAINS_SINGLE_PHYSICAL_IDENTITY"],
   ["docs/NEXT_WORK.md", "BOUNDARY_CONFIRMED_SPLIT_REQUIRES_EXPLICIT_ATOMIC_MIGRATION"],
-  ["docs/NEXT_WORK.md", "Test many-to-one merge semantics"],
+  ["docs/NEXT_WORK.md", "BOUNDARY_CONFIRMED_MERGE_REQUIRES_EXPLICIT_CONFLICT_AWARE_MIGRATION"],
+  ["docs/NEXT_WORK.md", "Evaluate incompatible value evolution"],
   ["docs/EVALUATION_LOOP.md", "Simple persistence should feel automatic. Hard persistence problems must remain observable and controllable."],
   ["docs/ALPHA_RELEASE_DECISION.md", "public alpha candidate"],
   ["docs/ALPHA_RELEASE_DECISION.md", "not a stable API release"],
@@ -235,6 +244,7 @@ console.log(JSON.stringify({
   hasCollectionRenameProjectionExperiment: true,
   hasMultiStepDeclarationRenameExperiment: true,
   hasStateSplitMergeBoundaryExperiment: true,
+  hasStateMergeBoundaryExperiment: true,
   hasIssueTrackerScenario: true,
   hasFindSemanticsDecision: true,
   pass: true,
