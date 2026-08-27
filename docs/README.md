@@ -10,7 +10,8 @@ StorekeeperDB is a public alpha candidate. The current priority is product refin
 - [Next work](./NEXT_WORK.md) — current priorities and deferred research.
 - [Issue tracker evaluation](./ISSUE_TRACKER_EVALUATION.md) — realistic compatible application-shape evolution and query-to-update scenario.
 - [`find()` semantics evaluation](./FIND_SEMANTICS_EVALUATION.md) — durable-handle vs snapshot decision record.
-- [Change amplification experiment](./CHANGE_AMPLIFICATION_EXPERIMENT.md) — direct-SQL baselines vs StorekeeperDB for V1 -> V2 persistence-specific edit surface.
+- [Change amplification experiment](./CHANGE_AMPLIFICATION_EXPERIMENT.md) — first direct-SQL comparison for compatible model evolution.
+- [CLI metadata replication](./CLI_METADATA_CHANGE_AMPLIFICATION_EXPERIMENT.md) — second change-amplification scenario exposing singleton-root concept cost.
 - [Benchmarks](./BENCHMARKS.md) — reproducible observations; timings are not release guarantees.
 - [Demo](./DEMO.md) — executable runtime walkthrough.
 
@@ -27,6 +28,7 @@ StorekeeperDB is a public alpha candidate. The current priority is product refin
 These documents record experimental evidence and narrower runtime behavior. They are useful for understanding why a contract exists and where it has not yet generalized.
 
 - [Change amplification experiment](./CHANGE_AMPLIFICATION_EXPERIMENT.md)
+- [CLI metadata replication](./CLI_METADATA_CHANGE_AMPLIFICATION_EXPERIMENT.md)
 - [Durable variable / session bootstrap experiment](./DURABLE_VARIABLE_EXPERIMENT.md)
 - [`find()` semantics evaluation](./FIND_SEMANTICS_EVALUATION.md)
 - [Magic lifecycle](./MAGIC_LIFECYCLE.md)
@@ -46,7 +48,7 @@ Avoid:
 
 - presenting the alpha as production-ready;
 - adding features without a demonstrated scenario;
-- treating benchmark timings or one application experiment as general guarantees;
+- treating benchmark timings or small application experiments as general guarantees;
 - implying that the experimental async boundary is a complete browser adapter;
 - growing the public API when simplification or removal would solve the same problem.
 
