@@ -62,30 +62,28 @@ if (pkg.version !== "0.1.0-alpha.0") fail(`unexpected alpha version: ${pkg.versi
 if (pkg.private !== false) fail("package.json private must be false for public alpha dry-run checks");
 if (!releaseCheck.includes("pack:dry")) fail("release:check must include pack:dry");
 if (!releaseCheck.includes("consumer:smoke")) fail("release:check must include consumer:smoke");
-if (!releaseCheck.includes("experiment:durable-session:check")) {
-  fail("release:check must include experiment:durable-session:check");
+if (!releaseCheck.includes("experiment:durable-session:check")) fail("release:check must include experiment:durable-session:check");
+if (!releaseCheck.includes("experiment:change-amplification:check")) fail("release:check must include experiment:change-amplification:check");
+if (!releaseCheck.includes("experiment:cli-change-amplification:check")) fail("release:check must include experiment:cli-change-amplification:check");
+if (!releaseCheck.includes("experiment:root-state-semantics:check")) fail("release:check must include experiment:root-state-semantics:check");
+if (!releaseCheck.includes("experiment:singleton-object-surface:check")) fail("release:check must include experiment:singleton-object-surface:check");
+if (!releaseCheck.includes("experiment:agent-decision-burden:check")) fail("release:check must include experiment:agent-decision-burden:check");
+if (!releaseCheck.includes("scenario:issue-tracker:check")) fail("release:check must include scenario:issue-tracker:check");
+if (releaseCheck.includes("benchmark:check")) fail("release:check must not include benchmark:check while benchmark timing is observational");
+
+const requiredScripts = [
+  "consumer:smoke",
+  "experiment:durable-session",
+  "experiment:change-amplification",
+  "experiment:cli-change-amplification",
+  "experiment:root-state-semantics",
+  "experiment:singleton-object-surface",
+  "experiment:agent-decision-burden",
+  "scenario:issue-tracker",
+];
+for (const script of requiredScripts) {
+  if (typeof pkg.scripts?.[script] !== "string") fail(`missing ${script} script`);
 }
-if (!releaseCheck.includes("experiment:change-amplification:check")) {
-  fail("release:check must include experiment:change-amplification:check");
-}
-if (!releaseCheck.includes("experiment:cli-change-amplification:check")) {
-  fail("release:check must include experiment:cli-change-amplification:check");
-}
-if (!releaseCheck.includes("experiment:root-state-semantics:check")) {
-  fail("release:check must include experiment:root-state-semantics:check");
-}
-if (!releaseCheck.includes("scenario:issue-tracker:check")) {
-  fail("release:check must include scenario:issue-tracker:check");
-}
-if (releaseCheck.includes("benchmark:check")) {
-  fail("release:check must not include benchmark:check while benchmark timing is observational");
-}
-if (typeof pkg.scripts?.["consumer:smoke"] !== "string") fail("missing consumer:smoke script");
-if (typeof pkg.scripts?.["experiment:durable-session"] !== "string") fail("missing durable-session experiment script");
-if (typeof pkg.scripts?.["experiment:change-amplification"] !== "string") fail("missing change-amplification experiment script");
-if (typeof pkg.scripts?.["experiment:cli-change-amplification"] !== "string") fail("missing CLI change-amplification experiment script");
-if (typeof pkg.scripts?.["experiment:root-state-semantics"] !== "string") fail("missing root-state semantics experiment script");
-if (typeof pkg.scripts?.["scenario:issue-tracker"] !== "string") fail("missing issue-tracker scenario script");
 
 const expectedFileEntries = ["dist", "README.md", "LICENSE", "CHANGELOG.md", "docs"];
 for (const entry of expectedFileEntries) {
@@ -111,6 +109,7 @@ const publicDocs = [
   "docs/CHANGE_AMPLIFICATION_EXPERIMENT.md",
   "docs/CLI_METADATA_CHANGE_AMPLIFICATION_EXPERIMENT.md",
   "docs/ROOT_STATE_SEMANTICS_EVALUATION.md",
+  "docs/AGENT_DECISION_BURDEN_EXPERIMENT.md",
   "docs/MANUAL.md",
   "docs/EVALUATION_LOOP.md",
   "docs/BENCHMARKS.md",
@@ -154,6 +153,11 @@ const requiredPublicText: Array<[string, string]> = [
   ["docs/ROOT_STATE_SEMANTICS_EVALUATION.md", "PREFER_NARROW_SINGLETON_OBJECT_PROTOTYPE"],
   ["docs/ROOT_STATE_SEMANTICS_EVALUATION.md", "memoryDurableDivergenceAfterOldHandleWrite"],
   ["docs/ROOT_STATE_SEMANTICS_EVALUATION.md", "primitive mutable-reference"],
+  ["docs/AGENT_DECISION_BURDEN_EXPERIMENT.md", "CANDIDATE PASS in CI #147"],
+  ["docs/AGENT_DECISION_BURDEN_EXPERIMENT.md", "does not inspect or claim access to model chain-of-thought"],
+  ["docs/AGENT_DECISION_BURDEN_EXPERIMENT.md", "StorekeeperDB | **14** | **7**"],
+  ["docs/AGENT_DECISION_BURDEN_EXPERIMENT.md", "singleton-list-adaptation"],
+  ["docs/NEXT_WORK.md", "Persistence should normally not enter the coding agent's planning loop."],
   ["docs/EVALUATION_LOOP.md", "Simple persistence should feel automatic. Hard persistence problems must remain observable and controllable."],
   ["docs/ALPHA_RELEASE_DECISION.md", "public alpha candidate"],
   ["docs/ALPHA_RELEASE_DECISION.md", "not a stable API release"],
@@ -180,6 +184,8 @@ console.log(JSON.stringify({
   hasChangeAmplificationExperiment: true,
   hasCliChangeAmplificationReplication: true,
   hasRootStateSemanticsExperiment: true,
+  hasSingletonObjectSurfaceExperiment: true,
+  hasAgentDecisionBurdenExperiment: true,
   hasIssueTrackerScenario: true,
   hasFindSemanticsDecision: true,
   pass: true,
