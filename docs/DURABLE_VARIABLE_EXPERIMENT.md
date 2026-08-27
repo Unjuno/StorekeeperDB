@@ -1,6 +1,6 @@
 # Durable variable / session bootstrap experiment
 
-Status: implemented on the experiment branch; semantic validation is performed by `npm run experiment:durable-session` and the release gate.
+Status: initial cross-process experiment PASS on CI #83. Generalization is still uncertain.
 
 Issue: #26.
 
@@ -79,6 +79,27 @@ UNCERTAIN when:
 - a single manifest becomes a hidden coordination bottleneck;
 - multi-writer behavior is required to judge the design.
 
+## Initial result
+
+CI #83 ran the full `npm run release:check` gate successfully, including `experiment:durable-session:check`.
+
+Observed decision for this experiment:
+
+```text
+Durability across process boundary        PASS
+Nested checkpoint persistence             PASS
+Reader bootstrap from __workspace         PASS
+Dynamic discovery of additional states    PASS
+Public package entrypoint only             PASS
+General workspace/agent API justification UNCERTAIN
+```
+
+The experiment therefore supports the narrow architecture claim:
+
+> durable state + a small bootstrap manifest is sufficient for this cross-process recovery scenario.
+
+It does not establish that the bootstrap convention is general enough to become a reserved StorekeeperDB API.
+
 ## C — competing explanations
 
 1. The experiment may only prove that a manually curated manifest works, not that agent memory is solved.
@@ -113,7 +134,7 @@ interpretation / coordination
   = application or agent layer decides what to do with that state
 ```
 
-If the experiment passes, the narrow conclusion is:
+The current conclusion is:
 
 > StorekeeperDB can provide session-spanning durable variables, and discoverability can be prototyped above the core with a bootstrap manifest.
 
