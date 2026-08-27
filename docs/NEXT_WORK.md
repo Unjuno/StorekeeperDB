@@ -20,7 +20,7 @@ See [Alpha evaluation loop](./EVALUATION_LOOP.md).
 
 ## Active priority
 
-### 1. Realistic alpha scenario
+### 1. Realistic alpha scenario — #24
 
 Status: next.
 
