@@ -75,6 +75,7 @@ if (!releaseCheck.includes("experiment:multi-step-declaration-rename:check")) fa
 if (!releaseCheck.includes("experiment:state-split-merge-boundary:check")) fail("release:check must include experiment:state-split-merge-boundary:check");
 if (!releaseCheck.includes("experiment:state-merge-boundary:check")) fail("release:check must include experiment:state-merge-boundary:check");
 if (!releaseCheck.includes("experiment:scalar-to-object-evolution:check")) fail("release:check must include experiment:scalar-to-object-evolution:check");
+if (!releaseCheck.includes("experiment:enum-narrowing-evolution:check")) fail("release:check must include experiment:enum-narrowing-evolution:check");
 if (!releaseCheck.includes("scenario:issue-tracker:check")) fail("release:check must include scenario:issue-tracker:check");
 if (releaseCheck.includes("benchmark:check")) fail("release:check must not include benchmark:check while benchmark timing is observational");
 
@@ -93,6 +94,7 @@ const requiredScripts = [
   "experiment:state-split-merge-boundary",
   "experiment:state-merge-boundary",
   "experiment:scalar-to-object-evolution",
+  "experiment:enum-narrowing-evolution",
   "scenario:issue-tracker",
 ];
 for (const script of requiredScripts) {
@@ -131,6 +133,7 @@ const publicDocs = [
   "docs/STATE_SPLIT_MERGE_BOUNDARY_EXPERIMENT.md",
   "docs/STATE_MERGE_BOUNDARY_EXPERIMENT.md",
   "docs/SCALAR_TO_OBJECT_VALUE_EVOLUTION_EXPERIMENT.md",
+  "docs/ENUM_NARROWING_VALUE_EVOLUTION_EXPERIMENT.md",
   "docs/MANUAL.md",
   "docs/EVALUATION_LOOP.md",
   "docs/BENCHMARKS.md",
@@ -212,6 +215,12 @@ const requiredPublicText: Array<[string, string]> = [
   ["docs/SCALAR_TO_OBJECT_VALUE_EVOLUTION_EXPERIMENT.md", "TypeScript declaration change alone does not migrate persisted semantic shape"],
   ["docs/SCALAR_TO_OBJECT_VALUE_EVOLUTION_EXPERIMENT.md", "exactPhysicalRollback = true"],
   ["docs/SCALAR_TO_OBJECT_VALUE_EVOLUTION_EXPERIMENT.md", "No public migration API is authorized by this result."],
+  ["docs/ENUM_NARROWING_VALUE_EVOLUTION_EXPERIMENT.md", "BOUNDARY CONFIRMED in CI #218"],
+  ["docs/ENUM_NARROWING_VALUE_EVOLUTION_EXPERIMENT.md", "BOUNDARY_CONFIRMED_ENUM_NARROWING_REQUIRES_EXPLICIT_VALUE_POLICY"],
+  ["docs/ENUM_NARROWING_VALUE_EVOLUTION_EXPERIMENT.md", "narrower TypeScript union does not transform persisted"],
+  ["docs/ENUM_NARROWING_VALUE_EVOLUTION_EXPERIMENT.md", "exactPhysicalRollback = true"],
+  ["docs/ENUM_NARROWING_VALUE_EVOLUTION_EXPERIMENT.md", "ordinary durable mutation kept the existing scalar projection coherent"],
+  ["docs/ENUM_NARROWING_VALUE_EVOLUTION_EXPERIMENT.md", "No public migration or validation API is authorized by this result."],
   ["docs/NEXT_WORK.md", "Persistence should normally not enter the coding agent's planning loop."],
   ["docs/NEXT_WORK.md", "CANDIDATE_PREFER_EXPLICIT_RENAME_ALIAS_WITH_IDENTITY_MANIFEST"],
   ["docs/NEXT_WORK.md", "CANDIDATE_PASS_LOGICAL_RENAME_PRESERVES_PHYSICAL_DERIVED_STATE"],
@@ -219,7 +228,8 @@ const requiredPublicText: Array<[string, string]> = [
   ["docs/NEXT_WORK.md", "BOUNDARY_CONFIRMED_SPLIT_REQUIRES_EXPLICIT_ATOMIC_MIGRATION"],
   ["docs/NEXT_WORK.md", "BOUNDARY_CONFIRMED_MERGE_REQUIRES_EXPLICIT_CONFLICT_AWARE_MIGRATION"],
   ["docs/NEXT_WORK.md", "BOUNDARY_CONFIRMED_SCALAR_TO_OBJECT_REQUIRES_EXPLICIT_VALUE_MIGRATION"],
-  ["docs/NEXT_WORK.md", "Probe enum narrowing incompatible value evolution"],
+  ["docs/NEXT_WORK.md", "BOUNDARY_CONFIRMED_ENUM_NARROWING_REQUIRES_EXPLICIT_VALUE_POLICY"],
+  ["docs/NEXT_WORK.md", "Probe required-field introduction independently"],
   ["docs/EVALUATION_LOOP.md", "Simple persistence should feel automatic. Hard persistence problems must remain observable and controllable."],
   ["docs/ALPHA_RELEASE_DECISION.md", "public alpha candidate"],
   ["docs/ALPHA_RELEASE_DECISION.md", "not a stable API release"],
@@ -255,6 +265,7 @@ console.log(JSON.stringify({
   hasStateSplitMergeBoundaryExperiment: true,
   hasStateMergeBoundaryExperiment: true,
   hasScalarToObjectEvolutionExperiment: true,
+  hasEnumNarrowingEvolutionExperiment: true,
   hasIssueTrackerScenario: true,
   hasFindSemanticsDecision: true,
   pass: true,
