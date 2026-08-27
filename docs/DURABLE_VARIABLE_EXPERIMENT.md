@@ -1,6 +1,8 @@
 # Durable variable / session bootstrap experiment
 
-Status: draft experiment.
+Status: implemented on the experiment branch; semantic validation is performed by `npm run experiment:durable-session` and the release gate.
+
+Issue: #26.
 
 ## H — hypothesis
 
@@ -17,19 +19,20 @@ Use two separate Node processes against one temporary SQLite file.
 
 Writer process:
 
-1. opens StorekeeperDB;
+1. opens StorekeeperDB through the public `@storekeeper/db` entrypoint;
 2. writes one `__workspace` manifest;
 3. writes `decisions` and `findings` states;
 4. records those state names in the manifest;
-5. closes and exits.
+5. updates nested checkpoint state;
+6. closes and exits.
 
 Reader process:
 
 1. starts with only the database path and bootstrap key;
-2. opens StorekeeperDB;
+2. opens StorekeeperDB through the public package entrypoint;
 3. reads the manifest;
-4. discovers `decisions` and `findings` from `importantStateKeys`;
-5. opens those states dynamically;
+4. discovers additional state names from `importantStateKeys`;
+5. opens those states dynamically rather than through a hard-coded reader list;
 6. verifies current goal, active task, checkpoint, and discovered state counts;
 7. closes and exits.
 
@@ -40,6 +43,18 @@ Environment:
 - one temporary local SQLite database;
 - two independent Node processes.
 
+Run:
+
+```bash
+npm run experiment:durable-session
+```
+
+The deterministic check is also included in:
+
+```bash
+npm run release:check
+```
+
 ## D — decision
 
 PASS when:
@@ -47,7 +62,8 @@ PASS when:
 - reader process reconstructs the expected goal and active task;
 - reader discovers durable states from the manifest rather than a hard-coded list;
 - decision/finding rows survive the writer process exit;
-- no internal SQLite access or StorekeeperDB internal import is required by the scenario logic;
+- nested checkpoint updates survive the process boundary;
+- no direct SQLite access or StorekeeperDB internal import is required by the scenario logic;
 - the experiment exits successfully.
 
 FAIL when:
@@ -67,7 +83,7 @@ UNCERTAIN when:
 
 1. The experiment may only prove that a manually curated manifest works, not that agent memory is solved.
 2. `__workspace` may simply move schema design into a different JSON object.
-3. A single-process parent that launches two subprocesses still controls the protocol; a real autonomous agent may not know when or how to checkpoint.
+3. A parent process still launches both subprocesses and controls the protocol; a real autonomous agent may not know when or how to checkpoint.
 4. Discovery can succeed while stale or malicious stored instructions still make continuation unsafe.
 
 ## U — uncertainty
@@ -82,10 +98,27 @@ Major unresolved areas:
 - how much durable state should be loaded into an agent context;
 - whether a reserved bootstrap key belongs in StorekeeperDB core or should remain an application convention.
 
-## Expected architectural consequence
+## Architectural interpretation
+
+The experiment separates three responsibilities:
+
+```text
+durability
+  = StorekeeperDB core persists source state
+
+discoverability
+  = bootstrap manifest points to relevant durable states
+
+interpretation / coordination
+  = application or agent layer decides what to do with that state
+```
 
 If the experiment passes, the narrow conclusion is:
 
 > StorekeeperDB can provide session-spanning durable variables, and discoverability can be prototyped above the core with a bootstrap manifest.
 
-It does **not** prove that StorekeeperDB should implement agent memory, orchestration, summarization, or conflict resolution.
+It does **not** prove that StorekeeperDB should implement agent memory, orchestration, summarization, autonomous checkpointing, or conflict resolution.
+
+## Follow-up decision
+
+Do not add a reserved `__workspace` API after one passing scenario. Reuse the same convention in at least one additional application or agent-like scenario first. If the convention remains stable and repeatedly removes user-side boilerplate, then evaluate whether a first-class bootstrap/workspace API is justified.
