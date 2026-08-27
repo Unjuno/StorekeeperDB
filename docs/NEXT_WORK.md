@@ -6,7 +6,7 @@ This document tracks current StorekeeperDB priorities. Historical implementation
 
 StorekeeperDB is a public alpha candidate in a product refinement / alpha hardening loop.
 
-The current goal is not promotion and not feature-count growth. The goal is to use realistic application scenarios to expose:
+The current goal is not promotion and not feature-count growth. The goal is to use realistic application and process-lifecycle scenarios to expose:
 
 - API friction;
 - surprising behavior;
@@ -14,19 +14,18 @@ The current goal is not promotion and not feature-count growth. The goal is to u
 - documentation gaps;
 - test gaps;
 - persistence-specific change amplification;
+- session / process lifetime boundaries;
 - reproducible performance roughness.
 
-See [Alpha evaluation loop](./EVALUATION_LOOP.md).
+See [Alpha evaluation loop](./EVALUATION_LOOP.md) and [Architecture](./ARCHITECTURE.md).
 
-## Active priority
+## Active priorities
 
-### 1. Realistic alpha scenario — #24
+### 1. Realistic application scenario — #24
 
-Status: next.
+Status: next application-facing evaluation.
 
-Build one small scenario that exercises StorekeeperDB as an application developer would, rather than as an implementation demo.
-
-Preferred first candidate: an issue tracker whose persisted item shape changes during development.
+Build one small issue-tracker scenario that exercises StorekeeperDB as an application developer would, rather than as an implementation demo.
 
 The scenario should include:
 
@@ -40,14 +39,31 @@ The scenario should include:
 
 Record all friction before changing the runtime.
 
-### 2. Convert findings into small PRs
+### 2. Durable variable / session bootstrap experiment — #26
 
-Status: follows the first scenario.
+Status: experiment in progress.
+
+Evaluate whether StorekeeperDB can be treated as a durable-variable layer across process/session boundaries without adding agent-specific APIs to the core.
+
+Current experiment:
+
+- writer and reader run as separate Node processes;
+- writer persists a `__workspace` manifest plus additional durable states;
+- reader initially knows only the database path and bootstrap key;
+- reader discovers other state keys from the manifest;
+- release checks run the deterministic experiment;
+- architecture documentation separates durability, discoverability, and agent/application policy.
+
+Do not infer from a passing experiment that StorekeeperDB should become an agent-memory or orchestration framework. The immediate question is narrower: whether durable state plus a bootstrap convention is sufficient for cross-session recovery.
+
+### 3. Convert findings into small PRs
+
+Status: follows scenario evidence.
 
 For each observed rough edge:
 
 1. classify the finding;
-2. decide whether the smallest fix belongs in runtime, public API, tests, or docs;
+2. decide whether the smallest fix belongs in runtime, public API, tests, docs, or an application-level convention;
 3. prefer simplification over API growth;
 4. add regression coverage when behavior changes;
 5. run the scenario again;
@@ -55,7 +71,7 @@ For each observed rough edge:
 
 One PR should normally address one observed problem or one tightly related group.
 
-### 3. Evaluate change amplification
+### 4. Evaluate change amplification
 
 Status: planned.
 
@@ -72,6 +88,25 @@ For selected scenario changes, record:
 
 The purpose is not to manufacture a favorable line-count comparison. The purpose is to detect whether StorekeeperDB actually moves persistence concerns out of the early prototype loop or merely hides them until failure.
 
+## Architecture questions opened by #26
+
+The session-bootstrap experiment should help distinguish four scopes:
+
+```text
+local value
+session/process value
+durable state
+discoverable durable state
+```
+
+Current working boundary:
+
+- StorekeeperDB core owns durable local state;
+- a bootstrap manifest may provide discoverability above the core;
+- checkpoint policy, agent memory, summarization, trust, context selection, and multi-agent coordination remain outside the core unless later evidence requires otherwise.
+
+Do not reserve `__workspace` or add a workspace API until the convention has been exercised in more than one scenario.
+
 ## Recently completed baseline
 
 The current main branch already includes:
@@ -87,7 +122,8 @@ The current main branch already includes:
 - alpha release decision notes;
 - prepublish wording inspection;
 - clean consumer tarball install simulation;
-- slimmed release-check fixtures while preserving semantic coverage.
+- slimmed release-check fixtures while preserving semantic coverage;
+- alpha evaluation-loop and documentation organization.
 
 This baseline is sufficient to stop treating missing infrastructure as the default reason to add more infrastructure.
 
@@ -111,6 +147,10 @@ These remain valid research topics, but they are not the next product priority u
 
 The current experimental async write-behind runtime defines a durability boundary; it is not a complete browser adapter. Browser implementation work should wait until the required semantics are justified by a realistic browser scenario.
 
+### Agent-specific memory / orchestration
+
+Do not add conversation summarization, agent identity, prompt storage, autonomous checkpoint policy, or multi-agent conflict resolution to the core based only on the durable-variable experiment. Those are separate architecture layers.
+
 ## Publication follow-up
 
 Publishing is not the current optimization target. If `0.1.0-alpha.0` is published later:
@@ -128,6 +168,7 @@ Publishing is not the current optimization target. If `0.1.0-alpha.0` is publish
 - README matches actual public implementation;
 - browser gaps are clearly documented;
 - transaction behavior is either stable or explicitly scoped as alpha behavior;
+- deterministic architecture experiments included in the release gate pass;
 - `npm run release:check` passes on a clean checkout;
 - alpha release decision notes are accepted by a maintainer.
 
