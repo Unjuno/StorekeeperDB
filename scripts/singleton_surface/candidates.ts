@@ -34,8 +34,6 @@ export function objectSignal<T extends object>(sk: StorekeeperDB, key: string, i
   };
 }
 
-export type ObjectHandle<T extends object> = Signal<T>;
-
-export function objectHandle<T extends object>(sk: StorekeeperDB, key: string, initial: T): ObjectHandle<T> {
+export function objectHandle<T extends object>(sk: StorekeeperDB, key: string, initial: T): Signal<T> {
   return objectSignal(sk, key, initial);
 }
