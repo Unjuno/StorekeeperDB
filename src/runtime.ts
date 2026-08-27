@@ -17,7 +17,7 @@ import { cloneJson, expectJsonObject, isArrayIndex, isObjectRecord, isScalar, pa
 type ItemRow = { id: string; value_json: string };
 type LoadedState = { key: string; list: Dict[]; proxy: Dict[]; generation: number };
 type SnapshotEntry = { key: string; rows: Dict[]; generation: number };
-type MutationContext = { key: string; id: string; root: Dict; generation: number };
+type MutationContext = { key: string; id: string; root: Dict; generation: number; ownerProxy: Dict };
 
 const MUTATING_ARRAY_METHODS = new Set(["push", "pop", "shift", "unshift", "splice", "sort", "reverse"]);
 
@@ -350,7 +350,7 @@ export class StorekeeperDB {
   private wrapItem(key: string, item: Dict, id: string, generation: number): Dict {
     let proxy: Dict;
     const commitRoot = (path: string, value: unknown) => {
-      this.assertWritableProxy(key, generation, id);
+      this.assertWritableProxy(key, generation, id, proxy);
       this.observe(key, path, value, "write");
       this.saveItem(key, id, this.positionOf(key, proxy), item);
       this.bump(key);
@@ -362,20 +362,20 @@ export class StorekeeperDB {
         const value = Reflect.get(target, property, receiver);
         if (typeof property === "string") this.observe(key, property, value, "read");
         if ((isObjectRecord(value) || Array.isArray(value)) && typeof property === "string") {
-          const context: MutationContext = { key, id, root: item, generation };
+          const context: MutationContext = { key, id, root: item, generation, ownerProxy: proxy };
           return this.wrapNested(context, value as JsonValue, property);
         }
         return value;
       },
       set: (target, property, value) => {
-        this.assertWritableProxy(key, generation, id);
+        this.assertWritableProxy(key, generation, id, proxy);
         if (typeof property !== "string") return false;
         Reflect.set(target, property, value);
         commitRoot(property, value);
         return true;
       },
       deleteProperty: (target, property) => {
-        this.assertWritableProxy(key, generation, id);
+        this.assertWritableProxy(key, generation, id, proxy);
         if (typeof property !== "string") return false;
         Reflect.deleteProperty(target, property);
         commitRoot(property, undefined);
@@ -389,7 +389,8 @@ export class StorekeeperDB {
   private wrapNested(context: MutationContext, value: JsonValue, basePath: string): JsonValue {
     if (!isObjectRecord(value) && !Array.isArray(value)) return value;
 
-    const assertWritable = () => this.assertWritableProxy(context.key, context.generation, context.id);
+    const assertWritable = () =>
+      this.assertWritableProxy(context.key, context.generation, context.id, context.ownerProxy);
     const commitNested = (path: string, observedValue: unknown) => {
       assertWritable();
       this.observe(context.key, path, observedValue, "write");
@@ -611,10 +612,14 @@ export class StorekeeperDB {
     }
   }
 
-  private assertWritableProxy(key: string, generation: number, id: string): void {
+  private assertWritableProxy(key: string, generation: number, id: string, sourceProxy: Dict): void {
     this.assertActiveProxy(key, generation);
-    if (!this.findProxyById(key, id)) {
+    const currentProxy = this.findProxyById(key, id);
+    if (!currentProxy) {
       throw new Error("Stale Storekeeper proxy after removal; re-read the item from its state list.");
+    }
+    if (currentProxy !== sourceProxy) {
+      throw new Error("Stale Storekeeper proxy after replacement; re-read the item from its state list.");
     }
   }
 
