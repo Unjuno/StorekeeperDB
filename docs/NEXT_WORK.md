@@ -41,20 +41,23 @@ Record all friction before changing the runtime.
 
 ### 2. Durable variable / session bootstrap experiment — #26
 
-Status: experiment in progress.
+Status: initial cross-process experiment PASS; generalization remains uncertain.
 
-Evaluate whether StorekeeperDB can be treated as a durable-variable layer across process/session boundaries without adding agent-specific APIs to the core.
-
-Current experiment:
+Validated by CI #83 through `npm run release:check`:
 
 - writer and reader run as separate Node processes;
 - writer persists a `__workspace` manifest plus additional durable states;
+- nested checkpoint mutation survives the writer process exit;
 - reader initially knows only the database path and bootstrap key;
 - reader discovers other state keys from the manifest;
-- release checks run the deterministic experiment;
+- scenario uses the public `@storekeeper/db` package entrypoint;
 - architecture documentation separates durability, discoverability, and agent/application policy.
 
-Do not infer from a passing experiment that StorekeeperDB should become an agent-memory or orchestration framework. The immediate question is narrower: whether durable state plus a bootstrap convention is sufficient for cross-session recovery.
+The immediate hypothesis passed for one controlled scenario: durable state plus a bootstrap convention is sufficient for cross-process recovery.
+
+Do not infer that StorekeeperDB should become an agent-memory or orchestration framework. Do not reserve `__workspace` or add a workspace API after one passing scenario.
+
+Next evidence required: reuse the same bootstrap convention in at least one additional scenario without modifying the core specifically for that scenario.
 
 ### 3. Convert findings into small PRs
 
@@ -90,7 +93,7 @@ The purpose is not to manufacture a favorable line-count comparison. The purpose
 
 ## Architecture questions opened by #26
 
-The session-bootstrap experiment should help distinguish four scopes:
+The session-bootstrap experiment distinguishes four scopes:
 
 ```text
 local value
@@ -99,13 +102,14 @@ durable state
 discoverable durable state
 ```
 
-Current working boundary:
+Current working boundary after the first PASS:
 
 - StorekeeperDB core owns durable local state;
-- a bootstrap manifest may provide discoverability above the core;
-- checkpoint policy, agent memory, summarization, trust, context selection, and multi-agent coordination remain outside the core unless later evidence requires otherwise.
+- a bootstrap manifest can provide discoverability above the core for at least one cross-process scenario;
+- checkpoint policy, agent memory, summarization, trust, context selection, and multi-agent coordination remain outside the core;
+- a first-class workspace/bootstrap API is not justified yet.
 
-Do not reserve `__workspace` or add a workspace API until the convention has been exercised in more than one scenario.
+The next useful falsification attempt is to apply the same convention in a second scenario and see whether the manifest shape remains stable or starts accumulating scenario-specific policy.
 
 ## Recently completed baseline
 
