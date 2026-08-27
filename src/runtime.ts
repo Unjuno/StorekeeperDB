@@ -32,6 +32,7 @@ export class StorekeeperDB {
   private readonly derivationCache = new Map<string, DerivationSnapshot[]>();
   private nextId = 1;
   private transactionDepth = 0;
+  private observationSuppressionDepth = 0;
   private pendingNotifications = new Set<string>();
 
   constructor(path: string, options: StorekeeperOptions = {}) {
@@ -311,7 +312,7 @@ export class StorekeeperDB {
 
         if (property === "fill" || property === "copyWithin") return () => {
           throw new Error(`${String(property)} is not supported on persistent arrays; use splice or direct replacement.`);
-        };
+        }
 
         return Reflect.get(target, property, receiver);
       },
@@ -561,6 +562,7 @@ export class StorekeeperDB {
   }
 
   private observe(key: string, path: string, value: unknown, mode: "read" | "write"): void {
+    if (this.observationSuppressionDepth > 0) return;
     const column = mode === "read" ? "read_count" : "write_count";
     this.prepare(
       `INSERT INTO __sk_paths(state_key,path,observed_type,${column}) VALUES(?,?,?,1) ON CONFLICT(state_key,path) DO UPDATE SET observed_type=excluded.observed_type,${column}=${column}+1`,
@@ -581,11 +583,16 @@ export class StorekeeperDB {
   }
 
   private memorySnapshot(): SnapshotEntry[] {
-    return [...this.states.entries()].map(([key, loaded]) => ({
-      key,
-      rows: loaded.list.map((item) => cloneJson(item)),
-      generation: loaded.generation,
-    }));
+    this.observationSuppressionDepth++;
+    try {
+      return [...this.states.entries()].map(([key, loaded]) => ({
+        key,
+        rows: loaded.list.map((item) => cloneJson(item)),
+        generation: loaded.generation,
+      }));
+    } finally {
+      this.observationSuppressionDepth--;
+    }
   }
 
   private restoreMemory(snapshot: SnapshotEntry[]): void {
