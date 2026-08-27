@@ -12,61 +12,62 @@ Working rule:
 
 > **Persistence should normally not enter the coding agent's planning loop. Hard persistence problems must remain observable and controllable.**
 
-See [Alpha evaluation loop](./EVALUATION_LOOP.md), [Architecture](./ARCHITECTURE.md), [State split migration boundary experiment](./STATE_SPLIT_MERGE_BOUNDARY_EXPERIMENT.md), [State merge migration boundary experiment](./STATE_MERGE_BOUNDARY_EXPERIMENT.md), and [Scalar-to-object value evolution experiment](./SCALAR_TO_OBJECT_VALUE_EVOLUTION_EXPERIMENT.md).
+See [Alpha evaluation loop](./EVALUATION_LOOP.md), [Architecture](./ARCHITECTURE.md), [State split migration boundary experiment](./STATE_SPLIT_MERGE_BOUNDARY_EXPERIMENT.md), [State merge migration boundary experiment](./STATE_MERGE_BOUNDARY_EXPERIMENT.md), [Scalar-to-object value evolution experiment](./SCALAR_TO_OBJECT_VALUE_EVOLUTION_EXPERIMENT.md), and [Enum narrowing value evolution experiment](./ENUM_NARROWING_VALUE_EVOLUTION_EXPERIMENT.md).
 
 ## Active priorities
 
-### 1. Probe enum narrowing incompatible value evolution
+### 1. Probe required-field introduction independently
 
-Status: **next value-semantic replication after scalar-to-object boundary confirmation in CI #211.**
+Status: **next incompatible-value replication after enum narrowing confirmation in CI #218.**
 
-Keep durable state identity and the field path unchanged:
+Keep durable state identity and existing fields unchanged while adding newly required information:
 
 ```text
-V1 mode: "auto" | "manual" | "legacy"
+V1
+job { id, queue }
+
   ->
-V2 mode: "auto" | "manual"
+
+V2
+job { id, queue, maxRetries: number }
 ```
+
+Persist a V1 object with no `maxRetries`, establish a projection on unchanged `queue`, close, and reopen through a V2 TypeScript declaration.
 
 Required cases:
 
-1. persist `"legacy"`, establish a projection on `mode`, close, and reopen under the narrower V2 TypeScript type;
-2. verify declaration-only reopen leaves the runtime value as `"legacy"` rather than validating or transforming it;
-3. require an explicit policy such as `legacy -> manual` for a successful transform;
-4. without a policy, reject atomically and leave value plus metadata unchanged;
-5. inject failure after the value mutation and verify exact rollback of item, path counters/types, derivation, and projection;
-6. after successful transform, verify the existing `mode` scalar projection remains coherent or is explicitly rebuilt if required;
-7. close/reopen and verify only an allowed V2 value remains.
+1. declaration-only reopen must reveal whether the persisted object remains physically missing `maxRetries` despite the V2 static type;
+2. no fresh/default `maxRetries` may be counted as migration unless the runtime actually persisted it;
+3. explicit backfill must require an application policy such as `maxRetries = 3`;
+4. missing policy must reject atomically rather than invent a value;
+5. failure injected after backfill must restore item JSON, path metadata counters/types, derivations, and projections exactly;
+6. the unrelated existing `queue` projection should remain coherent throughout;
+7. after successful backfill, query `maxRetries = 3`, verify projection creation and durable-handle semantics, then close/reopen.
 
 Primary question:
 
-> Does enum narrowing confirm the same boundary as scalar-to-object evolution—static type change is not durable validation, while explicit application policy plus current transactional primitives is sufficient?
+> Does a newly required property produce the same boundary as scalar-to-object and enum narrowing: TypeScript declaration is not runtime data migration, while current transaction/handle/projection primitives remain sufficient for explicit policy-driven backfill?
 
 Candidate decision:
 
 ```text
-BOUNDARY_CONFIRMED_ENUM_NARROWING_REQUIRES_EXPLICIT_VALUE_POLICY
-MIXED_RUNTIME_SUPPORT_WITH_PROJECTION_GAP
+BOUNDARY_CONFIRMED_REQUIRED_FIELD_INTRODUCTION_REQUIRES_EXPLICIT_BACKFILL_POLICY
+MIXED_RUNTIME_SUPPORT_WITH_METADATA_GAP
+UNEXPECTED_RUNTIME_DEFAULTING
 INVALID_EXPERIMENT
 ```
 
-Do not add a validation/schema DSL in this experiment.
+Do not add schema validation or a migration DSL in this experiment.
 
-### 2. Probe required-field introduction independently
+### 2. Evaluate migration idempotency and crash/retry markers
 
-Status: planned after enum narrowing.
+Status: planned after required-field replication.
 
-Scalar-to-object #64 already required an explicit `maxAttempts` value, but that requirement was coupled to a representation change. A separate experiment should add a genuinely required field to otherwise-compatible object shape and determine whether missing persisted values should be rejected, explicitly backfilled, or represented as a versioned migration obligation.
-
-### 3. Evaluate migration idempotency and crash/retry markers
-
-Status: planned after incompatible-value replication.
-
-Split, merge, and scalar-to-object experiments prove in-process transaction rollback. They do not establish how a migration is recognized, retried, or skipped after process interruption or old/new application version skew.
+Split, merge, scalar-to-object, and enum-narrowing experiments prove in-process transaction rollback. They do not establish how a migration is recognized, retried, or skipped after interruption or old/new application version skew.
 
 Evaluate whether a minimal migration marker/version convention is sufficient before considering any migration DSL.
 
-### 4. Replicate the project convention in a third topology
+### 3. Replicate the project convention in a third topology
 
 Status: **candidate direction, not public API.**
 
@@ -74,7 +75,7 @@ PR #49 reused the same generic helper unchanged across project-board and editor/
 
 Test a third topology such as agent workspace/checkpoints or a multi-list workflow. The exact `openProjectStore/list/object` names remain experiment placeholders only.
 
-### 5. Reuse durable-session bootstrap with project identity
+### 4. Reuse durable-session bootstrap with project identity
 
 Status: initial cross-process bootstrap PASS; integration unproven.
 
@@ -84,31 +85,49 @@ Do not add a general workspace/agent-memory API until reuse is demonstrated.
 
 ## Current experimental evidence
 
+### Enum narrowing incompatible value evolution — #66
+
+Status: **BOUNDARY CONFIRMED in CI #218; experiment-only.**
+
+Stable identity and path:
+
+```text
+state key      jobs
+item identity  JOB-1
+field path     mode
+```
+
+Semantic transition:
+
+```text
+"auto" | "manual" | "legacy"
+  ->
+"auto" | "manual"
+```
+
+Declaration-only reopen through the narrower TypeScript type succeeded and still returned `"legacy"`. No runtime validation, conversion, or defaulting occurred, and the existing `mode` projection continued to reflect the stored value.
+
+Explicit `legacy -> manual` mapping ran inside one outer `batch()`. Failure injection restored item JSON, path counters/types, derivation, and projection exactly. Retry persisted `manual`, `find(mode="legacy")` returned 0, `find(mode="manual")` returned 1, and reopen retained the allowed V2 value.
+
+Unlike scalar-to-object evolution, the path and scalar representation stayed compatible. **Ordinary durable mutation kept the existing scalar projection coherent**; no migration-specific eviction/rebuild was required.
+
+Machine result:
+
+```text
+BOUNDARY_CONFIRMED_ENUM_NARROWING_REQUIRES_EXPLICIT_VALUE_POLICY
+```
+
 ### Scalar-to-object incompatible value evolution — #64
 
 Status: **BOUNDARY CONFIRMED in CI #211; experiment-only.**
 
-The test deliberately held stable:
-
 ```text
-state key       jobs
-item identity   JOB-1
-field path      retryPolicy
-```
-
-while changing only the field's persisted semantic representation:
-
-```text
-number
+retryPolicy: number
   ->
-{ delayMs: number; maxAttempts: number }
+retryPolicy: { delayMs: number; maxAttempts: number }
 ```
 
-Declaration-only reopen through the V2 TypeScript type left the runtime value as the original number `750`; no automatic object conversion or fresh default occurred, and the old scalar projection remained present.
-
-The explicit migration then performed source read/validation, required-field policy, scalar-to-object replacement, and obsolete projection eviction inside one outer `batch()`. Failure injection restored the complete item/path/derivation/projection snapshot exactly. Retry succeeded, a nested `retryPolicy.delayMs` projection was created by `find()`, the returned item remained a durable handle, and reopen preserved the V2 object.
-
-Missing `maxAttempts` policy rejected atomically rather than inventing a default.
+Declaration-only reopen left the persisted scalar unchanged. Explicit migration required a `maxAttempts` policy, rolled back exactly under failure injection, retired the obsolete root scalar projection, created a nested `retryPolicy.delayMs` projection after migration, and reopened in V2 shape.
 
 Machine result:
 
@@ -116,30 +135,39 @@ Machine result:
 BOUNDARY_CONFIRMED_SCALAR_TO_OBJECT_REQUIRES_EXPLICIT_VALUE_MIGRATION
 ```
 
-Interpretation:
+### Incompatible value boundary replicated
 
-> **TypeScript declaration change alone does not migrate persisted semantic shape.** Durable identity can stay stable while an explicit value migration becomes necessary.
+Two different value-semantic changes now show the same core result:
 
-This completes the first case under **Evaluate incompatible value evolution**. It does not justify a public migration API.
+```text
+static TypeScript declaration
+  !=
+runtime migration / durable validation
+```
+
+But derived-state treatment differs by representation compatibility:
+
+```text
+scalar -> object
+  old query representation invalidated
+  -> explicit projection retirement/rebuild
+
+enum narrowing on same scalar path
+  query representation remains valid
+  -> ordinary durable mutation maintains projection
+```
+
+This supports a narrower rule:
+
+> Migration policy is driven by semantic incompatibility; migration-specific metadata work is driven by whether the persisted/queryable path representation remains valid.
+
+No public migration or validation API is authorized by either result.
 
 ### Many-to-one declared-state merge migration — #60
 
 Status: **BOUNDARY CONFIRMED in CI #205; experiment-only.**
 
-Scenario:
-
-```text
-account { displayName, locale }
-preferences { compactMode, locale }
-  ->
-profile { displayName, compactMode, locale }
-```
-
-Naive merge failed safely. One-to-one alias misuse was rejected because the second source remained unexplained. Explicit merge placed reads, conflict resolution, target construction, source retirement, manifest transition, and metadata cleanup in one outer `batch()`.
-
-Failure injection restored source values, target absence, identity bindings, projections/derivations, and exact observation counters. Conflicting locales required an explicit resolution policy.
-
-Machine result:
+Naive merge and alias misuse failed safely. Explicit conflict-aware merge placed source reads, validation, target construction, source retirement, identity-manifest transition, and metadata cleanup inside one transaction. Failure rollback restored behavior-driving metadata counters exactly.
 
 ```text
 BOUNDARY_CONFIRMED_MERGE_REQUIRES_EXPLICIT_CONFLICT_AWARE_MIGRATION
@@ -149,25 +177,16 @@ BOUNDARY_CONFIRMED_MERGE_REQUIRES_EXPLICIT_CONFLICT_AWARE_MIGRATION
 
 Status: **BOUNDARY CONFIRMED in CI #192; experiment-only.**
 
-Naive split failed safely. Misusing one-to-one aliasing could produce a structurally valid but semantically incomplete result, losing persisted source meaning. Explicit transactional transform with source retirement and metadata cleanup succeeded under failure injection and reopen.
-
-Machine result:
+One-to-one aliasing was insufficient for one-to-many semantic transformation. Explicit transactional migration succeeded under failure injection and reopen.
 
 ```text
 BOUNDARY_CONFIRMED_SPLIT_REQUIRES_EXPLICIT_ATOMIC_MIGRATION
 ```
 
-### Batch rollback observation neutrality — #62
+### Runtime hardening found by migration experiments
 
-Status: **fixed in PR #63 / CI #202.**
-
-Internal rollback snapshot reads no longer increment application observation counters. Callback reads remain observable and roll back with a failed transaction.
-
-### `debug().compactMetadata()` static type mismatch — #58
-
-Status: **fixed in PR #59 / CI #199.**
-
-The concrete `StorekeeperDB.debug()` type now agrees with the exported `StorekeeperDebugAPI`; runtime behavior was unchanged.
+- #62 / PR #63 / CI #202: internal rollback snapshots no longer count as application observations.
+- #58 / PR #59 / CI #199: concrete `StorekeeperDB.debug()` type now matches exported `StorekeeperDebugAPI` for object-form metadata compaction.
 
 ### Durable identity / rename chain
 
@@ -175,7 +194,7 @@ The concrete `StorekeeperDB.debug()` type now agrees with the exported `Storekee
 - #52: `CANDIDATE_PASS_LOGICAL_RENAME_PRESERVES_PHYSICAL_DERIVED_STATE`
 - #54: `CANDIDATE_PASS_MULTI_STEP_RENAME_RETAINS_SINGLE_PHYSICAL_IDENTITY`
 
-Together these support one-to-one logical rename over stable physical identity, not general migration inference.
+These support one-to-one logical rename over stable physical identity, not general migration inference.
 
 ### Agent-facing and change-amplification evidence
 
@@ -199,8 +218,6 @@ Removed references remain readable but cannot write deleted rows back. Rollback 
 
 ### Identity evolution vs value-semantic evolution
 
-Current evidence separates two independent axes:
-
 ```text
 logical identity changes, value meaning stable
   -> explicit one-to-one rename alias
@@ -210,7 +227,6 @@ logical identity stable, value meaning incompatible
   -> TypeScript type change is insufficient
   -> explicit value interpretation/policy
   -> transactional transform
-  -> derived metadata reconciliation
 ```
 
 ### Evolution classes now observed
@@ -224,13 +240,16 @@ one-to-one logical rename
 
 split / merge
   -> explicit semantic transform
-  -> explicit source retirement
-  -> conflict policy where required
+  -> source retirement / conflict policy
 
 scalar -> structured object
   -> explicit value transform
-  -> explicit required-field policy
-  -> obsolete projection retirement / nested projection rebuild
+  -> explicit newly-required value policy
+  -> representation-specific metadata reconciliation
+
+enum narrowing
+  -> explicit mapping policy
+  -> same scalar projection maintained by ordinary mutation
 ```
 
 The key boundary is semantic preservation, not merely whether a TypeScript type changed.
@@ -239,7 +258,7 @@ The key boundary is semantic preservation, not merely whether a TypeScript type 
 
 The agent-first goal does not authorize hiding incompatible value transformation, split/merge, durable identity rename, corruption, concurrent writers, transaction failures, or durability uncertainty. When the runtime cannot preserve semantics safely, the persistence problem must become explicit.
 
-Automatic heuristic rename, split, merge, or incompatible-value conversion from declaration shape/content/order is not supported by current evidence.
+Automatic heuristic rename, split, merge, enum remapping, or incompatible-value conversion from declaration shape/content/order is not supported by current evidence.
 
 ## Deferred research
 
