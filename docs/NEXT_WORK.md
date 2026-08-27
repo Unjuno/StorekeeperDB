@@ -23,27 +23,36 @@ See [Alpha evaluation loop](./EVALUATION_LOOP.md) and [Architecture](./ARCHITECT
 
 ### 1. Realistic application scenario — #24
 
-Status: next application-facing evaluation.
+Status: scenario implemented; CI validation pending.
 
-Build one small issue-tracker scenario that exercises StorekeeperDB as an application developer would, rather than as an implementation demo.
+The first issue-tracker evaluation now exercises three iterations against one durable database:
 
-The scenario should include:
+1. create a minimal `IssueV1` model;
+2. reopen as `IssueV2` and add optional priority, labels, and comments;
+3. reopen again and verify evolved nested state and durable mutation.
 
-- state creation and ordinary mutation;
-- nested data;
-- `find()` or `liveFind()` where a scalar lookup is genuinely useful;
-- reopen / persistence verification;
-- at least one application-shape change or unsupported-operation boundary;
-- public package entrypoints only;
-- no internal imports or scenario-specific persistence workaround.
+The scenario also deliberately tests a current semantic boundary:
 
-Record all friction before changing the runtime.
+```text
+state proxy mutation -> durable
+find() result mutation -> detached snapshot only
+```
+
+The PR that first records this result must not change `find()` behavior. If the scenario confirms the boundary is surprising, create a separate product/API decision issue.
+
+Run:
+
+```bash
+npm run scenario:issue-tracker
+```
+
+See [Issue tracker evaluation](./ISSUE_TRACKER_EVALUATION.md).
 
 ### 2. Durable variable / session bootstrap experiment — #26
 
 Status: initial cross-process experiment PASS; generalization remains uncertain.
 
-Validated by CI #83 through `npm run release:check`:
+Validated by CI #83 and final CI #85 through `npm run release:check`:
 
 - writer and reader run as separate Node processes;
 - writer persists a `__workspace` manifest plus additional durable states;
@@ -111,6 +120,14 @@ Current working boundary after the first PASS:
 
 The next useful falsification attempt is to apply the same convention in a second scenario and see whether the manifest shape remains stable or starts accumulating scenario-specific policy.
 
+## API question expected from #24
+
+If CI confirms the issue-tracker observation, separate the following question from the scenario PR:
+
+> Should `find()` remain a detached snapshot API, become explicitly read-only/snapshot-named, or return durable state handles?
+
+Do not infer the answer solely from implementation convenience. Evaluate least-surprise semantics, identity/lifecycle complexity, live query behavior, and API surface size.
+
 ## Recently completed baseline
 
 The current main branch already includes:
@@ -127,7 +144,8 @@ The current main branch already includes:
 - prepublish wording inspection;
 - clean consumer tarball install simulation;
 - slimmed release-check fixtures while preserving semantic coverage;
-- alpha evaluation-loop and documentation organization.
+- alpha evaluation-loop and documentation organization;
+- initial durable-session architecture experiment.
 
 This baseline is sufficient to stop treating missing infrastructure as the default reason to add more infrastructure.
 
@@ -172,7 +190,7 @@ Publishing is not the current optimization target. If `0.1.0-alpha.0` is publish
 - README matches actual public implementation;
 - browser gaps are clearly documented;
 - transaction behavior is either stable or explicitly scoped as alpha behavior;
-- deterministic architecture experiments included in the release gate pass;
+- deterministic realistic scenarios and architecture experiments included in the release gate pass;
 - `npm run release:check` passes on a clean checkout;
 - alpha release decision notes are accepted by a maintainer.
 
