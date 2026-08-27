@@ -1,4 +1,4 @@
-import { StorekeeperDB, type Dict } from "@storekeeper/db"; // @framework-internal:runtime-ownership
+import { StorekeeperDB, type Dict, type JsonScalar } from "@storekeeper/db"; // @framework-internal:runtime-ownership
 
 export type ListState<T extends object> = {
   kind: "list";
@@ -22,6 +22,8 @@ type StateOf<S extends ProjectShape> = {
   [K in keyof S]: ValueOf<S[K]>;
 };
 
+type ScalarWhere<T extends Dict> = Partial<Record<keyof T & string, JsonScalar>>;
+
 // The agent-facing convention introduces one shape-description concept: list vs object.
 export const list = <T extends object>(initial: T[]): ListState<T> => ({
   kind: "list",
@@ -36,7 +38,7 @@ export const object = <T extends object>(initial: T): ObjectState<T> => ({
 export type AgentProjectStore<S extends ProjectShape> = {
   state: StateOf<S>;
   keys: Array<keyof S & string>;
-  find<T extends Dict>(state: T[], where: Partial<T>): T[];
+  find<T extends Dict>(state: T[], where: ScalarWhere<T>): T[];
   close(): void;
 };
 
@@ -67,7 +69,7 @@ export function openProjectStore<S extends ProjectShape>(path: string, shape: S)
   return {
     state: loaded as StateOf<S>,
     keys,
-    find<T extends Dict>(state: T[], where: Partial<T>): T[] {
+    find<T extends Dict>(state: T[], where: ScalarWhere<T>): T[] {
       const key = keyByList.get(state);
       if (!key) throw new Error("Project query requires a list state owned by this project store.");
       return sk.find<T>(key, where); // @framework-internal:state-reference-query
