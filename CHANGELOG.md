@@ -26,6 +26,8 @@ Initial public alpha baseline plus iterative hardening from realistic evaluation
 - Persistence-specific change-amplification experiment against minimal relational and JSON-blob SQLite baselines.
 - CLI metadata replication exposing the `singleton-list-boundary` concept cost.
 - Root-state semantics experiment comparing list-only, singleton/object, and explicit cell directions without changing the public runtime API.
+- Singleton-object surface experiment comparing current list syntax, paired object state/signal helpers, and a combined handle without changing exports.
+- Agent persistence decision-burden experiment comparing relational SQLite, JSON-blob SQLite, and StorekeeperDB through auditable `@decision` markers.
 - Consumer install smoke test through `npm run consumer:smoke`.
 - Real React verification using `useSyncExternalStore` and `react-test-renderer`.
 - Experimental async write-behind durability-boundary model through `@storekeeper/db/experimental`.
@@ -50,7 +52,7 @@ Initial public alpha baseline plus iterative hardening from realistic evaluation
 - Automatic derived GC protects the lookup path used by the current `find()` call from the same collection pass.
 - Metadata compaction preserves source rows, projection cells, and projection-backed observations.
 - Benchmark script performs semantic pass/fail checks while keeping latency observational.
-- Release checks run the cross-process durable-session experiment, change-amplification experiments, root-state semantics probes, and realistic issue-tracker scenario.
+- Release checks run the cross-process durable-session experiment, change-amplification experiments, root-state/singleton probes, agent decision-burden experiment, and realistic issue-tracker scenario.
 - Release checks install the generated tarball into a temporary consumer project and verify public subpath imports.
 - Release checks inspect key alpha wording and documented semantic boundaries before packaging.
 - README and next-work documentation prioritize realistic evaluation over promotion or speculative feature growth.
@@ -70,10 +72,14 @@ liveFind() result values -> detached stable snapshots
 - Removed-handle invalidation and reactive snapshot separation were fixed before changing `find()`.
 - First change-amplification experiment: StorekeeperDB persistence-specific changed lines were 8 vs 14 for the strongest JSON-blob baseline; concept count was tied 4 vs 4. This is candidate evidence, not a general benchmark.
 - CLI metadata replication: StorekeeperDB persistence-specific changed lines were 8 vs 12 for JSON-blob SQLite, but concept count was worse 5 vs 4 because one logical record required the `singleton-list-boundary`.
-- Root-state semantics experiment CI #128 selected `PREFER_NARROW_SINGLETON_OBJECT_PROTOTYPE` as the current candidate direction. A public API has not been added.
-- The same root-state experiment rejected broad raw arbitrary-root `state()` generalization as unjustified: JavaScript primitive values cannot provide mutation-by-reference durability without an explicit cell/get-set/replacement model.
-- Root-state replacement probing exposed #42. PR #43 hardens exact proxy identity; CI #136 revalidated the root-state experiment with old replacement-handle writes rejected and memory/durable divergence removed.
-- Candidate B remained preferred after hardening, so the next API experiment should compare the smallest object/singleton public surface against documenting the existing one-item-list convention.
+- Root-state semantics experiment CI #128 selected `PREFER_NARROW_SINGLETON_OBJECT_PROTOTYPE` as the current candidate direction. Broad raw arbitrary-root `state()` generalization was not supported.
+- Root-state replacement probing exposed #42. PR #43 hardened exact proxy identity; CI #136 revalidated the root-state experiment with old replacement-handle writes rejected and memory/durable divergence removed.
+- Singleton-object surface experiment CI #144 produced `NO_CLEAR_WINNER` and `NO_API_CHANGE_FROM_THIS_EXPERIMENT`: removing `[0]` ceremony alone did not justify permanent public methods.
+- Product evaluation focus was therefore moved from source-character minimization toward **agent-visible persistence decision burden**.
+- Agent decision-burden experiment CI #147 conservatively measured 8 decisions for relational SQLite, 8 for JSON-blob SQLite, and 7 for StorekeeperDB; persistence-marked source lines were 19, 25, and 14 respectively.
+- The Storekeeper count was deliberately corrected upward from an initial 6 to 7 by adding `compatible-state-evolution`, avoiding a favorable classification mismatch with the JSON-blob baseline.
+- The agent decision result is candidate evidence that StorekeeperDB can move some schema/bootstrap/serialization/write-plumbing choices behind the runtime. It is not a measurement of hidden chain-of-thought or a general productivity guarantee.
+- `singleton-list-adaptation` remains an explicit StorekeeperDB decision cost and a target for further agent-facing architecture experiments; no object-root API is authorized by this result alone.
 
 ### Boundaries
 
@@ -82,6 +88,8 @@ liveFind() result values -> detached stable snapshots
 - Durable item writability requires current loaded generation, durable-id membership, and exact current proxy identity.
 - Close/reopen preserves durable data, not JavaScript proxy identity.
 - Compatible optional-field evolution is separate from incompatible schema migration semantics.
+- Decision-burden annotations are an auditable implementation proxy, not access to model chain-of-thought, reasoning tokens, or a universal cognitive metric.
+- The agent-first direction does not authorize hiding incompatible migrations, corruption, concurrent writers, transaction failures, or durability uncertainty.
 - Durable-session `__workspace` is an experiment convention, not a reserved core API.
 - The durable-variable experiment does not implement agent memory, checkpoint policy, trust, context selection, or multi-agent coordination.
 - Full browser adapter is not implemented.
