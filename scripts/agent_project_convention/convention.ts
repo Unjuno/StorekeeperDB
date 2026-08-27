@@ -1,4 +1,4 @@
-import { StorekeeperDB } from "@storekeeper/db"; // @framework:project-runtime
+import { StorekeeperDB } from "@storekeeper/db"; // @framework-internal:runtime-ownership
 
 export type ListState<T extends object> = {
   kind: "list";
@@ -22,15 +22,16 @@ type StateOf<S extends ProjectShape> = {
   [K in keyof S]: ValueOf<S[K]>;
 };
 
+// The agent-facing convention introduces one shape-description concept: list vs object.
 export const list = <T extends object>(initial: T[]): ListState<T> => ({
   kind: "list",
   initial,
-}); // @framework:shape-descriptor
+}); // @framework-public:shape-descriptor
 
 export const object = <T extends object>(initial: T): ObjectState<T> => ({
   kind: "object",
   initial,
-}); // @framework:shape-descriptor
+}); // @framework-public:shape-descriptor
 
 export type AgentProjectStore<S extends ProjectShape> = {
   state: StateOf<S>;
@@ -39,11 +40,12 @@ export type AgentProjectStore<S extends ProjectShape> = {
   close(): void;
 };
 
-export function openProjectStore<S extends ProjectShape>(path: string, shape: S): AgentProjectStore<S> {
-  const sk = new StorekeeperDB(path);
+// The second agent-facing concept is one project-scoped durable runtime/declaration.
+export function openProjectStore<S extends ProjectShape>(path: string, shape: S): AgentProjectStore<S> { // @framework-public:project-store
+  const sk = new StorekeeperDB(path); // @framework-internal:runtime-ownership
   const loaded: Partial<StateOf<S>> = {};
   const keyByList = new WeakMap<object, string>();
-  const keys = Object.keys(shape) as Array<keyof S & string>; // @framework:derived-state-keys
+  const keys = Object.keys(shape) as Array<keyof S & string>; // @framework-internal:derived-state-keys
 
   for (const key of keys) {
     const descriptor = shape[key]!;
@@ -54,7 +56,7 @@ export function openProjectStore<S extends ProjectShape>(path: string, shape: S)
       continue;
     }
 
-    const holder = sk.state(key, [descriptor.initial]); // @framework:singleton-adaptation
+    const holder = sk.state(key, [descriptor.initial]); // @framework-internal:singleton-adaptation
     if (holder.length !== 1) {
       sk.close();
       throw new Error(`Project object state ${key} expected exactly one durable item, found ${holder.length}.`);
@@ -68,7 +70,7 @@ export function openProjectStore<S extends ProjectShape>(path: string, shape: S)
     find<T extends object>(state: T[], where: Partial<T>): T[] {
       const key = keyByList.get(state);
       if (!key) throw new Error("Project query requires a list state owned by this project store.");
-      return sk.find<T>(key, where); // @framework:state-reference-query
+      return sk.find<T>(key, where); // @framework-internal:state-reference-query
     },
     close: () => sk.close(),
   };
