@@ -9,6 +9,7 @@ StorekeeperDB is a public alpha candidate. The current priority is product refin
 - [Evaluation loop](./EVALUATION_LOOP.md) — how to evaluate and refine the product during alpha.
 - [Next work](./NEXT_WORK.md) — current priorities and deferred research.
 - [Issue tracker evaluation](./ISSUE_TRACKER_EVALUATION.md) — realistic application-shape evolution and query-semantics scenario.
+- [`find()` semantics evaluation](./FIND_SEMANTICS_EVALUATION.md) — snapshot vs durable-handle design experiment.
 - [Benchmarks](./BENCHMARKS.md) — reproducible observations; timings are not release guarantees.
 - [Demo](./DEMO.md) — executable runtime walkthrough.
 
@@ -25,6 +26,7 @@ StorekeeperDB is a public alpha candidate. The current priority is product refin
 These documents explain implementation experiments or narrower runtime behavior. They are useful when evaluating a specific subsystem, but are not the main entry point for new users.
 
 - [Durable variable / session bootstrap experiment](./DURABLE_VARIABLE_EXPERIMENT.md)
+- [`find()` semantics evaluation](./FIND_SEMANTICS_EVALUATION.md)
 - [Magic lifecycle](./MAGIC_LIFECYCLE.md)
 - [Magic re-import status](./MAGIC_REIMPORT_STATUS.md)
 - [Automatic derived decay](./DECAY.md)
