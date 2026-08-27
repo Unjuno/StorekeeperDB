@@ -30,6 +30,7 @@ Initial public alpha baseline plus iterative hardening from realistic evaluation
 - Agent persistence decision-burden experiment comparing relational SQLite, JSON-blob SQLite, and StorekeeperDB through auditable `@decision` markers.
 - Agent-facing project-convention experiment reusing one generic declaration layer across project-board and editor/workspace scenarios without changing public exports.
 - Declaration-property rename experiment comparing naive property-derived keys, fail-loudly identity tracking, one-shot rename aliasing, and stable durable ids without changing public exports.
+- Collection-rename projection experiment verifying logical list rename while retaining one physical source/projection namespace.
 - Consumer install smoke test through `npm run consumer:smoke`.
 - Real React verification using `useSyncExternalStore` and `react-test-renderer`.
 - Experimental async write-behind durability-boundary model through `@storekeeper/db/experimental`.
@@ -54,7 +55,7 @@ Initial public alpha baseline plus iterative hardening from realistic evaluation
 - Automatic derived GC protects the lookup path used by the current `find()` call from the same collection pass.
 - Metadata compaction preserves source rows, projection cells, and projection-backed observations.
 - Benchmark script performs semantic pass/fail checks while keeping latency observational.
-- Release checks run the cross-process durable-session experiment, change-amplification experiments, root-state/singleton probes, agent decision-burden experiment, agent project-convention experiment, declaration-key rename experiment, and realistic issue-tracker scenario.
+- Release checks run the cross-process durable-session experiment, change-amplification experiments, root-state/singleton probes, agent decision-burden experiment, agent project-convention experiment, declaration-key rename experiment, collection-rename projection experiment, and realistic issue-tracker scenario.
 - Release checks install the generated tarball into a temporary consumer project and verify public subpath imports.
 - Release checks inspect key alpha wording and documented semantic boundaries before packaging.
 - README and next-work documentation prioritize realistic evaluation over promotion or speculative feature growth.
@@ -94,7 +95,10 @@ liveFind() result values -> detached stable snapshots
 - Stable durable-id candidate also preserved state but requires one explicit identity decision on the ordinary compatible path from V1.
 - After correcting an A/B decision-marker classification mismatch, CI #168 selected `CANDIDATE_PREFER_EXPLICIT_RENAME_ALIAS_WITH_IDENTITY_MANIFEST`.
 - Candidate rename alias is an incompatible-boundary decision, not evidence for automatic migration. The alias does not physically rename the StorekeeperDB state key.
-- Collection rename with active projections and multi-step rename chains remain required before any public project-store/rename surface is justified.
+- Collection rename with active `priority` projection passed in CI #175: logical `tasks -> workItems` retained physical key `tasks`, projection cells stayed 2 -> 2, no `workItems` source/path/projection/derivation rows appeared, and post-rename projected-field mutation remained durable and index-consistent.
+- CI #175 selected `CANDIDATE_PASS_LOGICAL_RENAME_PRESERVES_PHYSICAL_DERIVED_STATE`.
+- The collection result shows projection migration was unnecessary when physical identity remained stable; it does not authorize physical key renaming or compaction.
+- Multi-step rename chains remain the next required identity test before any public project-store/rename surface is justified.
 - The convention's query wrapper was explicitly narrowed to StorekeeperDB's existing scalar-predicate `find()` contract after CI #158 exposed an overly broad prototype type.
 
 ### Boundaries
@@ -108,6 +112,7 @@ liveFind() result values -> detached stable snapshots
 - Reusable framework concepts and per-prototype persistence decisions are reported separately; amortization does not make framework machinery free.
 - Deriving durable keys from declaration property names reduces normal key bookkeeping but makes property rename an incompatible persistence boundary unless alias/migration identity is specified.
 - The identity-manifest candidate is registry-like; current evidence supports only a narrow logical-to-physical identity role, not general schema management.
+- Logical rename currently retains the old physical StorekeeperDB key and therefore retains source and derived metadata in that physical namespace.
 - Automatic heuristic rename inference from shape, content, or declaration order is not supported.
 - The agent-first direction does not authorize hiding incompatible migrations, key renames, corruption, concurrent writers, transaction failures, or durability uncertainty.
 - Durable-session `__workspace` is an experiment convention, not a reserved core API.
