@@ -1,8 +1,8 @@
 # StorekeeperDB
 
-**Magic state for fast AI prototypes.**
+**Magic persistence for fast-changing TypeScript prototypes.**
 
-StorekeeperDB lets TypeScript apps mutate ordinary arrays and objects while SQLite quietly persists the source state behind the scenes. Useful scalar lookup paths are derived automatically when `find()` / `liveFind()` needs them. The app code does not design tables, columns, migrations, or indexes.
+StorekeeperDB lets TypeScript apps mutate ordinary arrays and objects while SQLite quietly persists source state behind the scenes. The product goal is to delay persistence architecture decisions while an application is still changing quickly: fewer tables, repository layers, migrations, and indexes need to be designed up front.
 
 ```ts
 import { StorekeeperDB, liveFind } from "@storekeeper/db";
@@ -21,7 +21,6 @@ tasks.push({ title: "Write proposal", done: false, tags: [] });
 tasks[0]!.priority = "urgent";
 tasks[0]!.tags!.push("prototype");
 
-// Magic: scalar lookup paths are projected when useful.
 const urgent = sk.find<Task>("tasks", { priority: "urgent" });
 const liveUrgent = liveFind<Task>(sk, "tasks", { priority: "urgent" });
 ```
@@ -31,6 +30,23 @@ const liveUrgent = liveFind<Task>(sk, "tasks", { priority: "urgent" });
 > Magic by default. Explainable on demand. Source state is never silently deleted.
 
 StorekeeperDB is built for local prototype loops where UI and state shape change quickly. It is not a production database migration framework.
+
+The intended abstraction is not “databases no longer exist.” It is “simple persistence should not dominate application architecture before it needs to.” Hard persistence problems such as transaction semantics, durability boundaries, incompatible shape changes, indexing cost, and recovery remain explicit when they matter.
+
+## Current development posture
+
+`0.1.0-alpha.0` is a public alpha candidate, not a stable API release. The current priority is evaluation and product refinement, not promotion or feature-count growth.
+
+The default loop is:
+
+1. choose a realistic usage scenario;
+2. use the documented public API;
+3. record friction, surprise, failure, documentation gaps, and performance roughness;
+4. make the smallest justified change;
+5. run regression checks and the scenario again;
+6. repeat.
+
+See [Alpha evaluation loop](./docs/EVALUATION_LOOP.md) and [Next work](./docs/NEXT_WORK.md).
 
 ## Demo
 
@@ -52,37 +68,27 @@ npm run benchmark
 
 The benchmark prints JSON timings for insert, first projected lookup, repeated lookup, live update behavior, metadata compaction, and reopen lookup. It is an observation tool, not a hard release latency gate. See [Benchmarks](./docs/BENCHMARKS.md).
 
-## Manual
+## Documentation
 
-For the current public alpha API and boundaries, see [Manual](./docs/MANUAL.md).
+Start with the [documentation index](./docs/README.md).
 
-## Alpha release posture
-
-`0.1.0-alpha.0` is a public alpha candidate, not a stable API release. Publishing remains manual and should use the `alpha` npm dist-tag only. See [Alpha release decision](./docs/ALPHA_RELEASE_DECISION.md) and [0.1.0-alpha.0 release notes](./docs/RELEASE_NOTES_0.1.0-alpha.0.md).
-
-## Public alpha docs
+Primary alpha documents:
 
 - [Manual](./docs/MANUAL.md)
+- [Alpha evaluation loop](./docs/EVALUATION_LOOP.md)
+- [Next work](./docs/NEXT_WORK.md)
 - [Benchmarks](./docs/BENCHMARKS.md)
 - [Alpha release decision](./docs/ALPHA_RELEASE_DECISION.md)
-- [0.1.0-alpha.0 release notes](./docs/RELEASE_NOTES_0.1.0-alpha.0.md)
-- [Demo](./docs/DEMO.md)
-- [React verification](./docs/REACT_VERIFICATION.md)
-- [Magic lifecycle](./docs/MAGIC_LIFECYCLE.md)
-- [Magic re-import status](./docs/MAGIC_REIMPORT_STATUS.md)
-- [Automatic derived decay](./docs/DECAY.md)
-- [Metadata compaction](./docs/METADATA_COMPACTION.md)
-- [Changelog](./CHANGELOG.md)
 - [Release checklist](./docs/RELEASE.md)
 - [Transaction model](./docs/TRANSACTION_MODEL.md)
 - [Browser storage boundary](./docs/BROWSER_BOUNDARY.md)
-- [Audit notes](./docs/AUDIT.md)
-- [Next work](./docs/NEXT_WORK.md)
-- [Todo example](./examples/todo.ts)
+- [Changelog](./CHANGELOG.md)
+
+Implementation and experiment notes remain available from the documentation index rather than being presented as equal-priority entry points here.
 
 ## What is magic?
 
-StorekeeperDB treats app state and derived structures differently.
+StorekeeperDB treats application source state and derived lookup structures differently.
 
 ```text
 source state JSON       = source of truth, do not silently delete
@@ -92,101 +98,13 @@ magic log / metadata    = debug surface, can be compacted
 
 When `find()` or `liveFind()` uses a supported scalar path, StorekeeperDB may create a SQLite-backed projection. That projection is rebuildable. The original state remains stored as source JSON rows.
 
-## Automatic derived decay
-
-Automatic decay is available but opt-in in the public alpha:
-
-```ts
-const sk = new StorekeeperDB("app.sqlite", {
-  decay: {
-    enabled: true,
-    collectEveryFinds: 4,
-    maxDerivations: 2,
-    markCold: true,
-  },
-});
-```
-
-This only touches rebuildable projection derivations. Source state rows are preserved, and the current lookup path is protected during the same GC pass. See [Automatic derived decay](./docs/DECAY.md).
-
-## Metadata compaction
-
-Magic logs and path observations are debug/planning metadata. They can be compacted without deleting source rows or active projection cells.
-
-```ts
-sk.debug().compactMetadata({
-  maxMagicLogEntries: 500,
-  pathCountDecayFactor: 0.5,
-  dropPathStatsBelow: 1,
-});
-```
-
-See [Metadata compaction](./docs/METADATA_COMPACTION.md).
-
-## React adapter
-
-The React surface is intentionally thin:
-
-```ts
-import { externalStore } from "@storekeeper/db/react";
-```
-
-`externalStore(signal)` returns the shape consumed by React's `useSyncExternalStore`. The alpha test suite verifies this with real React and `react-test-renderer` while keeping the core runtime independent of React.
-
-## Async browser boundary
-
-The Node runtime is synchronous and SQLite-backed. Browser-style storage is not claimed to have the same durability semantics.
-
-The experimental entrypoint contains a small write-behind boundary model:
-
-```ts
-import {
-  AsyncMemoryStorage,
-  ExperimentalAsyncWriteBehindRuntime,
-} from "@storekeeper/db/experimental";
-
-const storage = new AsyncMemoryStorage();
-const sk = new ExperimentalAsyncWriteBehindRuntime(storage);
-const tasks = await sk.state<{ title: string; done: boolean }[]>("tasks", []);
-
-tasks.push({ title: "Draft", done: false });
-
-sk.status(); // dirty: memory changed, async storage not durable yet
-await sk.flush();
-sk.status(); // clean: storage accepted the write
-```
-
-This is an experiment, not a full browser adapter. See [Browser storage boundary](./docs/BROWSER_BOUNDARY.md).
-
-## Debug surface
-
-Magic must be inspectable.
-
-```ts
-sk.status();
-sk.inspect("tasks");
-sk.explain("tasks", "priority");
-sk.debug().recentMagic();
-sk.debug().derivations("tasks");
-sk.debug().markCold("tasks", ["priority"]);
-sk.debug().collectGarbage({ stateKey: "tasks" });
-sk.debug().collectGarbage({ stateKey: "tasks", maxDerivations: 2 });
-sk.debug().compactMetadata({ maxMagicLogEntries: 100 });
-sk.debug().evict("tasks", ["priority"]);
-sk.debug().rebuild("tasks", ["priority"]);
-```
-
-See [Magic lifecycle](./docs/MAGIC_LIFECYCLE.md) for the current derived projection lifecycle boundary.
-
-## Honesty boundary
-
-This remains ordinary in-memory JavaScript:
+Ordinary in-memory JavaScript remains ordinary in-memory JavaScript:
 
 ```ts
 const high = tasks.filter((task) => task.priority === "high");
 ```
 
-StorekeeperDB does **not** claim to compile arbitrary JavaScript predicates into SQL. The supported large-list lookup path is:
+StorekeeperDB does not claim to compile arbitrary JavaScript predicates into SQL. The supported large-list lookup path is explicit:
 
 ```ts
 const high = sk.find<Task>("tasks", { priority: "high" });
@@ -194,29 +112,28 @@ const high = sk.find<Task>("tasks", { priority: "high" });
 
 ## Current alpha scope
 
-This public alpha baseline includes:
+Included:
 
-- ordinary mutable array/object state
-- row-per-item SQLite persistence
-- common array mutators: `push`, `pop`, `shift`, `unshift`, `splice`, `sort`, `reverse`
-- nested object/array mutation persistence
-- scalar-path magic lookup projection
-- derived projection lifecycle debug APIs
-- opt-in automatic derived projection decay
-- metadata compaction for magic logs and non-projection path observations
-- executable benchmark and public manual
-- alpha release decision notes
-- `signal()` / `liveFind()` for local realtime prototype flows
-- React `useSyncExternalStore` adapter verification
-- experimental async write-behind boundary model
-- debug APIs: `status`, `inspect`, `explain`, `debug()`
-- loud failures for intentionally unsupported shape-breaking operations
+- ordinary mutable array/object state;
+- row-per-item SQLite persistence;
+- common array mutators: `push`, `pop`, `shift`, `unshift`, `splice`, `sort`, `reverse`;
+- nested object/array mutation persistence;
+- scalar-path lookup projection through `find()` / `liveFind()`;
+- source-preserving derived projection eviction and rebuild;
+- opt-in automatic derived projection decay;
+- metadata compaction for debug/planning observations;
+- `signal()` / `liveFind()` for local realtime prototype flows;
+- React `useSyncExternalStore` adapter verification;
+- experimental async write-behind boundary model;
+- inspectable debug APIs such as `status`, `inspect`, `explain`, and `debug()`;
+- executable demo, benchmark, consumer smoke, and release checks.
 
 Known gaps:
 
 - Full browser adapter is not implemented.
 - API is alpha and not frozen.
-- Time-based lifecycle decay and richer metadata scoring are separate follow-up research items.
+- Time-based lifecycle decay and richer metadata scoring are deferred research, not current product priorities.
+- The experimental async runtime is a durability-boundary model, not a production browser backend.
 
 ## Requirements
 
@@ -242,6 +159,10 @@ npm run release:check
 @storekeeper/db/react        -> useSyncExternalStore-compatible adapter shape
 @storekeeper/db/experimental -> experimental async write-behind boundary
 ```
+
+## Release boundary
+
+Publishing remains manual. If the alpha is published, use the `alpha` npm dist-tag and follow [Alpha release decision](./docs/ALPHA_RELEASE_DECISION.md) and [Release checklist](./docs/RELEASE.md). Do not publish as `latest`.
 
 ## License
 
