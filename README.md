@@ -33,6 +33,8 @@ StorekeeperDB is built for local prototype loops where UI and state shape change
 
 The intended abstraction is not “databases no longer exist.” It is “simple persistence should not dominate application architecture before it needs to.” Hard persistence problems such as transaction semantics, durability boundaries, incompatible shape changes, indexing cost, and recovery remain explicit when they matter.
 
+Architecturally, StorekeeperDB can also be viewed as extending the lifetime of application state beyond one process: local/session values can become durable source state. A separate **discoverable durable state** layer for process or agent-session bootstrap is experimental and is currently being evaluated as a convention above the core rather than as a new public API. See [Architecture](./docs/ARCHITECTURE.md) and [Durable variable experiment](./docs/DURABLE_VARIABLE_EXPERIMENT.md).
+
 ## Current development posture
 
 `0.1.0-alpha.0` is a public alpha candidate, not a stable API release. The current priority is evaluation and product refinement, not promotion or feature-count growth.
@@ -58,6 +60,16 @@ npm run demo
 
 The demo shows `json_only -> projection -> debug eviction -> rebuild`, live lookup updates, and source-state preservation. See [Demo](./docs/DEMO.md).
 
+## Durable session experiment
+
+Run the cross-process architecture experiment:
+
+```bash
+npm run experiment:durable-session
+```
+
+The writer and reader execute as separate Node processes against one temporary SQLite database. The reader initially knows only a bootstrap state key and discovers other durable state keys from the stored manifest. This evaluates durability plus discoverability; it does not claim StorekeeperDB is an agent-memory or orchestration framework.
+
 ## Benchmark
 
 Run the executable benchmark:
@@ -75,6 +87,7 @@ Start with the [documentation index](./docs/README.md).
 Primary alpha documents:
 
 - [Manual](./docs/MANUAL.md)
+- [Architecture](./docs/ARCHITECTURE.md)
 - [Alpha evaluation loop](./docs/EVALUATION_LOOP.md)
 - [Next work](./docs/NEXT_WORK.md)
 - [Benchmarks](./docs/BENCHMARKS.md)
@@ -126,14 +139,17 @@ Included:
 - React `useSyncExternalStore` adapter verification;
 - experimental async write-behind boundary model;
 - inspectable debug APIs such as `status`, `inspect`, `explain`, and `debug()`;
-- executable demo, benchmark, consumer smoke, and release checks.
+- executable demo, durable-session experiment, benchmark, consumer smoke, and release checks.
 
 Known gaps:
 
+- Root `state()` is currently an array-of-objects API, not arbitrary root values.
+- `find()` results are cloned snapshots, not persistent proxy handles.
 - Full browser adapter is not implemented.
 - API is alpha and not frozen.
 - Time-based lifecycle decay and richer metadata scoring are deferred research, not current product priorities.
 - The experimental async runtime is a durability-boundary model, not a production browser backend.
+- The durable-session bootstrap convention does not solve checkpoint policy, trust, multi-agent coordination, or context selection.
 
 ## Requirements
 
@@ -146,6 +162,7 @@ npm run build
 npm test
 npm run gate
 npm run demo
+npm run experiment:durable-session
 npm run benchmark
 npm run release:check
 ```
