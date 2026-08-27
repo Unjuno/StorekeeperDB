@@ -71,6 +71,9 @@ if (!releaseCheck.includes("experiment:change-amplification:check")) {
 if (!releaseCheck.includes("experiment:cli-change-amplification:check")) {
   fail("release:check must include experiment:cli-change-amplification:check");
 }
+if (!releaseCheck.includes("experiment:root-state-semantics:check")) {
+  fail("release:check must include experiment:root-state-semantics:check");
+}
 if (!releaseCheck.includes("scenario:issue-tracker:check")) {
   fail("release:check must include scenario:issue-tracker:check");
 }
@@ -81,6 +84,7 @@ if (typeof pkg.scripts?.["consumer:smoke"] !== "string") fail("missing consumer:
 if (typeof pkg.scripts?.["experiment:durable-session"] !== "string") fail("missing durable-session experiment script");
 if (typeof pkg.scripts?.["experiment:change-amplification"] !== "string") fail("missing change-amplification experiment script");
 if (typeof pkg.scripts?.["experiment:cli-change-amplification"] !== "string") fail("missing CLI change-amplification experiment script");
+if (typeof pkg.scripts?.["experiment:root-state-semantics"] !== "string") fail("missing root-state semantics experiment script");
 if (typeof pkg.scripts?.["scenario:issue-tracker"] !== "string") fail("missing issue-tracker scenario script");
 
 const expectedFileEntries = ["dist", "README.md", "LICENSE", "CHANGELOG.md", "docs"];
@@ -106,6 +110,7 @@ const publicDocs = [
   "docs/FIND_SEMANTICS_EVALUATION.md",
   "docs/CHANGE_AMPLIFICATION_EXPERIMENT.md",
   "docs/CLI_METADATA_CHANGE_AMPLIFICATION_EXPERIMENT.md",
+  "docs/ROOT_STATE_SEMANTICS_EVALUATION.md",
   "docs/MANUAL.md",
   "docs/EVALUATION_LOOP.md",
   "docs/BENCHMARKS.md",
@@ -146,6 +151,9 @@ const requiredPublicText: Array<[string, string]> = [
   ["docs/CLI_METADATA_CHANGE_AMPLIFICATION_EXPERIMENT.md", "MIXED in CI #122"],
   ["docs/CLI_METADATA_CHANGE_AMPLIFICATION_EXPERIMENT.md", "singleton-list-boundary"],
   ["docs/CLI_METADATA_CHANGE_AMPLIFICATION_EXPERIMENT.md", "MIXED_EDIT_ADVANTAGE_WITH_CONCEPT_COST"],
+  ["docs/ROOT_STATE_SEMANTICS_EVALUATION.md", "PREFER_NARROW_SINGLETON_OBJECT_PROTOTYPE"],
+  ["docs/ROOT_STATE_SEMANTICS_EVALUATION.md", "memoryDurableDivergenceAfterOldHandleWrite"],
+  ["docs/ROOT_STATE_SEMANTICS_EVALUATION.md", "primitive mutable-reference"],
   ["docs/EVALUATION_LOOP.md", "Simple persistence should feel automatic. Hard persistence problems must remain observable and controllable."],
   ["docs/ALPHA_RELEASE_DECISION.md", "public alpha candidate"],
   ["docs/ALPHA_RELEASE_DECISION.md", "not a stable API release"],
@@ -171,6 +179,7 @@ console.log(JSON.stringify({
   hasDurableSessionExperiment: true,
   hasChangeAmplificationExperiment: true,
   hasCliChangeAmplificationReplication: true,
+  hasRootStateSemanticsExperiment: true,
   hasIssueTrackerScenario: true,
   hasFindSemanticsDecision: true,
   pass: true,
