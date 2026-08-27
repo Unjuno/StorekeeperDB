@@ -351,7 +351,7 @@ export class StorekeeperDB {
   private wrapItem(key: string, item: Dict, id: string, generation: number): Dict {
     let proxy: Dict;
     const commitRoot = (path: string, value: unknown) => {
-      this.assertActiveProxy(key, generation);
+      this.assertWritableProxy(key, generation, id);
       this.observe(key, path, value, "write");
       this.saveItem(key, id, this.positionOf(key, proxy), item);
       this.bump(key);
@@ -369,14 +369,14 @@ export class StorekeeperDB {
         return value;
       },
       set: (target, property, value) => {
-        this.assertActiveProxy(key, generation);
+        this.assertWritableProxy(key, generation, id);
         if (typeof property !== "string") return false;
         Reflect.set(target, property, value);
         commitRoot(property, value);
         return true;
       },
       deleteProperty: (target, property) => {
-        this.assertActiveProxy(key, generation);
+        this.assertWritableProxy(key, generation, id);
         if (typeof property !== "string") return false;
         Reflect.deleteProperty(target, property);
         commitRoot(property, undefined);
@@ -390,8 +390,9 @@ export class StorekeeperDB {
   private wrapNested(context: MutationContext, value: JsonValue, basePath: string): JsonValue {
     if (!isObjectRecord(value) && !Array.isArray(value)) return value;
 
+    const assertWritable = () => this.assertWritableProxy(context.key, context.generation, context.id);
     const commitNested = (path: string, observedValue: unknown) => {
-      this.assertActiveProxy(context.key, context.generation);
+      assertWritable();
       this.observe(context.key, path, observedValue, "write");
       const rootProxy = this.findProxyById(context.key, context.id);
       this.saveItem(context.key, context.id, this.positionOf(context.key, rootProxy ?? context.root), context.root);
@@ -408,36 +409,43 @@ export class StorekeeperDB {
         }
 
         if (Array.isArray(target) && property === "push") return (...items: JsonValue[]) => {
+          assertWritable();
           const result = (target as JsonValue[]).push(...items);
           commitNested(basePath, target);
           return result;
         };
         if (Array.isArray(target) && property === "pop") return () => {
+          assertWritable();
           const result = (target as JsonValue[]).pop();
           commitNested(basePath, target);
           return result;
         };
         if (Array.isArray(target) && property === "shift") return () => {
+          assertWritable();
           const result = (target as JsonValue[]).shift();
           commitNested(basePath, target);
           return result;
         };
         if (Array.isArray(target) && property === "unshift") return (...items: JsonValue[]) => {
+          assertWritable();
           const result = (target as JsonValue[]).unshift(...items);
           commitNested(basePath, target);
           return result;
         };
         if (Array.isArray(target) && property === "splice") return (start: number, deleteCount?: number, ...items: JsonValue[]) => {
+          assertWritable();
           const result = (target as JsonValue[]).splice(start, deleteCount ?? (target as JsonValue[]).length - start, ...items);
           commitNested(basePath, target);
           return result;
         };
         if (Array.isArray(target) && property === "sort") return (compare?: (a: JsonValue, b: JsonValue) => number) => {
+          assertWritable();
           (target as JsonValue[]).sort(compare);
           commitNested(basePath, target);
           return receiver;
         };
         if (Array.isArray(target) && property === "reverse") return () => {
+          assertWritable();
           (target as JsonValue[]).reverse();
           commitNested(basePath, target);
           return receiver;
@@ -449,14 +457,14 @@ export class StorekeeperDB {
         return current;
       },
       set: (target, property, nextValue) => {
-        this.assertActiveProxy(context.key, context.generation);
+        assertWritable();
         if (typeof property !== "string") return false;
         Reflect.set(target, property, nextValue);
         commitNested(`${basePath}.${property}`, nextValue);
         return true;
       },
       deleteProperty: (target, property) => {
-        this.assertActiveProxy(context.key, context.generation);
+        assertWritable();
         if (typeof property !== "string") return false;
         Reflect.deleteProperty(target, property);
         commitNested(`${basePath}.${property}`, undefined);
@@ -601,6 +609,13 @@ export class StorekeeperDB {
     if (!loaded) return;
     if (loaded.generation !== generation) {
       throw new Error("Stale Storekeeper proxy after rollback; re-read the item from its state list.");
+    }
+  }
+
+  private assertWritableProxy(key: string, generation: number, id: string): void {
+    this.assertActiveProxy(key, generation);
+    if (!this.findProxyById(key, id)) {
+      throw new Error("Stale Storekeeper proxy after removal; re-read the item from its state list.");
     }
   }
 
