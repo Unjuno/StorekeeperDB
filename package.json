@@ -24,6 +24,8 @@
     "benchmark:check": "node --experimental-sqlite dist/scripts/benchmark.js",
     "experiment:durable-session": "npm run build && node --experimental-sqlite dist/scripts/durable_session_experiment.js",
     "experiment:durable-session:check": "node --experimental-sqlite dist/scripts/durable_session_experiment.js",
+    "experiment:change-amplification": "npm run build && node --experimental-sqlite dist/scripts/change_amplification_experiment.js",
+    "experiment:change-amplification:check": "node --experimental-sqlite dist/scripts/change_amplification_experiment.js",
     "scenario:issue-tracker": "npm run build && node --experimental-sqlite dist/scripts/issue_tracker_scenario.js",
     "scenario:issue-tracker:check": "node --experimental-sqlite dist/scripts/issue_tracker_scenario.js",
     "consumer:smoke": "node --experimental-sqlite scripts/consumer_smoke.mjs",
