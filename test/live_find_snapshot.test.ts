@@ -34,7 +34,7 @@ test("liveFind owns stable snapshots for content changes inside an existing matc
     assert.equal(notifications, 1);
     assert.equal(before.version, 0);
     assert.equal(after.version, 1);
-    assert.notEqual(after, before);
+    assert.ok(after !== before);
     assert.equal(before.value[0]!.title, "A");
     assert.equal(after.value[0]!.title, "B");
 
