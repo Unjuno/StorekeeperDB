@@ -1,8 +1,8 @@
 # Root-state semantics evaluation
 
-Status: **experiment implemented; result pending CI execution.**
+Status: **CANDIDATE B — prefer a narrow singleton/object direction; arbitrary raw-root `state()` is not justified.**
 
-Issue: #40.
+Issue: #40. First measured run: CI #128.
 
 ## Goal
 
@@ -24,154 +24,207 @@ find()       = query durable items
 liveFind()   = detached read snapshots
 ```
 
-These facts matter because an arbitrary root is not just a TypeScript signature change.
+An arbitrary root is therefore not just a TypeScript signature change.
 
-## Candidates
+## Candidate results — CI #128
 
-### A — keep list-only state
+```text
+A — current list-only
+  nested mutation persists                    PASS
+  singleton list ceremony remains             YES
+  whole-item replacement exists               YES
+  old handle write after replacement          ACCEPTED
+  memory/durable divergence after old write   YES
+  scalar root                                 NO
+
+B — narrow singleton/object helper
+  nested mutation persists                    PASS
+  singleton list hidden at callsite           YES
+  rollback invalidates old handle              PASS
+  signal notifications                        3
+  signal snapshot version advances            PASS
+  whole-root replacement exposed              NO, intentionally
+  scalar root                                 NO
+
+C — explicit root cell
+  scalar cell persistence                      PASS
+  object nested mutation                       PASS
+  signal notification/version                  PASS
+  primitive mutation requires `.value`         YES
+  raw primitive mutable-reference model        IMPOSSIBLE
+  old nested write after value replacement     ACCEPTED
+  old nested write changes current root        NO
+```
+
+Machine decision:
+
+```text
+PREFER_NARROW_SINGLETON_OBJECT_PROTOTYPE
+```
+
+## Finding 1 — candidate A exposes an existing replacement correctness defect
+
+The experiment tested:
 
 ```ts
 const metadata = sk.state<ProjectMeta[]>("project", [initial]);
-const project = metadata[0]!;
-```
-
-This keeps every current lifecycle rule, but preserves collection ceremony for a single logical value.
-
-The experiment also probes whole-item replacement:
-
-```ts
 const old = metadata[0]!;
+
 metadata[0] = replacement;
-old.cwd = "/stale-write";
+old.cwd = "/stale-overwrite";
 ```
 
-The result is important because replacement reuses the durable item id today.
+The replacement reuses the durable item id. The old proxy remains in the same loaded generation, and current writability checks only require that an item with the same durable id is still a member.
 
-### B — narrow singleton/object helper
+Observed in CI #128:
 
-Prototype only outside the runtime:
+```text
+oldHandleWriteAcceptedAfterReplacement       true
+memoryDurableDivergenceAfterOldHandleWrite   true
+```
+
+The loaded list still points at the replacement object, while the old proxy can persist its old root payload. Reopen then observes data different from current loaded memory.
+
+This is not a root-API preference issue. It is a runtime correctness defect tracked separately in #42 and should be fixed before adding new singleton/root surface.
+
+Required stronger invariant:
+
+```text
+active current proxy                    writable
+reordered current proxy                 writable
+removed proxy                           write rejected
+rollback old-generation proxy           rejected
+replaced old proxy with reused id       rejected
+new replacement proxy                   writable
+```
+
+## Finding 2 — candidate B removes the measured ceremony without a new storage/lifetime model
+
+Prototype:
 
 ```ts
 const project = singletonObjectState(sk, "project", initial);
+project.preferences.verbose = true;
 ```
 
-The helper is built only on public `state()` / `signal()` behavior. It hides the collection at the callsite while deliberately not adding scalar roots or a second storage model.
+The helper is implemented only over current public `state()` / `signal()` behavior.
 
-Required checks:
+Observed:
 
-- nested mutation persists;
-- rollback invalidates the previously returned object handle;
-- re-reading returns the fresh handle;
-- signal version/subscription behavior can be mapped without exposing the list;
-- whole-root replacement is not silently invented by the helper.
+- nested mutation persisted after reopen;
+- rollback restored durable/loaded state;
+- the pre-rollback object handle became stale and rejected writes;
+- re-reading through the helper returned the fresh object handle;
+- a singleton signal could map the current one-item list dynamically without exposing the list at the callsite;
+- notifications/version progression remained available;
+- whole-root replacement was deliberately not invented.
 
-### C — arbitrary-root/cell prototype
+This matters because B removes the observed `singleton-list-boundary` ceremony while preserving the existing durable-item mental model.
 
-A raw primitive cannot behave as a persistent mutable reference in JavaScript:
+The current evidence supports only an **object singleton** direction. It does not justify scalar roots or automatic root replacement.
+
+## Finding 3 — candidate C proves scalar persistence is possible only with explicit replacement/cell semantics
+
+A raw JavaScript primitive cannot behave as a mutable persistent reference:
 
 ```ts
 let count = sk.state("count", 0);
 count++;
 ```
 
-`count++` only rebinds the local variable; a primitive value cannot intercept that assignment.
+`count++` rebinds the local variable. No runtime can intercept that primitive-variable assignment through the returned number.
 
-Therefore the executable prototype uses an explicit cell:
+The executable C prototype therefore uses:
 
 ```ts
 const count = rootCell(sk, "count", 0);
 count.value++;
 ```
 
-The same cell can contain an object:
+This persisted and signaled correctly, but changes the abstraction from “ordinary value” to an explicit mutable cell.
+
+So a generalized signature like:
+
+```ts
+state("count", 0): number
+```
+
+cannot honestly provide mutation-by-reference durability. A generic root API would need one of:
+
+- a cell/value wrapper;
+- explicit `get()` / `set()` replacement semantics;
+- inconsistent overloads where objects and primitives behave differently.
+
+None is justified merely to remove singleton-list syntax.
+
+## Finding 4 — cell object replacement creates another stale-handle ambiguity
+
+The C prototype also tested:
 
 ```ts
 const project = rootCell(sk, "project", initial);
-project.value.cwd = "/next";
+const oldValue = project.value;
+
 project.value = replacement;
+oldValue.cwd = "/stale-write";
 ```
 
-This makes scalar replacement executable, but introduces a wrapper concept and creates a second lifetime question: what should happen to an old nested object handle after `cell.value = replacement`?
+The old nested proxy write was accepted, but it did not modify the current root or the reopened replacement value.
 
-## H — hypothesis
+That is safer than A's memory/durable divergence, but still semantically poor: a write to a detached old root appears to succeed while having no effect on the current durable value and may still trigger persistence/notification work.
 
-Candidate B should be preferable if it removes the observed singleton-list ceremony while reusing current durable-item rollback, identity, and notification semantics.
+Therefore C still lacks a clear replacement-lifetime contract.
 
-Candidate C should only advance if raw object/array/scalar roots can have one coherent contract. A shorter signature is insufficient when primitives require explicit replacement/cell semantics or root replacement leaves ambiguous old handles.
+## Decision matrix
 
-## T — executable probes
+| Criterion | A list-only | B singleton/object | C arbitrary/cell |
+| --- | --- | --- | --- |
+| removes singleton list ceremony | no | **yes** | yes, but adds cell ceremony |
+| reuses durable-item identity model | yes | **yes** | partially |
+| nested object mutation | pass | **pass** | pass |
+| rollback old-handle semantics | existing | **pass** | inherited holder semantics |
+| raw scalar root | no | no | **not coherent without wrapper** |
+| whole-root replacement clarity | **unsafe today (#42)** | explicitly out of scope | ambiguous old nested handles |
+| query/projection fit | native | native underlying item | not naturally universal |
+| implementation/storage expansion | none | **small wrapper surface** | larger semantic expansion |
+| current decision | reject as singleton UX answer | **preferred direction** | do not generalize yet |
 
-`scripts/root_state_semantics_experiment.ts` runs isolated SQLite files for A, B, and C.
+## H — result
 
-### A probes
+The hypothesis that B can remove the measured singleton ceremony while reusing current lifecycle semantics is **supported by the first executable prototype**.
 
-- nested mutation;
-- whole-item replacement;
-- old-handle write after replacement;
-- memory vs reopened durable value.
+The stronger hypothesis that `state()` should generalize directly to arbitrary JSON roots is **not supported**. Primitive reference semantics are impossible without changing the API model, and root replacement lifetime remains ambiguous.
 
-### B probes
+## D — decision
 
-- singleton helper nested mutation;
-- failed batch rollback;
-- old-handle rejection after rollback;
-- re-read fresh object;
-- singleton signal notification/version behavior;
-- reopen verification.
+Current candidate direction:
 
-### C probes
+> Prefer a narrow singleton/object abstraction over broad arbitrary-root `state()` generalization.
 
-- scalar cell `value++` persistence;
-- cell signal notification/version behavior;
-- object nested mutation;
-- whole-cell value replacement;
-- old nested handle write after replacement;
-- whether that old write changes the current/reopened root.
+But do not add the public API in this experiment PR.
 
-## D — decision rules
+Sequence:
 
-### Prefer A
+1. fix #42 replacement-handle invalidation;
+2. re-run this experiment with the stronger replacement invariant;
+3. only then open a focused singleton/object API implementation issue;
+4. keep scalar/cell support separate until a real scalar-root scenario demonstrates value beyond syntax.
 
-Only if B/C fail to remove enough ceremony or introduce worse lifecycle semantics.
+## C — counter-hypotheses still alive
 
-### Prefer B
-
-When:
-
-- object singleton use works through current public behavior;
-- rollback/stale semantics stay aligned with durable item handles;
-- reactive wrapping is straightforward;
-- no scalar/reference fiction is introduced;
-- whole-root replacement can remain explicitly out of scope.
-
-### Continue C
-
-Only when:
-
-- scalar semantics are explicit and acceptable;
-- object/root replacement has a clear stale-handle rule;
-- one coherent reactive model can cover object and scalar roots;
-- storage/rollback implementation growth is justified by scenarios beyond singleton cosmetics.
-
-### UNCERTAIN
-
-When raw primitive semantics or replacement lifetime remain unresolved.
-
-## C — counter-hypotheses
-
-1. Singleton-list ceremony may be tolerable and not justify a permanent API.
-2. A singleton helper may only rename the list boundary rather than remove meaningful complexity.
-3. A generic `state()` signature may be syntactically attractive but impossible to honor uniformly for primitive mutation.
-4. A `cell.value` design may solve primitives but add roughly the same ceremony under a different name.
-5. Root replacement can invalidate or detach handles in ways not currently encoded by membership-by-id alone.
+1. Singleton-list ceremony may still be too small to justify permanent public API surface.
+2. A singleton helper could create discoverability/naming cost despite runtime simplicity.
+3. A future explicit `cell()` abstraction could be valuable for scalar checkpoints/config, but that is a separate product hypothesis.
+4. Root replacement might eventually deserve first-class semantics, but it must have explicit invalidation before being surfaced.
 
 ## U — uncertainty
 
-- whether singleton object state is common enough for public API surface;
-- whether replacement should be supported at all for object-state handles;
-- whether primitive durable values belong in core or a separate cell/value abstraction;
-- migration/storage compatibility if a future root representation is not row-per-item;
-- behavior with browser/async backends.
+- prevalence of singleton object state across realistic users;
+- final public name, if any, for a singleton/object API;
+- whether singleton signals belong as a separate API or can be derived ergonomically;
+- whether object replacement should be unsupported, explicit, or identity-invalidating;
+- whether scalar cells belong in core;
+- browser/async implications.
 
 ## Run
 
@@ -179,4 +232,4 @@ When raw primitive semantics or replacement lifetime remain unresolved.
 npm run experiment:root-state-semantics
 ```
 
-The output is machine-readable JSON. Product comparison results do not themselves modify runtime behavior in this PR.
+The output is machine-readable JSON. This PR records experimental evidence only; StorekeeperDB runtime/public API behavior is unchanged.
