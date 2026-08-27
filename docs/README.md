@@ -2,12 +2,15 @@
 
 StorekeeperDB is a public alpha candidate. The current priority is product refinement: use realistic scenarios, find rough edges, make the smallest justified fix, and re-verify behavior.
 
+The current product direction is agent-oriented: reduce the persistence-specific decisions a coding agent must carry while building fast-changing TypeScript prototypes, without pretending hard persistence problems do not exist.
+
 ## Start here
 
 - [Manual](./MANUAL.md) — current public alpha API and usage boundaries.
 - [Architecture](./ARCHITECTURE.md) — runtime layers, durable-variable model, and architectural boundaries.
 - [Evaluation loop](./EVALUATION_LOOP.md) — how to evaluate and refine the product during alpha.
 - [Next work](./NEXT_WORK.md) — current priorities and deferred research.
+- [Agent decision-burden experiment](./AGENT_DECISION_BURDEN_EXPERIMENT.md) — auditable comparison of persistence-specific implementation decisions for agent-driven prototyping.
 - [Issue tracker evaluation](./ISSUE_TRACKER_EVALUATION.md) — realistic compatible application-shape evolution and query-to-update scenario.
 - [`find()` semantics evaluation](./FIND_SEMANTICS_EVALUATION.md) — durable-handle vs snapshot decision record.
 - [Change amplification experiment](./CHANGE_AMPLIFICATION_EXPERIMENT.md) — first direct-SQL comparison for compatible model evolution.
@@ -28,6 +31,7 @@ StorekeeperDB is a public alpha candidate. The current priority is product refin
 
 These documents record experimental evidence and narrower runtime behavior. They are useful for understanding why a contract exists and where it has not yet generalized.
 
+- [Agent decision-burden experiment](./AGENT_DECISION_BURDEN_EXPERIMENT.md)
 - [Change amplification experiment](./CHANGE_AMPLIFICATION_EXPERIMENT.md)
 - [CLI metadata replication](./CLI_METADATA_CHANGE_AMPLIFICATION_EXPERIMENT.md)
 - [Root-state semantics evaluation](./ROOT_STATE_SEMANTICS_EVALUATION.md)
@@ -50,16 +54,17 @@ Avoid:
 
 - presenting the alpha as production-ready;
 - adding features without a demonstrated scenario;
-- treating benchmark timings or small application experiments as general guarantees;
+- treating benchmark timings, decision counts, or small application experiments as general guarantees;
+- implying that source annotations measure hidden model reasoning or chain-of-thought;
 - implying that the experimental async boundary is a complete browser adapter;
-- growing the public API when simplification or removal would solve the same problem.
+- growing the public API when a convention, simplification, or removal would solve the same problem.
 
 The default loop is:
 
 1. choose a realistic usage scenario;
 2. use the public API only;
-3. record friction, surprise, failure, documentation gaps, and performance roughness;
-4. make the smallest runtime, API, test, or documentation change that addresses the finding;
+3. record friction, surprise, failure, persistence-specific decision burden, documentation gaps, and performance roughness;
+4. make the smallest runtime, API, test, convention, or documentation change that addresses the finding;
 5. run `npm run release:check` and any scenario-specific checks;
 6. record the result and uncertainty in the PR;
 7. update [Next work](./NEXT_WORK.md) before generalizing the result.
