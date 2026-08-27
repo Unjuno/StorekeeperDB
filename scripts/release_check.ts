@@ -71,6 +71,7 @@ if (!releaseCheck.includes("experiment:agent-decision-burden:check")) fail("rele
 if (!releaseCheck.includes("experiment:agent-project-convention:check")) fail("release:check must include experiment:agent-project-convention:check");
 if (!releaseCheck.includes("experiment:declaration-key-rename:check")) fail("release:check must include experiment:declaration-key-rename:check");
 if (!releaseCheck.includes("experiment:collection-rename-projection:check")) fail("release:check must include experiment:collection-rename-projection:check");
+if (!releaseCheck.includes("experiment:multi-step-declaration-rename:check")) fail("release:check must include experiment:multi-step-declaration-rename:check");
 if (!releaseCheck.includes("scenario:issue-tracker:check")) fail("release:check must include scenario:issue-tracker:check");
 if (releaseCheck.includes("benchmark:check")) fail("release:check must not include benchmark:check while benchmark timing is observational");
 
@@ -85,6 +86,7 @@ const requiredScripts = [
   "experiment:agent-project-convention",
   "experiment:declaration-key-rename",
   "experiment:collection-rename-projection",
+  "experiment:multi-step-declaration-rename",
   "scenario:issue-tracker",
 ];
 for (const script of requiredScripts) {
@@ -119,6 +121,7 @@ const publicDocs = [
   "docs/AGENT_PROJECT_CONVENTION_EXPERIMENT.md",
   "docs/DECLARATION_KEY_RENAME_EXPERIMENT.md",
   "docs/COLLECTION_RENAME_PROJECTION_EXPERIMENT.md",
+  "docs/MULTI_STEP_DECLARATION_RENAME_EXPERIMENT.md",
   "docs/MANUAL.md",
   "docs/EVALUATION_LOOP.md",
   "docs/BENCHMARKS.md",
@@ -180,10 +183,16 @@ const requiredPublicText: Array<[string, string]> = [
   ["docs/COLLECTION_RENAME_PROJECTION_EXPERIMENT.md", "The experiment does **not** show successful migration of projection metadata"],
   ["docs/COLLECTION_RENAME_PROJECTION_EXPERIMENT.md", "manifest binds workItems -> tasks"],
   ["docs/COLLECTION_RENAME_PROJECTION_EXPERIMENT.md", "No public API surface is authorized by this result."],
+  ["docs/MULTI_STEP_DECLARATION_RENAME_EXPERIMENT.md", "CANDIDATE PASS in CI #183"],
+  ["docs/MULTI_STEP_DECLARATION_RENAME_EXPERIMENT.md", "CANDIDATE_PASS_MULTI_STEP_RENAME_RETAINS_SINGLE_PHYSICAL_IDENTITY"],
+  ["docs/MULTI_STEP_DECLARATION_RENAME_EXPERIMENT.md", "The tested manifest behaves as a **current identity binding**, not a rename-history registry."],
+  ["docs/MULTI_STEP_DECLARATION_RENAME_EXPERIMENT.md", "Rename source settings does not exist."],
+  ["docs/MULTI_STEP_DECLARATION_RENAME_EXPERIMENT.md", "No public project-store or rename API is authorized by this result."],
   ["docs/NEXT_WORK.md", "Persistence should normally not enter the coding agent's planning loop."],
   ["docs/NEXT_WORK.md", "CANDIDATE_PREFER_EXPLICIT_RENAME_ALIAS_WITH_IDENTITY_MANIFEST"],
   ["docs/NEXT_WORK.md", "CANDIDATE_PASS_LOGICAL_RENAME_PRESERVES_PHYSICAL_DERIVED_STATE"],
-  ["docs/NEXT_WORK.md", "Test a multi-step rename chain"],
+  ["docs/NEXT_WORK.md", "CANDIDATE_PASS_MULTI_STEP_RENAME_RETAINS_SINGLE_PHYSICAL_IDENTITY"],
+  ["docs/NEXT_WORK.md", "Test declared-state split/merge boundary"],
   ["docs/EVALUATION_LOOP.md", "Simple persistence should feel automatic. Hard persistence problems must remain observable and controllable."],
   ["docs/ALPHA_RELEASE_DECISION.md", "public alpha candidate"],
   ["docs/ALPHA_RELEASE_DECISION.md", "not a stable API release"],
@@ -215,6 +224,7 @@ console.log(JSON.stringify({
   hasAgentProjectConventionExperiment: true,
   hasDeclarationKeyRenameExperiment: true,
   hasCollectionRenameProjectionExperiment: true,
+  hasMultiStepDeclarationRenameExperiment: true,
   hasIssueTrackerScenario: true,
   hasFindSemanticsDecision: true,
   pass: true,
