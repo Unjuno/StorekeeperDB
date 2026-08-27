@@ -1,173 +1,197 @@
 # `find()` semantics evaluation
 
-Status: CI #94 PASS; hybrid durable-handle direction conditionally selected for #29.
+Status: **PASS — hybrid durable-handle design selected and implemented.**
+
+Issue: #29. Evaluation PR: #30. Lifecycle hardening: #33 / #31. Reactive snapshot hardening: #34 / #32. Final implementation: #35.
 
 ## Goal
 
-Choose the least-surprising query-result contract without adding unnecessary API surface or hidden identity/lifecycle complexity.
+Choose the least-surprising query-result contract without adding unnecessary API surface or hidden identity/lifecycle machinery.
 
-The realistic issue-tracker scenario established the current mismatch:
+The original realistic issue-tracker scenario exposed this mismatch:
 
 ```text
 state() item mutation -> durable
-find() item mutation  -> detached clone only
+find() item mutation  -> detached clone
 ```
 
-## Candidates
+The evaluation compared three directions.
 
-### A — keep detached snapshots
-
-Keep `find()` behavior unchanged and make results explicitly read-only through types/documentation.
+## Candidate A — keep detached `find()` snapshots
 
 Advantages:
 
-- minimal runtime complexity;
-- current `liveFind()` snapshot behavior remains natural;
-- no new handle lifetime rules are required.
+- smallest runtime change;
+- naturally compatible with read-only/reactive use.
 
 Costs:
 
-- JavaScript `Array.find()` normally returns the original object, not a clone;
-- StorekeeperDB's durable-variable mental model becomes discontinuous at query boundaries;
-- query-then-update requires a second lookup through `state()`;
-- type-level readonly only helps TypeScript callers and does not change runtime mutation behavior.
+- conflicts with JavaScript reference expectations;
+- breaks the durable-variable mental model at the query boundary;
+- query-to-update requires a second lookup through `state()`.
 
-Decision: not preferred unless durable handles prove substantially more complex than the experiment indicates.
+Decision: rejected as the default public contract.
 
-### B — add/rename an explicit snapshot query API
-
-Use a name that makes detached values explicit, while preserving or replacing `find()`.
+## Candidate B — add an explicit snapshot query API
 
 Advantages:
 
-- semantic clarity can be high;
-- snapshot/read-model behavior is naturally compatible with reactive UI use.
+- explicit read semantics.
 
 Costs:
 
-- larger public API or an alpha breaking rename;
-- still leaves query-to-mutation workflows indirect;
-- naming solves the symptom but does not strengthen the durable-variable abstraction.
+- larger public API;
+- still leaves query-to-update indirect;
+- no demonstrated one-shot snapshot use case required a second method.
 
-Decision: defer. Do not add a second public query method without a demonstrated one-shot snapshot use case.
+Decision: deferred. Do not add speculative API surface.
 
-### C — return durable item handles from `find()`
-
-Return a new local result array whose matching elements are the same Storekeeper-backed item proxies contained by `state()`.
+## Candidate C — durable item handles from `find()`
 
 Target contract:
 
 ```text
-result array mutation  -> local only
-result item mutation   -> durable while item belongs to the state
-reorder                 -> handle identity survives
-rollback                -> captured handle becomes stale
-item deletion           -> captured handle becomes stale
-projection eviction     -> handle remains valid because projections are derived
-liveFind()              -> stable snapshot/read model, not mutable handles
+find() result array      -> local ordinary array
+find() result item       -> durable handle
+reorder                  -> handle remains valid
+rollback                 -> old handle becomes stale
+remove                   -> removed handle cannot write
+projection eviction      -> handle remains valid
+liveFind()               -> detached stable snapshots
 ```
 
-Decision: **conditionally preferred**.
+Decision: selected after experiment and blocker hardening.
 
-## H — hypothesis
+## H — falsifiable hypothesis
 
-A hybrid C design can reduce surprise without requiring a second public query API:
+StorekeeperDB can make query-to-update natural by returning durable handles from `find()` without a new identity subsystem, provided:
 
-```text
-state() / find()  = command-capable durable handles
-liveFind()        = stable read snapshots
-```
+1. removed handles cannot write deleted rows back into persistence; and
+2. reactive APIs own detached snapshot semantics independently of `find()`.
 
-This is acceptable only if handle invalidation rules are explicit and reactive snapshots remain stable.
+## T — experiment sequence
 
-## T — experiment
+### Experiment 1 — simulate durable query handles
 
-`test/find_semantics_experiment.test.ts` used only current public APIs to simulate the proposed handle model through `state().filter(...)`.
+PR #30 used only public APIs and `state().filter(...)` to simulate the proposed `find()` handle model.
 
-CI #94 ran the experiment under Node 22.23.2 as part of the complete `npm run release:check` gate. All 24 tests passed.
-
-## Result — CI #94
-
-Observed behavior:
+CI #94 confirmed:
 
 ```text
-current find() clone is detached                    CONFIRMED
-local result array + durable item handles            PASS
-item mutation through handle persists               PASS
-result-array push remains local                      PASS
+current detached find() behavior                    CONFIRMED
+local result array + durable item handles           PASS
+item mutation through durable handle                PASS
+result-array mutation remains local                 PASS
 handle identity survives reorder                    PASS
 rollback invalidates captured handle                PASS
-naive live handle snapshots alias previous values   CONFIRMED BLOCKER
-cloned reactive boundary restores notifications     PASS
-removed handle can resurrect deleted row            CONFIRMED BLOCKER
+naive reactive handle snapshots alias old values   CONFIRMED BLOCKER
+removed handles can resurrect deleted rows          CONFIRMED BLOCKER
 ```
 
-### R1 — query handle model is smaller than expected
+This falsified the idea that C could be adopted by merely removing `cloneJson` from `find()`.
 
-The current runtime already stores item identity on the loaded state proxies. Reorder preserves proxy identity and rollback increments state generation, making old proxies stale. The experiment did not justify a new identity registry.
+### Experiment 2 — removed-handle lifetime
 
-### R2 — mutable handles cannot be reused as reactive snapshots
+Issue #31 / PR #33 strengthened write validity from generation-only to generation + state membership.
 
-A naive selector returning durable proxies aliases the previous snapshot. When a matched item's content mutates, the old snapshot already observes the mutation before comparison, so change notification can be suppressed.
+CI #98 passed the full `npm run release:check` gate.
 
-Cloning at the reactive boundary restored stable previous-value semantics and correct notification.
+Result:
 
-Therefore:
+```text
+active member    -> writable
+reordered member -> writable
+rollback         -> stale
+removed member   -> readable detached reference, writes fail
+nested removed   -> writes fail
+```
 
-> `liveFind()` must preserve snapshot semantics independently of `find()`.
+No new handle registry was required.
 
-### R3 — deletion is the concrete handle-lifecycle defect
+### Experiment 3 — reactive snapshot separation
 
-A proxy removed from a state list remains generation-valid today. Mutating it can write the deleted row back to SQLite and resurrect it after reopen.
+Issue #32 / PR #34 made `liveFind()` explicitly clone its own snapshots instead of inheriting `find()` return semantics.
 
-This is not only a future `find()` problem; the same lifecycle defect exists for proxies returned by current array removals.
+CI #101 passed the full release gate.
 
-Tracked as #31.
+A regression proved that a non-filter content mutation:
+
+- notifies exactly once;
+- leaves the old snapshot unchanged;
+- creates a new snapshot/version;
+- remains compatible with React `useSyncExternalStore` verification.
+
+### Experiment 4 — implement durable `find()`
+
+PR #35 changes `find()` to return a new local array containing the same durable item handles held by loaded state.
+
+The realistic issue-tracker scenario now mutates status directly through a `find()` result and verifies the change after reopen. It also mutates query-result membership and verifies source membership is unchanged.
+
+CI #103 passed `npm run release:check` before documentation synchronization.
 
 ## D — decision
 
-The experiment does not support A as the default product direction: it is simpler internally but leaves the user-facing durable-variable model discontinuous.
+PASS criteria:
 
-The experiment does not justify B: adding a parallel snapshot query API increases public surface before a concrete need exists.
+- query-to-update persists directly through `find()`;
+- result-array mutation stays local;
+- removed handles cannot resurrect rows;
+- rollback handles remain stale;
+- reorder identity remains valid;
+- `liveFind()` keeps stable previous-value snapshots;
+- realistic issue-tracker, React verification, consumer smoke, projection lifecycle, and full release gate remain green.
 
-C is selected conditionally because its remaining complexity is localized to two explicit boundaries rather than a broad identity subsystem.
+The runtime/scenario implementation satisfies these criteria in the current Node/SQLite alpha.
 
 ## Selected architecture
 
 ```text
 command-capable durable plane
   state()
-  find()        <- target after blockers are fixed
+  find()
 
 reactive read plane
-  liveFind()    <- cloned/stable derived snapshots
+  liveFind()
 ```
 
-A `find()` result array should be a new ordinary array. Mutating array membership must not mutate the underlying state. Its items, however, should be durable handles while they remain members of the state.
+The important distinction is not “mutable vs immutable array.” It is:
 
-## Required implementation sequence
+```text
+query result array identity -> local
+matched item identity       -> durable while member/generation-valid
+```
 
-1. #31 — invalidate removed item handles by checking state membership in addition to generation.
-2. Convert the experimental removed-handle observation into a regression asserting stale failure and no resurrection.
-3. Decouple `liveFind()` snapshot cloning from the `find()` return contract.
-4. Change `find()` to return matching state proxies in a new local result array.
-5. Update the issue-tracker scenario so mutation through `find()` is expected to persist.
-6. Re-run React/live, rollback, reorder/removal, projection lifecycle, consumer smoke, issue-tracker, and full `release:check`.
+A durable handle is writable when:
 
-## C — competing explanations
+```text
+current generation
+AND
+current state membership by durable item id
+```
 
-1. Readonly snapshot types could reduce surprise enough without changing runtime behavior.
-2. Future async/browser backends may make durable handle identity more expensive than the current in-memory Node runtime.
-3. The split between mutable `find()` and snapshot `liveFind()` requires explicit documentation.
-4. An explicit snapshot query may become useful later, but should be evidence-driven rather than added preemptively.
+Close/reopen preserves data, not JavaScript proxy identity.
 
-## U — remaining uncertainty
+## C — competing explanations / counter-hypotheses
 
-- close/reopen expectations for already-captured handles;
-- future async/browser backend compatibility with the same handle contract;
-- deep-readonly typing for `liveFind()` snapshots;
-- whether a one-shot explicit snapshot query is eventually needed.
+1. Snapshot-only `find()` could have been sufficient if documentation was the only problem. The realistic query-to-update workflow still remained indirect, so this was not selected.
+2. Durable handles could have required a broad identity registry. The experiments did not support that for the current runtime; existing ids + membership + generation were sufficient.
+3. Mutable query handles could have broken reactive comparison. This counter-hypothesis was confirmed, which is why `liveFind()` remains a separate snapshot plane.
+4. Future async/browser backends may not preserve the same cheap identity model. This remains uncertain and must be re-tested before generalizing the contract to a different backend architecture.
 
-## Current recommendation
+## U — uncertainty
 
-Proceed with the hybrid C architecture, but do not change `find()` until #31 and reactive snapshot separation are implemented and verified.
+The main remaining uncertainty is generalization beyond the current Node/SQLite loaded-state model:
+
+- async/browser storage;
+- multi-process writers;
+- very large states where loaded proxy identity becomes expensive;
+- explicit one-shot snapshot-query demand;
+- incompatible schema evolution.
+
+These do not invalidate the current alpha contract; they bound it.
+
+## Product consequence
+
+The experiment supports a stronger durable-variable rule:
+
+> A normal query should not unexpectedly detach an object from persistence. Command-capable object identity can remain natural, while reactive read snapshots are explicitly separated where snapshot stability is required.
