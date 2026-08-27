@@ -1,187 +1,134 @@
 # Next work
 
-This document keeps the next StorekeeperDB work explicit after the initial public alpha baseline.
+This document tracks current StorekeeperDB priorities. Historical implementation details belong in the changelog, merged pull requests, and subsystem notes; this file should answer one question: **what should be evaluated or changed next?**
 
-## Completed public setup
+## Current phase
 
-### 1. Public alpha polish
+StorekeeperDB is a public alpha candidate in a product refinement / alpha hardening loop.
 
-Status: merged.
+The current goal is not promotion and not feature-count growth. The goal is to use realistic application scenarios to expose:
 
-Delivered:
+- API friction;
+- surprising behavior;
+- unclear failure modes;
+- documentation gaps;
+- test gaps;
+- persistence-specific change amplification;
+- reproducible performance roughness.
 
-- Changelog.
-- Transaction model.
-- Browser storage boundary.
-- Minimal example.
-- README links to public docs.
+See [Alpha evaluation loop](./EVALUATION_LOOP.md).
 
-### 2. Runtime hardening
+## Active priority
 
-Status: merged.
+### 1. Realistic alpha scenario — #24
 
-Delivered:
+Status: next.
 
-- Explicit stale proxy behavior after failed `batch()`.
-- Nested rollback tests.
-- Projection consistency after supported array mutators.
-- Clearer debug output for magic projection changes.
-- Runtime hardening notes.
+Build one small scenario that exercises StorekeeperDB as an application developer would, rather than as an implementation demo.
 
-### 3. Alpha release hygiene — #7
+Preferred first candidate: an issue tracker whose persisted item shape changes during development.
 
-Status: merged.
+The scenario should include:
 
-Delivered:
+- state creation and ordinary mutation;
+- nested data;
+- `find()` or `liveFind()` where a scalar lookup is genuinely useful;
+- reopen / persistence verification;
+- at least one application-shape change or unsupported-operation boundary;
+- public package entrypoints only;
+- no internal imports or scenario-specific persistence workaround.
 
-- Package export checks.
-- Package dry-run.
-- Release checklist.
-- Manual publishing boundary.
+Record all friction before changing the runtime.
 
-### 4. Executable demo
+### 2. Convert findings into small PRs
 
-Status: merged.
+Status: follows the first scenario.
 
-Delivered:
+For each observed rough edge:
 
-- `npm run demo`.
-- `docs/DEMO.md`.
-- Demo included in `release:check`.
+1. classify the finding;
+2. decide whether the smallest fix belongs in runtime, public API, tests, or docs;
+3. prefer simplification over API growth;
+4. add regression coverage when behavior changes;
+5. run the scenario again;
+6. run `npm run release:check` before merge.
 
-### 5. React verification — #4
+One PR should normally address one observed problem or one tightly related group.
 
-Status: merged.
+### 3. Evaluate change amplification
 
-Delivered:
+Status: planned.
 
-- Real React / `react-test-renderer` verification.
-- `useSyncExternalStore` behavior checked against `liveFind()`.
-- Core runtime remains independent of React.
-- `live()` / `liveFind()` snapshot caching hardened.
+The core product hypothesis is that StorekeeperDB reduces persistence-specific work while application models are changing quickly.
 
-### 6. Browser boundary experiment — #5
+For selected scenario changes, record:
 
-Status: merged.
+- files touched;
+- persistence-specific code added or changed;
+- migration or repository boilerplate required;
+- undocumented workarounds;
+- runtime failures;
+- implementation notes that reveal hidden persistence complexity.
 
-Delivered:
+The purpose is not to manufacture a favorable line-count comparison. The purpose is to detect whether StorekeeperDB actually moves persistence concerns out of the early prototype loop or merely hides them until failure.
 
-- Experimental async write-behind runtime separated from local SQLite.
-- `flush()` defined as the durability barrier.
-- Dirty / clean / failed durability states covered by tests.
+## Recently completed baseline
 
-### 7. Full magic lifecycle re-import — #6
+The current main branch already includes:
 
-Status: completed for public alpha.
+- runtime rollback and projection hardening;
+- release hygiene and package export checks;
+- executable demo;
+- React `useSyncExternalStore` verification;
+- experimental async write-behind boundary model;
+- derived projection lifecycle GC and opt-in lookup-count-based decay;
+- metadata compaction;
+- public manual and observational benchmark;
+- alpha release decision notes;
+- prepublish wording inspection;
+- clean consumer tarball install simulation;
+- slimmed release-check fixtures while preserving semantic coverage.
 
-Delivered across multiple PRs:
+This baseline is sufficient to stop treating missing infrastructure as the default reason to add more infrastructure.
 
-- Manual derived projection lifecycle.
-- `debug().markCold()`.
-- `debug().collectGarbage()`.
-- Source rows remain after projection GC.
-- Budget-based projection eviction and rebuild.
-- Opt-in `decay` option.
-- Lookup-count-triggered derived GC.
-- Automatic `maxDerivations` enforcement.
-- Current lookup path protection during the same GC pass.
-- `debug().compactMetadata()` for magic logs and path observations.
-- Path observation count decay.
-- Low-value non-projection observation deletion.
-- Source rows, projection cells, and projection-backed observations preserved by metadata compaction.
+## Deferred research
 
-See [Magic re-import status](./MAGIC_REIMPORT_STATUS.md).
+These remain valid research topics, but they are not the next product priority unless a realistic scenario demonstrates that they block the core value proposition.
 
-### 8. Manual and benchmark layer
+### Time-based lifecycle decay — #16
 
-Status: merged.
+- optional time-based cold marking;
+- explicit periodic derived GC semantics;
+- no hidden background work.
 
-Delivered:
+### Richer metadata scoring policy — #17
 
-- Public alpha manual.
-- Executable benchmark script.
-- Benchmark documentation.
-- Benchmark timings scoped as observational, not a hard release gate.
+- usefulness scoring for observation metadata;
+- explicit deletion boundaries;
+- source state remains outside metadata scoring deletion.
 
-### 9. Alpha release decision
+### Full browser adapter
 
-Status: merged.
+The current experimental async write-behind runtime defines a durability boundary; it is not a complete browser adapter. Browser implementation work should wait until the required semantics are justified by a realistic browser scenario.
 
-Delivered:
+## Publication follow-up
 
-- Public alpha candidate decision record.
-- Draft release notes.
-- Manual publish boundary: alpha dist-tag only.
-- Release check validates decision and release notes documents exist.
+Publishing is not the current optimization target. If `0.1.0-alpha.0` is published later:
 
-### 10. Final prepublish inspection
-
-Status: merged.
-
-Delivered:
-
-- Release checks verify key public alpha wording, not only file existence.
-- `release:check` rejects accidental removal of alpha disclaimers.
-- Benchmark timing remains outside the release gate.
-- npm publishing remains manual.
-
-### 11. Consumer install simulation
-
-Status: merged.
-
-Delivered:
-
-- Local package tarball install into a temporary clean consumer project.
-- Public package subpath import verification.
-- Minimal source state, `find()`, `liveFind()`, React-adapter-shape, and experimental async boundary smoke flow.
-- Included in `release:check` because it verifies package consumability rather than timing.
-
-## Active work
-
-### 12. Release-check runtime slimming
-
-Status: in progress.
-
-Scope:
-
-- Reduce oversized lifecycle / decay / gate / demo fixtures.
-- Preserve projection creation, GC, eviction, rebuild, and source-retention semantics.
-- Keep benchmark sizing unchanged because benchmark output is observational and manual.
-- Use CI runtime as the validation signal.
-
-## Open next work
-
-### 13. Time-based lifecycle decay — #16
-
-Scope:
-
-- Add optional time-based cold marking.
-- Add optional periodic derived GC independent of lookup count.
-- Keep background behavior explicit; do not introduce hidden async work.
-
-### 14. Metadata scoring policy — #17
-
-Scope:
-
-- Reintroduce fuller v22 metadata scoring policy only after the compactMetadata boundary is stable.
-- Keep source state and required projection state outside metadata scoring deletion.
-
-### 15. Post-alpha publication follow-up
-
-Scope:
-
-- Verify published package install behavior from a clean consumer project.
-- Confirm GitHub release notes match the published tarball.
-- Track early user-facing friction in issues.
-- Decide when to move from alpha candidate to broader alpha use.
+- verify registry-installed package behavior from a clean consumer project;
+- confirm GitHub release notes match the published tarball;
+- collect concrete user-facing friction;
+- feed those observations back into the same evaluation loop.
 
 ## Release posture
 
 `0.1.0-alpha.0` can be treated as a public alpha candidate only when:
 
-- CI passes consistently.
-- README matches actual public implementation.
-- Browser gaps are clearly documented.
-- The transaction model is either stable or explicitly scoped as alpha behavior.
-- `npm run release:check` passes on a clean checkout.
-- Alpha release decision notes are accepted by a maintainer.
+- CI passes consistently;
+- README matches actual public implementation;
+- browser gaps are clearly documented;
+- transaction behavior is either stable or explicitly scoped as alpha behavior;
+- `npm run release:check` passes on a clean checkout;
+- alpha release decision notes are accepted by a maintainer.
+
+Passing this checklist does not end the refinement loop and does not imply production readiness.
