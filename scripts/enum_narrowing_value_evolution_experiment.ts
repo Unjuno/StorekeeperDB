@@ -305,7 +305,6 @@ try {
     B.exactPhysicalRollback &&
     B.loadedMemoryRollback &&
     B.selectedMode === MAPPED_MODE &&
-    B.durableHandleReturned &&
     B.reopenedAllowedV2Value &&
     B.reopenedMappedMode;
 
@@ -318,6 +317,7 @@ try {
   const projectionCoherent =
     B.projectionUpdatedByOrdinaryMutation &&
     B.queriesReflectNarrowedValue &&
+    B.durableHandleReturned &&
     B.projectionStillCoherentAfterHandleMutation;
 
   const unexpectedRuntimeValidation =
@@ -355,7 +355,7 @@ try {
     interpretation: unexpectedRuntimeValidation
       ? "The runtime unexpectedly rejected persisted data based on the narrower declaration; this differs from the current static-TypeScript-only model and requires separate analysis."
       : validExperiment
-        ? "Enum narrowing is a semantic value boundary: the narrower TypeScript union does not transform persisted 'legacy'. An explicit mapping policy is required, while ordinary durable mutation keeps the existing scalar projection coherent in this scenario."
+        ? "Enum narrowing is a semantic value boundary: the narrower TypeScript union does not transform persisted 'legacy'. An explicit mapping policy is required; projection coherence is reported separately so a projection gap remains a valid mixed result."
         : "The experiment did not cleanly establish enum-narrowing behavior.",
     uncertainty: {
       independentRequiredFieldIntroductionUntested: true,
