@@ -41,8 +41,10 @@ try {
     const sk = new StorekeeperDB(aPath);
     const list = sk.state<ProjectMeta[]>("project", [initialProject()]);
     const oldHandle = list[0]!;
-    oldHandle.recentFiles.push("notes.md");
+    oldHandle.recentFiles.push("before-replacement.md");
     list[0] = replacementProject();
+    const replacementHandle = list[0]!;
+    replacementHandle.recentFiles.push("after-replacement.md");
     const memoryBeforeOldWrite = list[0]!.cwd;
     try {
       oldHandle.cwd = "/stale-overwrite";
@@ -56,7 +58,11 @@ try {
     const reopened = new StorekeeperDB(aPath);
     const reopenedList = reopened.state<ProjectMeta[]>("project", [initialProject()]);
     const persisted = reopenedList[0]!;
-    aNestedMutationPersisted = persisted.recentFiles.includes("notes.md") || persisted.cwd === "/stale-overwrite";
+    aNestedMutationPersisted =
+      persisted.cwd === "/replacement" &&
+      persisted.recentFiles.includes("README.md") &&
+      persisted.recentFiles.includes("after-replacement.md") &&
+      !persisted.recentFiles.includes("before-replacement.md");
     aMemoryDurableDivergence =
       aOldHandleWriteAccepted &&
       memoryBeforeOldWrite === "/replacement" &&
@@ -219,7 +225,7 @@ try {
       stateTypeConstraint: "object[]",
       storageModel: "row-per-item",
       rollbackModel: "loaded generation invalidation",
-      writableItemRule: "current generation + current durable item id membership",
+      writableItemRule: "current generation + current durable item id membership + current proxy identity",
     },
     candidateA,
     candidateB,

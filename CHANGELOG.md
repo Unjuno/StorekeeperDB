@@ -35,8 +35,10 @@ Initial public alpha baseline plus iterative hardening from realistic evaluation
 
 - Failed outer `batch()` calls invalidate item and nested handles captured from the old loaded generation.
 - Removed item handles can still be read as detached JavaScript references but cannot write deleted rows back into persistence.
-- Nested handles captured from removed items obey the same root-membership write rule.
-- Reorder preserves durable item-handle identity inside the current loaded generation.
+- Direct item replacement now invalidates the displaced item proxy and nested handles even when the replacement intentionally reuses the same durable row id.
+- Writable handles now require current loaded generation, current durable-id membership, and exact current proxy identity.
+- Reorder preserves durable item-handle identity because it moves the same proxy rather than replacing it.
+- Replacement regression verifies the new proxy remains writable while loaded memory and reopened SQLite state stay identical.
 - `find()` returns a new local result array containing durable item handles; modifying result-array membership does not modify durable source membership.
 - `liveFind()` explicitly clones/stores detached snapshots so prior snapshots do not alias mutable durable handles and suppress content-change notifications.
 - React external-store snapshot identity remains stable between changes and advances only when reactive content changes.
@@ -70,13 +72,14 @@ liveFind() result values -> detached stable snapshots
 - CLI metadata replication: StorekeeperDB persistence-specific changed lines were 8 vs 12 for JSON-blob SQLite, but concept count was worse 5 vs 4 because one logical record required the `singleton-list-boundary`.
 - Root-state semantics experiment CI #128 selected `PREFER_NARROW_SINGLETON_OBJECT_PROTOTYPE` as the current candidate direction. A public API has not been added.
 - The same root-state experiment rejected broad raw arbitrary-root `state()` generalization as unjustified: JavaScript primitive values cannot provide mutation-by-reference durability without an explicit cell/get-set/replacement model.
-- Root-state replacement probing exposed #42: a displaced old item proxy can currently remain writable when direct replacement reuses its durable id, causing loaded-memory/durable divergence. Runtime hardening takes priority over new root APIs.
+- Root-state replacement probing exposed #42. PR #43 hardens exact proxy identity; CI #136 revalidated the root-state experiment with old replacement-handle writes rejected and memory/durable divergence removed.
+- Candidate B remained preferred after hardening, so the next API experiment should compare the smallest object/singleton public surface against documenting the existing one-item-list convention.
 
 ### Boundaries
 
 - This is an alpha baseline, not the full pre-repo experiment history.
 - Root `state()` is currently an array-of-objects API, not arbitrary root values.
-- Current durable item writability combines loaded generation and durable-id membership; #42 demonstrates that direct replacement also requires exact current-proxy invalidation semantics.
+- Durable item writability requires current loaded generation, durable-id membership, and exact current proxy identity.
 - Close/reopen preserves durable data, not JavaScript proxy identity.
 - Compatible optional-field evolution is separate from incompatible schema migration semantics.
 - Durable-session `__workspace` is an experiment convention, not a reserved core API.

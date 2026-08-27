@@ -12,91 +12,62 @@ See [Alpha evaluation loop](./EVALUATION_LOOP.md) and [Architecture](./ARCHITECT
 
 ## Active priorities
 
-### 1. Fix replacement-handle invalidation — #42
+### 1. Evaluate the smallest singleton/object public surface
 
-Status: **runtime correctness blocker discovered by root-state semantics experiment CI #128.**
+Status: **candidate B revalidated after #42 in CI #136.**
 
-The root-state experiment directly replaced one durable list item while keeping its durable row id, then wrote through the displaced old proxy.
+Two compatible-evolution experiments established a recurring pattern:
 
-Observed:
+- StorekeeperDB reduced explicit persistence edit surface;
+- lower persistence-concept count did not consistently follow;
+- the single-record CLI workload exposed `singleton-list-boundary` as a concrete extra concept.
 
-```text
-old handle write after replacement          accepted
-loaded memory after old write               replacement object
-reopened durable value                      old proxy payload
-memory/durable divergence                   yes
-```
-
-Current writable-handle validation checks current generation + durable id membership. That is sufficient for removal and reorder, but not direct replacement because the new proxy intentionally reuses the old durable id.
-
-Required invariant:
-
-```text
-active current proxy                    writable
-reordered current proxy                 writable
-removed proxy                           write rejected
-rollback old-generation proxy           rejected
-replaced old proxy with reused id       rejected
-new replacement proxy                   writable
-```
-
-Fix this before adding singleton/root APIs. Prefer strengthening existing proxy-identity validation rather than adding a new public identity system.
-
-### 2. Re-run root-state semantics after #42 — #40
-
-Status: **first experiment selects candidate B, but re-verification after #42 is required.**
-
-CI #128 compared:
+Root-state experiment #40 compared:
 
 ```text
 A  current list-only state
-B  narrow singleton/object helper over current public APIs
-C  generic root cell / arbitrary-root direction
+B  narrow singleton/object helper over existing state()/signal()
+C  arbitrary-root / explicit cell direction
 ```
 
-First result:
+After replacement-handle hardening #42, CI #136 observed:
 
 ```text
-A  singleton ceremony remains; direct replacement currently unsafe
+A  replacement old handle rejected; memory/durable divergence gone
 B  nested mutation PASS; rollback stale rejection PASS; signal mapping PASS
-C  scalar cell works only through explicit `.value`; raw primitive mutable-reference state is not coherent
+C  scalar still requires explicit `.value`; nested lifetime after cell replacement remains ambiguous
 ```
 
-Candidate decision:
+Decision remains:
 
 ```text
 PREFER_NARROW_SINGLETON_OBJECT_PROTOTYPE
 ```
 
-Interpretation:
+The next experiment should therefore evaluate the **smallest permanent public surface** for one durable object, not widen `state()` to arbitrary JSON roots.
 
-> The measured singleton-list ceremony can be hidden without inventing a second storage/lifetime model. Broad arbitrary-root `state()` generalization is not justified by current evidence.
+Required comparison:
 
-However, do not open a public singleton API implementation until #42 is fixed and this experiment passes again with the stronger replacement invariant.
+1. document the existing one-item-list convention only;
+2. public `objectState()`-style method/helper returning the durable object directly;
+3. a combined object handle that also exposes reactive subscription without a second method.
 
-See [Root-state semantics evaluation](./ROOT_STATE_SEMANTICS_EVALUATION.md).
+Measure:
 
-### 3. Evaluate a focused singleton/object public surface
+- callsite ceremony;
+- new public names/concepts;
+- implementation LOC/surface;
+- nested mutation and reopen behavior;
+- rollback/replacement stale semantics;
+- TypeScript inference;
+- signal/reactive ergonomics;
+- whether the abstraction remains explainable as one durable item under the hood.
 
-Status: **conditional follow-up after #42 + root experiment re-verification.**
+Do not include primitive roots or implicit whole-object replacement in this decision.
 
-If candidate B remains valid, evaluate the smallest public surface for one durable object, for example a dedicated object/singleton abstraction rather than widening `state()` to every JSON root.
+### 2. Evaluate incompatible model evolution
 
-Required properties:
-
-- no exposed one-item array ceremony;
-- same durable-item nested mutation semantics;
-- same rollback/stale-handle rules;
-- clear signal/reactive mapping;
-- no implied primitive mutable-reference semantics;
-- root replacement either explicitly unsupported or separately specified;
-- no new storage representation solely for syntax.
-
-Naming/API shape remains undecided.
-
-### 4. Evaluate incompatible model evolution
-
-Status: planned after root/object semantics stabilize.
+Status: planned after object/singleton surface decision.
 
 Test a deliberately incompatible change such as:
 
@@ -109,13 +80,36 @@ The objective is to locate where persistence can no longer remain implicit and e
 
 A clean explicit boundary is preferable to unsafe “migration-free” magic.
 
-### 5. Reuse durable-session bootstrap in a second scenario — #26
+### 3. Reuse durable-session bootstrap in a second scenario — #26
 
 Status: initial cross-process experiment PASS; generalization remains uncertain.
 
 A writer and reader in separate Node processes can use one known bootstrap key to discover other durable states. This proves one convention, not a general workspace/agent-memory API.
 
 Reuse the convention in a second realistic scenario without modifying StorekeeperDB core specifically for it before considering a first-class workspace/bootstrap API.
+
+## Recently resolved hardening
+
+### Direct replacement handle invalidation — #42
+
+Status: **PASS in CI #136; pending merge of PR #43.**
+
+The root-state experiment originally found that a displaced old proxy could keep writing after `list[index] = replacement` because the replacement reused the durable id.
+
+The write invariant is now:
+
+```text
+active current proxy                    writable
+reordered current proxy                 writable
+removed proxy                           write rejected
+rollback old-generation proxy           rejected
+replaced old proxy with reused id       rejected
+new replacement proxy                   writable
+```
+
+Implementation uses current generation + durable-id membership + exact current proxy identity. No public identity registry was added.
+
+A regression test covers both displaced item and nested handles. The root-state experiment was corrected so its validity no longer depended on the former stale-overwrite behavior and revalidated candidate B.
 
 ## Current experimental evidence
 
@@ -133,13 +127,13 @@ Against JSON-blob SQLite, persistence-specific changed lines were 12 -> 8 (~33.3
 
 ### Root-state semantics — #40
 
-Status: candidate B in CI #128; runtime unchanged.
+Status: candidate B in CI #128, revalidated after #42 in CI #136.
 
-The singleton/object helper worked over existing public state/signal behavior. Raw arbitrary primitive `state()` cannot provide mutation-by-reference semantics; an explicit cell/get-set model would be required. The same experiment exposed #42.
+The singleton/object helper works over existing public state/signal behavior. Raw arbitrary primitive `state()` cannot provide mutation-by-reference semantics; an explicit cell/get-set model would be required. Broad arbitrary-root generalization remains unsupported.
 
-Interpretation across the three experiments:
+Interpretation across the experiments:
 
-> Reduced explicit persistence edit surface now has directionally consistent evidence in two compatible JSON-style scenarios. Lower conceptual complexity does not. A narrow object abstraction is more strongly supported than broad arbitrary-root generalization, but runtime identity correctness takes priority.
+> Reduced explicit persistence edit surface has directionally consistent evidence in two compatible JSON-style scenarios. Lower conceptual complexity does not. The strongest next simplification target is the observed singleton-object ceremony, not generic root values.
 
 Do not convert measured percentages or candidate API results into general product guarantees.
 
@@ -188,13 +182,11 @@ reactive read plane
   liveFind()
 ```
 
-The intended writable-item rule now needs one refinement from #42: durable id membership alone is insufficient when direct replacement reuses the id; the displaced proxy must become stale.
-
-Close/reopen preserves data, not JavaScript proxy identity.
+Durable item writability requires current loaded generation, current durable-id membership, and exact current proxy identity. Close/reopen preserves data, not JavaScript proxy identity.
 
 ### Root values
 
-Current public `state()` remains list-of-objects. The experiment does not authorize arbitrary-root support.
+Current public `state()` remains list-of-objects. The experiments do not authorize arbitrary-root support.
 
 A JavaScript primitive cannot act as a mutable persistent reference. Any future scalar-root API must use explicit cell/get-set/replacement semantics rather than pretending otherwise.
 

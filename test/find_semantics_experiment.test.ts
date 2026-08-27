@@ -118,6 +118,55 @@ test("durable handle identity survives reorder and rollback invalidates it", () 
   }
 });
 
+test("direct replacement invalidates displaced item and nested handles", () => {
+  const t = tempDb();
+  try {
+    let sk = new StorekeeperDB(t.path);
+    const tasks = sk.state<Task[]>("tasks", []);
+    tasks.push({
+      title: "A",
+      done: false,
+      priority: "urgent",
+      meta: { note: "old", labels: ["old"] },
+    });
+
+    const oldHandle = tasks[0]!;
+    const oldMeta = oldHandle.meta!;
+
+    tasks[0] = {
+      title: "replacement",
+      done: false,
+      priority: "high",
+      meta: { note: "new", labels: ["new"] },
+    };
+
+    const replacement = tasks[0]!;
+    replacement.done = true;
+    replacement.meta!.labels!.push("persisted");
+
+    assert.throws(() => { oldHandle.title = "stale"; }, /after replacement/);
+    assert.throws(() => { oldMeta.note = "stale nested"; }, /after replacement/);
+
+    assert.equal(tasks[0], replacement);
+    assert.equal(tasks[0]!.title, "replacement");
+    assert.equal(tasks[0]!.meta!.note, "new");
+    assert.deepEqual(tasks[0]!.meta!.labels, ["new", "persisted"]);
+
+    sk.close();
+
+    sk = new StorekeeperDB(t.path);
+    const reopened = sk.state<Task[]>("tasks", []);
+    assert.equal(reopened.length, 1);
+    assert.equal(reopened[0]!.title, "replacement");
+    assert.equal(reopened[0]!.done, true);
+    assert.equal(reopened[0]!.meta!.note, "new");
+    assert.deepEqual(reopened[0]!.meta!.labels, ["new", "persisted"]);
+    sk.close();
+  } finally {
+    t.cleanup();
+  }
+});
+
 test("removed durable handles become read-only stale references and cannot resurrect rows", () => {
   const t = tempDb();
   try {
