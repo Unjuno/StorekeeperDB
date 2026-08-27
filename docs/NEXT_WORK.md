@@ -12,50 +12,91 @@ See [Alpha evaluation loop](./EVALUATION_LOOP.md) and [Architecture](./ARCHITECT
 
 ## Active priorities
 
-### 1. Evaluate root-state semantics
+### 1. Fix replacement-handle invalidation — #42
 
-Status: **new product/API decision justified by #38; do not implement a new root API yet.**
+Status: **runtime correctness blocker discovered by root-state semantics experiment CI #128.**
 
-Two compatible-evolution experiments now show lower explicit persistence edit surface vs a minimal JSON-blob SQLite baseline:
+The root-state experiment directly replaced one durable list item while keeping its durable row id, then wrote through the displaced old proxy.
 
-```text
-Issue-list scenario
-  JSON blob       14 changed persistence lines
-  StorekeeperDB    8
-
-CLI metadata singleton
-  JSON blob       12 changed persistence lines
-  StorekeeperDB    8
-```
-
-However, the CLI metadata replication was MIXED because one logical metadata record must currently be represented as a one-item persistent list.
-
-V2 persistence concepts:
+Observed:
 
 ```text
-JSON blob       4
-StorekeeperDB   5
+old handle write after replacement          accepted
+loaded memory after old write               replacement object
+reopened durable value                      old proxy payload
+memory/durable divergence                   yes
 ```
 
-The additional StorekeeperDB concept is the explicitly counted `singleton-list-boundary`.
+Current writable-handle validation checks current generation + durable id membership. That is sufficient for removal and reorder, but not direct replacement because the new proxy intentionally reuses the old durable id.
 
-This is now evidence that the list-only root contract creates real conceptual ceremony, not merely a documentation inconvenience.
+Required invariant:
 
-Next evaluation should compare at least:
+```text
+active current proxy                    writable
+reordered current proxy                 writable
+removed proxy                           write rejected
+rollback old-generation proxy           rejected
+replaced old proxy with reused id       rejected
+new replacement proxy                   writable
+```
 
-1. keep list-only `state()` and formalize a singleton convention;
-2. add a focused singleton/object state API;
-3. generalize `state()` to arbitrary JSON roots.
+Fix this before adding singleton/root APIs. Prefer strengthening existing proxy-identity validation rather than adding a new public identity system.
 
-Evaluate API size, mutation ergonomics, rollback/stale semantics, identity, serialization, migration implications, implementation complexity, and compatibility with signals/reactive reads before choosing.
+### 2. Re-run root-state semantics after #42 — #40
 
-Do not add arbitrary-root support solely to make the previous benchmark look better.
+Status: **first experiment selects candidate B, but re-verification after #42 is required.**
 
-See [CLI metadata replication](./CLI_METADATA_CHANGE_AMPLIFICATION_EXPERIMENT.md).
+CI #128 compared:
 
-### 2. Evaluate incompatible model evolution
+```text
+A  current list-only state
+B  narrow singleton/object helper over current public APIs
+C  generic root cell / arbitrary-root direction
+```
 
-Status: planned after the root-state semantic decision is understood.
+First result:
+
+```text
+A  singleton ceremony remains; direct replacement currently unsafe
+B  nested mutation PASS; rollback stale rejection PASS; signal mapping PASS
+C  scalar cell works only through explicit `.value`; raw primitive mutable-reference state is not coherent
+```
+
+Candidate decision:
+
+```text
+PREFER_NARROW_SINGLETON_OBJECT_PROTOTYPE
+```
+
+Interpretation:
+
+> The measured singleton-list ceremony can be hidden without inventing a second storage/lifetime model. Broad arbitrary-root `state()` generalization is not justified by current evidence.
+
+However, do not open a public singleton API implementation until #42 is fixed and this experiment passes again with the stronger replacement invariant.
+
+See [Root-state semantics evaluation](./ROOT_STATE_SEMANTICS_EVALUATION.md).
+
+### 3. Evaluate a focused singleton/object public surface
+
+Status: **conditional follow-up after #42 + root experiment re-verification.**
+
+If candidate B remains valid, evaluate the smallest public surface for one durable object, for example a dedicated object/singleton abstraction rather than widening `state()` to every JSON root.
+
+Required properties:
+
+- no exposed one-item array ceremony;
+- same durable-item nested mutation semantics;
+- same rollback/stale-handle rules;
+- clear signal/reactive mapping;
+- no implied primitive mutable-reference semantics;
+- root replacement either explicitly unsupported or separately specified;
+- no new storage representation solely for syntax.
+
+Naming/API shape remains undecided.
+
+### 4. Evaluate incompatible model evolution
+
+Status: planned after root/object semantics stabilize.
 
 Test a deliberately incompatible change such as:
 
@@ -68,7 +109,7 @@ The objective is to locate where persistence can no longer remain implicit and e
 
 A clean explicit boundary is preferable to unsafe “migration-free” magic.
 
-### 3. Reuse durable-session bootstrap in a second scenario — #26
+### 5. Reuse durable-session bootstrap in a second scenario — #26
 
 Status: initial cross-process experiment PASS; generalization remains uncertain.
 
@@ -86,15 +127,21 @@ Against the strongest JSON-blob baseline, persistence-specific changed lines wer
 
 ### CLI metadata replication — #38
 
-Status: MIXED in CI #122.
+Status: MIXED in CI #122 / final gate CI #126.
 
 Against JSON-blob SQLite, persistence-specific changed lines were 12 -> 8 (~33.3% lower) and raw all-source changed lines were 35 -> 30. StorekeeperDB concept count was worse at 5 vs 4 because the one-record workload exposed `singleton-list-boundary`.
 
-Interpretation:
+### Root-state semantics — #40
 
-> Reduced explicit persistence edit surface now has directionally consistent evidence in two compatible JSON-style scenarios. Lower conceptual complexity does not; the root-list restriction is a measured counterexample.
+Status: candidate B in CI #128; runtime unchanged.
 
-Do not convert the measured percentages into a general performance/product claim.
+The singleton/object helper worked over existing public state/signal behavior. Raw arbitrary primitive `state()` cannot provide mutation-by-reference semantics; an explicit cell/get-set model would be required. The same experiment exposed #42.
+
+Interpretation across the three experiments:
+
+> Reduced explicit persistence edit surface now has directionally consistent evidence in two compatible JSON-style scenarios. Lower conceptual complexity does not. A narrow object abstraction is more strongly supported than broad arbitrary-root generalization, but runtime identity correctness takes priority.
+
+Do not convert measured percentages or candidate API results into general product guarantees.
 
 ## Resolved product/API decisions
 
@@ -141,11 +188,15 @@ reactive read plane
   liveFind()
 ```
 
-A durable item handle is writable only while its durable id remains a member of the current loaded state generation. Close/reopen preserves data, not JavaScript proxy identity.
+The intended writable-item rule now needs one refinement from #42: durable id membership alone is insufficient when direct replacement reuses the id; the displaced proxy must become stale.
 
-### Application evolution
+Close/reopen preserves data, not JavaScript proxy identity.
 
-Compatible JSON-style evolution has now been exercised in two small scenarios. Neither experiment establishes incompatible schema evolution semantics, arbitrary root-state semantics, or general workload performance.
+### Root values
+
+Current public `state()` remains list-of-objects. The experiment does not authorize arbitrary-root support.
+
+A JavaScript primitive cannot act as a mutable persistent reference. Any future scalar-root API must use explicit cell/get-set/replacement semantics rather than pretending otherwise.
 
 ## Deferred research
 
@@ -164,6 +215,10 @@ Compatible JSON-style evolution has now been exercised in two small scenarios. N
 ### Full browser adapter
 
 The experimental async write-behind runtime defines a durability boundary; it is not a complete browser adapter. Browser work should wait for a realistic browser scenario.
+
+### Scalar/root cell abstraction
+
+The C prototype showed that explicit `cell.value` semantics can persist primitives, but no realistic scenario yet shows that this additional abstraction belongs in core. Keep it separate from singleton/object work.
 
 ### Agent-specific memory / orchestration
 

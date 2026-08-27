@@ -12,6 +12,7 @@ StorekeeperDB is a public alpha candidate. The current priority is product refin
 - [`find()` semantics evaluation](./FIND_SEMANTICS_EVALUATION.md) — durable-handle vs snapshot decision record.
 - [Change amplification experiment](./CHANGE_AMPLIFICATION_EXPERIMENT.md) — first direct-SQL comparison for compatible model evolution.
 - [CLI metadata replication](./CLI_METADATA_CHANGE_AMPLIFICATION_EXPERIMENT.md) — second change-amplification scenario exposing singleton-root concept cost.
+- [Root-state semantics evaluation](./ROOT_STATE_SEMANTICS_EVALUATION.md) — list-only vs singleton/object vs arbitrary-root experiment and replacement-lifetime finding.
 - [Benchmarks](./BENCHMARKS.md) — reproducible observations; timings are not release guarantees.
 - [Demo](./DEMO.md) — executable runtime walkthrough.
 
@@ -29,6 +30,7 @@ These documents record experimental evidence and narrower runtime behavior. They
 
 - [Change amplification experiment](./CHANGE_AMPLIFICATION_EXPERIMENT.md)
 - [CLI metadata replication](./CLI_METADATA_CHANGE_AMPLIFICATION_EXPERIMENT.md)
+- [Root-state semantics evaluation](./ROOT_STATE_SEMANTICS_EVALUATION.md)
 - [Durable variable / session bootstrap experiment](./DURABLE_VARIABLE_EXPERIMENT.md)
 - [`find()` semantics evaluation](./FIND_SEMANTICS_EVALUATION.md)
 - [Magic lifecycle](./MAGIC_LIFECYCLE.md)
