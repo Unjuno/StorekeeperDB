@@ -10,6 +10,7 @@ StorekeeperDB is currently an alpha package. Do not publish a package only becau
 - Required Node flag for tests and runtime experiments: `--experimental-sqlite`
 - Browser runtime: not implemented
 - React runtime verification: covered by the test suite
+- Realistic application posture: issue-tracker model evolution is exercised by a deterministic scenario
 - Durable session posture: cross-process bootstrap semantics are exercised by a deterministic architecture experiment
 - Benchmark posture: observational timings, not a hard release gate
 - Consumer install posture: simulated through local `npm pack` tarball install
@@ -30,11 +31,34 @@ This performs:
 3. Gate script.
 4. Demo script.
 5. Cross-process durable-session bootstrap experiment.
-6. Export artifact check for all package subpaths.
-7. Public documentation file check.
-8. Prepublish wording inspection for the alpha boundary.
-9. `npm pack --dry-run`.
-10. Consumer install smoke test from a generated local tarball.
+6. Realistic issue-tracker evolution scenario.
+7. Export artifact check for all package subpaths.
+8. Public documentation file check.
+9. Prepublish wording inspection for the alpha boundary.
+10. `npm pack --dry-run`.
+11. Consumer install smoke test from a generated local tarball.
+
+## Realistic issue tracker scenario
+
+`release:check` runs:
+
+```bash
+npm run scenario:issue-tracker:check
+```
+
+The scenario validates a small application-evolution flow:
+
+```text
+IssueV1
+  -> close/reopen
+IssueV2 with optional nested fields
+  -> mutate through durable state proxy
+  -> find() scalar lookup / projection
+  -> close/reopen
+  -> verify evolved state
+```
+
+It also deliberately records the current `find()` semantic boundary: query results are detached snapshots, so mutating a `find()` result does not mutate durable state. The scenario PR records this finding but does not change the runtime behavior; any API decision belongs in a separate follow-up.
 
 ## Durable session architecture experiment
 
@@ -103,6 +127,7 @@ It verifies that the public docs still say:
 - Node's `--experimental-sqlite` flag is required
 - benchmark timings are observational and not a hard release latency gate
 - the durable-variable / bootstrap model does not imply an agent-memory framework
+- `find()` results are currently detached snapshots rather than persistent mutation handles
 
 This check is intentionally conservative. It does not replace human review, but it prevents the most important alpha disclaimers from disappearing accidentally.
 
@@ -166,13 +191,14 @@ Before any npm publish:
 - Confirm `docs/MANUAL.md` matches the current public API.
 - Confirm `docs/ARCHITECTURE.md` matches the implemented runtime boundaries.
 - Confirm `docs/DURABLE_VARIABLE_EXPERIMENT.md` does not overclaim agent/session semantics.
+- Confirm `docs/ISSUE_TRACKER_EVALUATION.md` matches the observed application-evolution behavior.
 - Confirm `docs/BENCHMARKS.md` describes the benchmark without overclaiming latency guarantees.
 - Confirm `docs/ALPHA_RELEASE_DECISION.md` still reflects the accepted alpha boundary.
 - Confirm `docs/RELEASE_NOTES_0.1.0-alpha.0.md` is suitable for the GitHub release body.
 - Run `npm run benchmark` manually if release notes will mention runtime observations.
 - Confirm `npm run consumer:smoke` passes if package boundary changes were made.
 - Confirm `CHANGELOG.md` describes the version being published.
-- Confirm open issues for realistic scenarios, durable-session architecture, browser, time-based decay, and metadata scoring are still accurately scoped.
+- Confirm open issues for API semantics, browser, time-based decay, and metadata scoring are still accurately scoped.
 - Run `npm run release:check` on a clean checkout.
 - Use an alpha tag until the API is intentionally frozen.
 
