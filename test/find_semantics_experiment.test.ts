@@ -19,23 +19,28 @@ function tempDb() {
 
 const cloneTask = (task: Task): Task => JSON.parse(JSON.stringify(task)) as Task;
 
-test("experiment: current find snapshots are detached while state-filter handles are durable", () => {
+test("find returns a local result array containing durable item handles", () => {
   const t = tempDb();
   try {
     let sk = new StorekeeperDB(t.path);
     const tasks = sk.state<Task[]>("tasks", []);
     tasks.push({ title: "A", done: false, priority: "urgent" });
 
-    const snapshot = sk.find<Task>("tasks", { priority: "urgent" })[0]!;
-    snapshot.title = "snapshot-only";
-    assert.equal(tasks[0]!.title, "A");
+    const handles = sk.find<Task>("tasks", { priority: "urgent" });
+    assert.equal(handles.length, 1);
+    assert.equal(handles[0], tasks[0]);
 
-    const handles = tasks.filter((task) => task.priority === "urgent");
     handles[0]!.title = "durable-handle";
     handles.push({ title: "local-array-only", done: false, priority: "urgent" });
 
     assert.equal(tasks.length, 1);
     assert.equal(tasks[0]!.title, "durable-handle");
+
+    const allHandles = sk.find<Task>("tasks", {});
+    assert.equal(allHandles[0], tasks[0]);
+    allHandles.pop();
+    assert.equal(tasks.length, 1);
+
     sk.close();
 
     sk = new StorekeeperDB(t.path);
@@ -86,7 +91,7 @@ test("experiment: naive live durable handles alias previous snapshots", () => {
   }
 });
 
-test("experiment: durable handle identity survives reorder and rollback invalidates it", () => {
+test("durable handle identity survives reorder and rollback invalidates it", () => {
   const t = tempDb();
   try {
     const sk = new StorekeeperDB(t.path);
@@ -94,7 +99,7 @@ test("experiment: durable handle identity survives reorder and rollback invalida
     tasks.push({ title: "A", done: false, priority: "urgent" });
     tasks.push({ title: "B", done: false, priority: "low" });
 
-    const handle = tasks.filter((task) => task.title === "A")[0]!;
+    const handle = sk.find<Task>("tasks", { title: "A" })[0]!;
     tasks.reverse();
     assert.equal(tasks[1], handle);
 

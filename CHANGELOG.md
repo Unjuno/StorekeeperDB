@@ -4,86 +4,83 @@ All notable changes to StorekeeperDB will be tracked here.
 
 ## 0.1.0-alpha.0 - unreleased
 
-Initial public alpha baseline plus first hardening passes.
+Initial public alpha baseline plus iterative hardening from realistic evaluation.
 
 ### Added
 
 - `StorekeeperDB` local synchronous SQLite runtime.
-- Ordinary mutable array/object state persistence.
-- Magic scalar-path lookup projection through `find()`.
+- Ordinary mutable array/object state persistence for list-of-object root state.
+- Magic scalar-path lookup projections through `find()` / `liveFind()`.
+- Durable item handles returned by both `state()` and `find()`.
 - `signal()` and `liveFind()` for local realtime prototype flows.
-- Debug surface: `status()`, `inspect()`, `explain()`, `debug().recentMagic()`, `debug().evict()`, and `debug().rebuild()`.
-- Derived projection lifecycle debug APIs: `debug().markCold()` and `debug().collectGarbage()`.
-- Opt-in automatic derived projection decay through `decay` options.
-- Metadata compaction for bounded magic logs and non-projection path observations.
+- Stable detached snapshot semantics owned independently by `liveFind()`.
+- Debug surface: `status()`, `inspect()`, `explain()`, and `debug()` lifecycle/metadata helpers.
+- Derived projection lifecycle: mark cold, collect garbage, evict, rebuild, and opt-in automatic lookup-count-based decay.
+- Metadata compaction for bounded magic logs and non-projection observations.
 - Persistent handling for common array mutators: `push`, `pop`, `shift`, `unshift`, `splice`, `sort`, and `reverse`.
 - Nested object and array mutation persistence.
 - Loaded-memory rollback for failed outer `batch()` calls.
-- Prepared statement cache for repeated SQLite operations.
-- Public alpha manual in `docs/MANUAL.md`.
-- Documentation index in `docs/README.md`.
-- Architecture model in `docs/ARCHITECTURE.md`, including local/session/durable/discoverable state boundaries.
-- Alpha product refinement process in `docs/EVALUATION_LOOP.md`.
-- Durable variable / cross-process bootstrap experiment in `docs/DURABLE_VARIABLE_EXPERIMENT.md` and `scripts/durable_session_experiment.ts`.
-- `npm run experiment:durable-session` and deterministic durable-session check in `release:check`.
-- Realistic issue-tracker evolution scenario in `docs/ISSUE_TRACKER_EVALUATION.md` and `scripts/issue_tracker_scenario.ts`.
-- `npm run scenario:issue-tracker` and deterministic issue-tracker check in `release:check`.
-- Benchmark documentation in `docs/BENCHMARKS.md`.
-- Executable benchmark through `npm run benchmark`.
+- Public manual, architecture notes, evaluation loop, realistic issue-tracker scenario, durable-session experiment, benchmark documentation, and alpha release notes.
+- Cross-process durable-variable/bootstrap experiment through `npm run experiment:durable-session`.
+- Realistic issue-tracker evolution scenario through `npm run scenario:issue-tracker`.
 - Consumer install smoke test through `npm run consumer:smoke`.
-- Alpha release decision record in `docs/ALPHA_RELEASE_DECISION.md`.
-- Draft release notes in `docs/RELEASE_NOTES_0.1.0-alpha.0.md`.
-- Public alpha docs: manual, architecture, evaluation loop, realistic issue-tracker evaluation, durable-variable experiment, benchmarks, release decision, release notes, demo, React verification, magic lifecycle, automatic derived decay, metadata compaction, transaction model, browser boundary, audit notes, next-work plan, and todo example.
-- Runtime hardening notes in `docs/RUNTIME_HARDENING.md`.
-- Magic lifecycle notes in `docs/MAGIC_LIFECYCLE.md`.
-- Automatic derived decay notes in `docs/DECAY.md`.
-- Metadata compaction notes in `docs/METADATA_COMPACTION.md`.
-- Release checklist in `docs/RELEASE.md`.
-- Executable demo through `npm run demo`.
-- Real React verification for `@storekeeper/db/react` using `useSyncExternalStore` and `react-test-renderer`.
-- Experimental async write-behind boundary model through `@storekeeper/db/experimental`.
-- GitHub Actions CI.
+- Real React verification using `useSyncExternalStore` and `react-test-renderer`.
+- Experimental async write-behind durability-boundary model through `@storekeeper/db/experimental`.
+- GitHub Actions CI running the complete release gate.
 
 ### Hardened
 
-- Failed outer `batch()` calls now invalidate item and nested proxies captured before rollback.
+- Failed outer `batch()` calls invalidate item and nested handles captured from the old loaded generation.
+- Removed item handles can still be read as detached JavaScript references but cannot write deleted rows back into persistence.
+- Nested handles captured from removed items obey the same root-membership write rule.
+- Reorder preserves durable item-handle identity inside the current loaded generation.
+- `find()` returns a new local result array containing durable item handles; modifying result-array membership does not modify durable source membership.
+- `liveFind()` explicitly clones/stores detached snapshots so prior snapshots do not alias mutable durable handles and suppress content-change notifications.
+- React external-store snapshot identity remains stable between changes and advances only when reactive content changes.
 - Projection cells are removed when a scalar path disappears.
 - Supported array mutators are covered by projection and reopen tests.
 - Nested object/array mutation persistence is covered by reopen tests.
 - Signal subscribers receive one notification after an outer batch commit.
-- `live()` and `liveFind()` cache snapshots so React `useSyncExternalStore` receives stable snapshot objects.
-- Derived projections can be marked cold, garbage-collected, budget-limited, automatically budget-collected, and rebuilt from source rows.
-- Automatic derived GC protects the path used by the current `find()` call from the same collection pass.
-- `debug().compactMetadata()` now trims magic logs, decays observation counters, and can delete low-value non-projection path observations.
-- Metadata compaction preserves source rows, projection cells, and projection-backed path observations.
-- Benchmark script now performs semantic pass/fail checks while keeping latency as observational output.
-- Release checks now require alpha decision and release-note documentation to exist.
-- Release checks now verify the documentation index, architecture document, alpha evaluation loop, realistic issue-tracker evaluation, and durable-variable experiment notes are included in the public package.
-- Release checks now run the cross-process durable-session bootstrap experiment and realistic issue-tracker evolution scenario.
-- Release checks now verify key prepublish alpha wording: alpha-only tag, not latest, non-stable API, missing browser adapter, experimental SQLite flag, observational benchmark posture, durable-session architecture boundaries, and current `find()` snapshot semantics.
-- Release checks now install the generated local tarball into a temporary consumer project and verify public subpath imports.
-- Release-check fixtures for lifecycle, decay, gate, and demo paths are smaller while preserving projection creation, GC, eviction, rebuild, and source-retention semantics.
-- Magic log actions now include `project_mark_cold` and `project_gc_evict` in addition to `project_create`, `project_touch`, `project_evict`, and `project_rebuild`.
-- CI now runs `npm run release:check`, including runtime tests, realistic executable scenarios, architecture experiments, export checks, prepublish wording inspection, package dry-run, and consumer install smoke testing.
-- README and next-work documentation now prioritize realistic alpha evaluation over promotion or speculative lifecycle feature growth.
+- Derived projections can be cold-marked, garbage-collected, budget-limited, automatically budget-collected, and rebuilt from source rows.
+- Automatic derived GC protects the lookup path used by the current `find()` call from the same collection pass.
+- Metadata compaction preserves source rows, projection cells, and projection-backed observations.
+- Benchmark script performs semantic pass/fail checks while keeping latency observational.
+- Release checks run the cross-process durable-session experiment and realistic issue-tracker scenario.
+- Release checks install the generated tarball into a temporary consumer project and verify public subpath imports.
+- Release checks inspect key alpha wording and documented semantic boundaries before packaging.
+- README and next-work documentation prioritize realistic evaluation over promotion or speculative feature growth.
+
+### Evaluation decisions
+
+- The initial issue-tracker evaluation showed that compatible optional JSON-field additions can evolve without a repository layer, direct SQL, or a manual table migration in that scenario.
+- The same scenario exposed detached `find()` results as a least-surprise problem.
+- A focused A/B/C experiment rejected snapshot-only `find()` as the preferred contract and did not justify adding a second public snapshot-query API.
+- The selected hybrid contract is:
+
+```text
+state() item             -> durable handle
+find() result item       -> durable handle
+find() result array      -> ordinary local array
+liveFind() result values -> detached stable snapshots
+```
+
+- Two blockers were fixed before changing `find()`: removed-handle invalidation and reactive snapshot separation.
+- The next product experiment is persistence-specific change amplification against a minimal direct-SQL baseline.
 
 ### Boundaries
 
-- This is an alpha baseline, not the full pre-repo v22 experiment.
+- This is an alpha baseline, not the full pre-repo experiment history.
 - Root `state()` is currently an array-of-objects API, not arbitrary root values.
-- `find()` returns cloned snapshots rather than persistent proxy handles; mutating a query result does not mutate durable state.
-- Compatible optional-field evolution is evaluated separately from incompatible schema migration semantics.
-- Durable source state can be evaluated across process boundaries, but `__workspace` is currently an experiment convention, not a reserved core API.
+- Durable item handles are writable only while their item id remains a member of the current loaded state generation.
+- Close/reopen preserves durable data, not JavaScript proxy identity.
+- Compatible optional-field evolution is separate from incompatible schema migration semantics.
+- Durable-session `__workspace` is an experiment convention, not a reserved core API.
 - The durable-variable experiment does not implement agent memory, checkpoint policy, trust, context selection, or multi-agent coordination.
 - Full browser adapter is not implemented.
-- Browser-style async storage is explicitly modeled as write-behind; mutation return means memory changed, while `flush()` is the durability barrier.
+- Browser-style async storage is modeled as write-behind; mutation return means memory changed, while `flush()` is the durability barrier.
 - Automatic derived decay is opt-in and currently lookup-count-based, not wall-clock-time-based.
-- Benchmark timings are observational and not hard release thresholds.
-- Benchmark execution is manual for now and intentionally outside `release:check`.
+- Benchmark timings are observational and intentionally outside hard release latency gates.
 - Alpha publishing remains manual and should use the `alpha` npm dist-tag only.
 - Consumer smoke verifies local tarball install behavior, not npm registry behavior.
-- Full v22 metadata scoring policy is not re-imported yet.
-- Time-based decay and richer metadata scoring are deferred research unless realistic product evaluation demonstrates they are blocking the core value proposition.
+- Time-based decay and richer metadata scoring remain deferred unless realistic product evaluation demonstrates they block the core value proposition.
 - API is not frozen.
-- Existing item and nested proxies captured before a failed batch are intentionally stale after rollback; re-read from the state list.
-- npm publishing remains manual and intentionally gated by the release checklist.

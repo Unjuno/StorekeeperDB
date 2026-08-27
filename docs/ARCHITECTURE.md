@@ -22,16 +22,16 @@ discoverable durable state
   -> a new process / agent can find the durable state it should read
 ```
 
-The current core runtime implements the third layer. The fourth layer is being evaluated as a convention above the core rather than added as a new public API prematurely.
+The current core implements durable local state. Discoverability is being evaluated as a convention above the core rather than added as a public workspace API prematurely.
 
 ## Runtime layers
 
 ```text
 application code
   |
-  | ordinary array/object mutation
+  | state() / find() durable handles
   v
-StorekeeperDB state proxies
+loaded StorekeeperDB state
   |
   | source persistence
   v
@@ -43,32 +43,84 @@ __sk_items
           |
           +--> derivation lifecycle (__sk_derivations)
 
-inspect/debug trace (__sk_magic_log)
+liveFind()
+  ^
+  | detached stable snapshots cloned from the durable plane
+  |
+reactive UI / external-store consumers
 ```
 
-### 1. Application state
+## Durable handle plane
 
-Application code works with mutable proxies returned by `state()` / `signal()`.
+Application code can obtain command-capable durable item handles from both `state()` and `find()`.
 
-Current alpha boundary: root state is an **array of objects**. Arbitrary root scalars and arbitrary root objects are not yet part of the public contract.
+```text
+state() item       -> durable handle
+find() result item -> durable handle
+```
 
-### 2. Durable source state
+A `find()` result array is deliberately different from its elements: the array is an ordinary local array, while matched items are Storekeeper-backed handles.
+
+```text
+result-array mutation -> local only
+result-item mutation  -> persistent while handle is writable
+```
+
+This keeps query-to-update natural without turning temporary query-result membership into durable state membership.
+
+### Handle validity
+
+A durable handle is writable only while both of these conditions hold:
+
+1. it belongs to the current loaded state generation; and
+2. its durable item id is still a member of that loaded state.
+
+Operationally:
+
+```text
+active member    -> readable + writable
+reordered member -> same handle remains writable
+rollback         -> old-generation handle is stale
+removed member   -> readable detached reference, writes fail
+close/reopen     -> durable data survives, JavaScript identity does not
+```
+
+No separate public identity registry is required for the current Node runtime. Existing internal item ids, loaded-state membership, and generation checks are sufficient for the tested semantics.
+
+## Reactive read plane
+
+`liveFind()` is not a collection of mutable handles. It owns detached stable snapshots independently of `find()`.
+
+That separation is required because mutable proxies alias prior values: if an old reactive snapshot contains the same proxy that is later mutated, the old snapshot changes before comparison and content-change notification can be suppressed.
+
+Therefore:
+
+```text
+command-capable plane -> state(), find()
+reactive read plane   -> liveFind()
+```
+
+A previous `liveFind()` snapshot must retain its previous content after later source mutation. New source content is exposed through a new snapshot/version.
+
+This boundary is also what keeps the React `useSyncExternalStore` adapter coherent.
+
+## Durable source state
 
 `__sk_items` is the durable source of truth. Source rows survive close/reopen and are not silently deleted by projection lifecycle or metadata compaction.
 
-This is the layer that turns a session-local value into durable state.
+Root-state alpha boundary: `state()` is currently an array-of-objects API. Arbitrary root scalars and arbitrary root objects are not yet part of the public contract.
 
-### 3. Derived lookup state
+## Derived lookup state
 
 Supported scalar `find()` / `liveFind()` paths can create SQLite-backed projections. Projection state is derived and may be evicted/rebuilt from source rows.
 
+Projection eviction does not invalidate a durable item handle because item identity belongs to source state, not to the derived projection.
+
 Derived state must never become the only copy of user data.
 
-### 4. Observation and lifecycle metadata
+## Observation and lifecycle metadata
 
-Path observations, derivation rows, and magic logs describe how the runtime is being used. They exist for planning, explanation, and bounded derived-state lifecycle behavior.
-
-They are not the application's source of truth.
+Path observations, derivation rows, and magic logs describe how the runtime is being used. They exist for planning, explanation, and bounded derived-state lifecycle behavior. They are not application source data.
 
 ## Session bootstrap experiment
 
@@ -77,86 +129,39 @@ A separate process or agent session has two different problems:
 1. **durability** — did the previous session's state survive?
 2. **discoverability** — does the new session know what state to read?
 
-StorekeeperDB already addresses the first problem. The alpha experiment evaluates the second with a small convention:
+The alpha experiment uses a known database path plus a known bootstrap key such as `__workspace` to discover other durable state keys. This is a convention, not a reserved core API.
 
-```text
-known database path
-  +
-known bootstrap key: __workspace
-  |
-  v
-workspace manifest
-  |
-  +--> current goal
-  +--> active task
-  +--> important state keys
-  +--> checkpoint metadata
-  |
-  v
-other durable states
-```
+StorekeeperDB should not absorb agent policy by default. Checkpoint policy, summarization, trust, context selection, and multi-agent conflict resolution remain above the persistence core unless evidence demonstrates otherwise.
 
-Example manifest shape:
-
-```ts
-type WorkspaceManifest = {
-  id: "workspace";
-  schemaVersion: 1;
-  currentGoal: string;
-  activeTask: string;
-  importantStateKeys: string[];
-  checkpoint: {
-    sequence: number;
-    note: string;
-  };
-};
-```
-
-This is intentionally a **convention, not a reserved core API**. The experiment must first show that a new process can recover useful working state from only the database path and bootstrap key.
-
-## What belongs outside the core
-
-StorekeeperDB should not become an agent-memory framework by absorbing every coordination concern.
-
-The following remain above the persistence core unless evidence demonstrates otherwise:
-
-- deciding what an agent should remember;
-- summarizing conversations;
-- deciding when to checkpoint;
-- trust / authority over stored instructions;
-- conflict resolution between independent agents;
-- selecting which durable states fit into a model context window.
-
-The core should provide durable, inspectable state. A bootstrap protocol may provide discovery. Agent interpretation stays outside the database runtime.
-
-## Important semantic boundaries
-
-### Query results are snapshots
-
-Current `find()` returns cloned result values rather than persistent proxy handles. Mutating a `find()` result does not mutate durable source state. This is a known semantic boundary that realistic scenarios should evaluate for surprise.
+## Important boundaries
 
 ### Object identity does not cross sessions
 
-Close/reopen preserves data, not JavaScript object identity. A new session receives new proxies reconstructed from durable source rows.
+Close/reopen preserves durable data and durable item ids in storage, but callers receive newly reconstructed JavaScript proxies. Do not rely on `===` identity across sessions.
 
 ### Persistence is local, not distributed coordination
 
-The Node alpha is local synchronous SQLite. Remote sync, multi-agent conflict resolution, and distributed consistency are not implied by durable variables.
+The Node alpha is local synchronous SQLite. Remote sync, distributed consistency, and multi-process conflict resolution are not implied by durable variables.
 
-### Schema evolution is not magically eliminated
+### Schema evolution is not eliminated
 
-Adding compatible JSON fields is naturally tolerant in the current source-state model, but incompatible semantic changes, migrations, validation policy, and long-lived data evolution remain real engineering concerns.
+Compatible optional JSON-field additions work naturally in the tested issue-tracker scenario. Incompatible semantic changes, field renames, validation policy, and long-lived migration remain real persistence problems.
+
+### Simple things automatic, hard things explicit
+
+The architecture should hide persistence ceremony, not failure reality. Unexpected lifecycle states should fail loudly rather than silently re-create, lose, or reinterpret source data.
 
 ## Architectural decision rule
 
-Use this order when considering a new capability:
+When considering a new capability:
 
 1. prove the user-facing problem in a realistic scenario;
-2. determine whether it is a core durability problem, a discovery problem, or an application/agent policy problem;
-3. prefer a convention or documentation change before a new public API;
+2. classify it as durability, identity/lifecycle, discovery, reactive-read, or application policy;
+3. prefer a smaller invariant or convention before a new public API;
 4. add core behavior only when the scenario cannot be solved cleanly above the runtime;
-5. preserve the invariant that source state remains durable and derived state remains rebuildable.
+5. preserve durable source state and rebuildable derived state;
+6. preserve the split between command-capable handles and stable reactive snapshots unless new evidence falsifies it.
 
-The target is a small abstraction with a clear boundary:
+The target remains small:
 
 > ordinary changing application state can become durable without database architecture dominating the prototype, while hard persistence problems remain observable and controllable.

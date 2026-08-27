@@ -6,112 +6,128 @@ This document tracks current StorekeeperDB priorities. Historical implementation
 
 StorekeeperDB is a public alpha candidate in a product refinement / alpha hardening loop.
 
-The current goal is not promotion and not feature-count growth. The goal is to use realistic application and process-lifecycle scenarios to expose:
-
-- API friction;
-- surprising behavior;
-- unclear failure modes;
-- documentation gaps;
-- test gaps;
-- persistence-specific change amplification;
-- session / process lifetime boundaries;
-- reproducible performance roughness.
+The current goal is not promotion and not feature-count growth. The goal is to use realistic application and process-lifecycle scenarios to expose API friction, surprising behavior, unclear failure modes, documentation gaps, persistence-specific change amplification, and reproducible performance roughness.
 
 See [Alpha evaluation loop](./EVALUATION_LOOP.md) and [Architecture](./ARCHITECTURE.md).
 
 ## Active priorities
 
-### 1. Invalidate removed durable item handles — #31
+### 1. Measure persistence-specific change amplification
 
-Status: next runtime hardening, discovered by #29 experiment.
+Status: **next experiment**.
 
-CI #94 confirmed that a proxy captured from `state()` can currently be removed and then mutated again, which re-creates the deleted SQLite row. This is a lifecycle defect independently of `find()`.
+The core product hypothesis is stronger than “CRUD works.” StorekeeperDB is intended to reduce the amount of persistence-specific work required while an application model is changing quickly.
 
-Required contract:
+The next experiment should implement the same small application change twice:
 
-```text
-active member    -> writable
-reordered member -> writable
-rollback         -> stale
-removed member   -> stale
-```
+1. minimal plain SQLite baseline;
+2. StorekeeperDB using only public APIs.
 
-Prefer strengthening the existing generation/membership check over adding a new handle registry.
+Do not intentionally overengineer the SQLite baseline.
 
-### 2. Complete `find()` durable-handle semantics — #29
-
-Status: architecture direction conditionally selected; blocked by #31 and reactive snapshot separation.
-
-The focused semantics experiment compared three directions:
-
-1. keep detached `find()` snapshots and strengthen readonly/documentation semantics;
-2. add/rename an explicit snapshot query surface;
-3. return durable handles from `find()`.
-
-CI #94 supports the hybrid C direction:
+Recommended first specification change:
 
 ```text
-state() / find() -> local arrays containing durable item handles
-liveFind()       -> stable cloned/read snapshots
+Issue V1
+- id
+- title
+- status
+
+        ↓ evolve
+
+Issue V2
+- id
+- title
+- status
+- priority
+- labels[]
+- comments[]
 ```
 
-Positive evidence:
+Record:
 
-- query-to-update through existing state handles persists naturally;
-- result-array mutation can remain local;
-- handle identity survives reorder;
-- rollback already invalidates captured handles;
-- no new identity registry was required by the experiment.
+- files touched;
+- persistence-specific lines added/changed;
+- schema/migration code;
+- repository/query mapping code;
+- serialization/deserialization code;
+- undocumented workarounds;
+- runtime failures;
+- implementation notes showing hidden persistence complexity;
+- elapsed implementation time only if measured under the same controlled procedure.
 
-Confirmed blockers:
+The important metric is **change amplification**, not total line count.
 
-- naive reactive selectors over durable handles alias previous snapshots and can suppress notifications;
-- removed handles can currently resurrect deleted rows.
+Working hypothesis:
 
-See [`find()` semantics evaluation](./FIND_SEMANTICS_EVALUATION.md).
+> For compatible prototype model evolution, StorekeeperDB requires fewer persistence-specific edits and fewer persistence-specific concepts than a minimal direct-SQL baseline.
 
-Do not add a second public snapshot query method yet. After #31, preserve independent clone semantics inside `liveFind()`, then change `find()` and re-run the realistic scenario.
+FAIL if StorekeeperDB-specific lifecycle/query workarounds grow enough to erase that advantage.
 
-### 3. Realistic application scenario — #24
-
-Status: PASS and merged.
-
-The issue-tracker evaluation established that compatible optional JSON-field evolution works in the tested scenario without a repository layer, direct SQL, or manual table migration. It also produced the `find()` semantics finding now tracked by #29.
-
-See [Issue tracker evaluation](./ISSUE_TRACKER_EVALUATION.md).
-
-### 4. Durable variable / session bootstrap experiment — #26
+### 2. Reuse durable-session bootstrap in a second scenario — #26
 
 Status: initial cross-process experiment PASS; generalization remains uncertain.
 
-Validated by CI #83 and final CI #85 through `npm run release:check`:
+Current evidence shows that a writer and reader in separate Node processes can use one known bootstrap key to discover other durable states. This proves one convention, not a general workspace/agent-memory API.
 
-- writer and reader run as separate Node processes;
-- writer persists a `__workspace` manifest plus additional durable states;
-- nested checkpoint mutation survives the writer process exit;
-- reader initially knows only the database path and bootstrap key;
-- reader discovers other state keys from the manifest;
-- scenario uses the public `@storekeeper/db` package entrypoint;
-- architecture documentation separates durability, discoverability, and agent/application policy.
+Next evidence required: reuse the same bootstrap convention in a second realistic scenario without modifying StorekeeperDB core specifically for it.
 
-Do not reserve `__workspace` or add a workspace API after one passing scenario. Reuse the convention in another realistic scenario before generalizing it.
+Do not reserve `__workspace` or add a workspace API yet.
 
-### 5. Evaluate change amplification
+### 3. Evaluate incompatible model evolution
 
-Status: planned.
+Status: planned after compatible change-amplification baseline.
 
-The core product hypothesis is that StorekeeperDB reduces persistence-specific work while application models are changing quickly.
+The issue-tracker scenario only establishes compatible optional JSON-field additions. A later scenario should test one deliberately incompatible change, such as:
 
-For selected scenario changes, record:
+- field rename;
+- scalar -> structured object;
+- enum narrowing;
+- required-field introduction.
 
-- files touched;
-- persistence-specific code added or changed;
-- migration or repository boilerplate required;
-- undocumented workarounds;
-- runtime failures;
-- implementation notes that reveal hidden persistence complexity.
+The goal is not to promise migration-free persistence. The goal is to identify where the “magic” must stop and an explicit migration/validation boundary must begin.
 
-The purpose is not to manufacture a favorable line-count comparison. The purpose is to detect whether StorekeeperDB actually moves persistence concerns out of the early prototype loop or merely hides them until failure.
+## Recently resolved product/API decisions
+
+### `find()` durable-handle semantics — #29
+
+Status: implemented in PR #35 after focused experiments and blocker hardening.
+
+Selected contract:
+
+```text
+state() item             -> durable handle
+find() result item       -> durable handle
+find() result array      -> ordinary local array
+liveFind() result values -> detached stable snapshots
+```
+
+The decision was not made by naming preference alone. PR #30 demonstrated that durable handles were viable but exposed two concrete blockers.
+
+### Removed-handle invalidation — #31
+
+Status: PASS, fixed by PR #33; full release gate passed in CI #98.
+
+```text
+active member    -> readable + writable
+reordered member -> writable
+rollback         -> stale
+removed member   -> readable detached reference, writes fail
+```
+
+The runtime uses existing item ids + state membership + generation rather than a new public identity subsystem.
+
+### Reactive snapshot separation — #32
+
+Status: PASS, fixed by PR #34; full release gate passed in CI #101.
+
+`liveFind()` owns detached snapshot cloning independently of `find()`. This prevents mutable proxy aliasing from changing old snapshots and suppressing reactive notifications.
+
+### Realistic application scenario — #24
+
+Status: PASS.
+
+The issue-tracker scenario established compatible optional-field evolution without a repository layer, direct SQL, or manual table migration in that scenario. It also generated the `find()` semantics finding that led to #29.
 
 ## Confirmed architecture boundaries
 
@@ -124,48 +140,30 @@ durable state
 discoverable durable state
 ```
 
-Current working boundary:
+Current boundary:
 
 - StorekeeperDB core owns durable local state;
-- a bootstrap manifest can provide discoverability above the core for at least one cross-process scenario;
-- checkpoint policy, agent memory, summarization, trust, context selection, and multi-agent coordination remain outside the core;
-- a first-class workspace/bootstrap API is not justified yet.
+- a bootstrap convention can provide discoverability above the core in tested cross-process cases;
+- checkpoint policy, agent memory, summarization, trust, context selection, and multi-agent coordination remain outside the core.
+
+### Query / command / read boundary
+
+```text
+command-capable durable plane
+  state()
+  find()
+
+reactive read plane
+  liveFind()
+```
+
+A durable item handle is writable only while its item id remains a member of the current loaded state generation.
+
+Close/reopen preserves data, not JavaScript proxy identity.
 
 ### Application evolution
 
-- compatible optional JSON-field additions can evolve through ordinary durable proxy mutation without a separate migration layer in the issue-tracker scenario;
-- this does not establish incompatible schema evolution semantics.
-
-### Query/read boundary
-
-The current refinement direction separates command-capable durable handles from reactive read snapshots:
-
-```text
-state() / find()   -> durable handles (find is target, not implemented yet)
-liveFind()         -> stable derived snapshots
-```
-
-The key invariant is that a durable handle is valid only while its item remains a member of the current loaded state generation.
-
-## Recently completed baseline
-
-The current main branch includes:
-
-- runtime rollback and projection hardening;
-- release hygiene and package export checks;
-- executable demo;
-- React `useSyncExternalStore` verification;
-- experimental async write-behind boundary model;
-- derived projection lifecycle GC and opt-in lookup-count-based decay;
-- metadata compaction;
-- public manual and observational benchmark;
-- alpha release decision notes;
-- prepublish wording inspection;
-- clean consumer tarball install simulation;
-- slimmed release-check fixtures while preserving semantic coverage;
-- alpha evaluation-loop and documentation organization;
-- initial durable-session architecture experiment;
-- realistic issue-tracker application-evolution scenario.
+Compatible optional JSON-field additions work in the tested issue-tracker scenario. This does not establish incompatible schema evolution semantics.
 
 ## Deferred research
 
@@ -179,11 +177,11 @@ The current main branch includes:
 
 - usefulness scoring for observation metadata;
 - explicit deletion boundaries;
-- source state remains outside metadata scoring deletion.
+- source state remains outside metadata-scoring deletion.
 
 ### Full browser adapter
 
-The current experimental async write-behind runtime defines a durability boundary; it is not a complete browser adapter. Browser implementation work should wait until required semantics are justified by a realistic browser scenario.
+The experimental async write-behind runtime defines a durability boundary; it is not a complete browser adapter. Browser work should wait until a realistic browser scenario demonstrates the required semantics.
 
 ### Agent-specific memory / orchestration
 
@@ -194,9 +192,9 @@ Conversation summarization, agent identity, prompt storage, autonomous checkpoin
 Publishing is not the current optimization target. If `0.1.0-alpha.0` is published later:
 
 - verify registry-installed package behavior from a clean consumer project;
-- confirm GitHub release notes match the published tarball;
+- confirm release notes match the published tarball;
 - collect concrete user-facing friction;
-- feed those observations back into the same evaluation loop.
+- feed those observations back into the evaluation loop.
 
 ## Release posture
 
@@ -204,10 +202,10 @@ Publishing is not the current optimization target. If `0.1.0-alpha.0` is publish
 
 - CI passes consistently;
 - README matches actual public implementation;
-- browser gaps are clearly documented;
-- transaction behavior is either stable or explicitly scoped as alpha behavior;
-- deterministic realistic scenarios and architecture experiments included in the release gate pass;
+- browser gaps are explicit;
+- transaction behavior is stable enough or explicitly scoped as alpha behavior;
+- deterministic realistic scenarios and architecture experiments in `release:check` pass;
 - `npm run release:check` passes on a clean checkout;
-- alpha release decision notes are accepted by a maintainer.
+- alpha release decision notes remain accurate.
 
-Passing this checklist does not end the refinement loop and does not imply production readiness.
+Passing this checklist does not imply production readiness and does not end the refinement loop.

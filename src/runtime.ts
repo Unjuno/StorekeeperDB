@@ -113,7 +113,7 @@ export class StorekeeperDB {
   find<T extends Dict>(key: string, where: Partial<Record<keyof T & string, JsonScalar>>): T[] {
     const pairs = Object.entries(where) as [string, JsonScalar][];
     const list = this.state<Dict[]>(key, [] as Dict[]);
-    if (pairs.length === 0) return list.map(cloneJson) as T[];
+    if (pairs.length === 0) return list.slice() as T[];
 
     if (this.magic) for (const [path] of pairs) this.project(key, path, "find");
     const [firstPath, firstValue] = pairs[0]!;
@@ -127,12 +127,10 @@ export class StorekeeperDB {
         )
       : null;
 
-    return list
-      .filter((item) => {
-        if (candidateIds && !candidateIds.has(this.idOf(item))) return false;
-        return pairs.every(([path, expected]) => pathGet(item, path) === expected);
-      })
-      .map(cloneJson) as T[];
+    return list.filter((item) => {
+      if (candidateIds && !candidateIds.has(this.idOf(item))) return false;
+      return pairs.every(([path, expected]) => pathGet(item, path) === expected);
+    }) as T[];
   }
 
   liveFind<T extends Dict>(key: string, where: Partial<Record<keyof T & string, JsonScalar>>) {

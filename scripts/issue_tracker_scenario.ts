@@ -57,23 +57,23 @@ try {
   issues[0]!.comments = [];
   issues[0]!.comments!.push({ author: "agent", body: "Shape evolved without a migration layer." });
 
-  // Exercise a genuine scalar lookup.
+  // Exercise a genuine scalar lookup and update through the returned durable handle.
   const queryResult = sk.find<IssueV2>("issues", { id: "ISSUE-1" });
-  const queryCopy = queryResult[0];
-  if (!queryCopy) throw new Error("expected ISSUE-1 from find()");
+  const queryHandle = queryResult[0];
+  if (!queryHandle) throw new Error("expected ISSUE-1 from find()");
 
-  // Deliberately mutate the query result to observe whether it is a durable handle.
-  queryCopy.status = "closed";
-  const queryMutationIsDetached = issues[0]!.status === "open";
+  queryHandle.status = "closed";
+  const queryMutationIsDurable = issues[0]!.status === "closed";
 
-  // Mutate through the state proxy to perform the actual durable update.
-  issues[0]!.status = "closed";
+  // The result array itself is local: changing membership must not change source state.
+  queryResult.pop();
+  const queryResultArrayIsLocal = issues.length === 2;
 
   const urgent = sk.find<IssueV2>("issues", { priority: "urgent" });
   const projectionCreated = sk.explain("issues", "priority").storage === "projection";
   sk.close();
 
-  // Iteration 3: prove the evolved shape and durable mutation survived reopen.
+  // Iteration 3: prove the evolved shape and durable query mutation survived reopen.
   sk = new StorekeeperDB(dbPath);
   const reopened = sk.state<IssueV2[]>("issues", []);
   const reopenedIssue = reopened[0];
@@ -94,9 +94,9 @@ try {
       detail: "Optional fields were added after reopen without a repository layer, table migration, or direct SQL.",
     },
     {
-      kind: "surprise",
-      code: "find-result-is-detached-snapshot",
-      detail: "Mutating an object returned by find() does not mutate durable state; mutation must go through the state proxy.",
+      kind: "positive",
+      code: "find-result-is-durable-handle",
+      detail: "Mutating an item returned by find() updates durable source state while the returned result array remains local.",
     },
     {
       kind: "boundary",
@@ -109,7 +109,8 @@ try {
     noMigrationRequired &&
     urgent.length === 1 &&
     projectionCreated &&
-    queryMutationIsDetached &&
+    queryMutationIsDurable &&
+    queryResultArrayIsLocal &&
     evolvedShapePersisted &&
     durableStatusPersisted;
 
@@ -125,7 +126,8 @@ try {
     checks: {
       noMigrationRequired,
       projectionCreated,
-      queryMutationIsDetached,
+      queryMutationIsDurable,
+      queryResultArrayIsLocal,
       evolvedShapePersisted,
       durableStatusPersisted,
     },

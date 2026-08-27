@@ -2,26 +2,17 @@
 
 This manual describes the public alpha API and its current boundaries.
 
-StorekeeperDB is for fast local prototype loops. It lets TypeScript code mutate ordinary arrays and objects while SQLite persists source state and StorekeeperDB derives useful lookup structures behind the scenes.
+StorekeeperDB is for fast local prototype loops. It lets TypeScript code mutate ordinary-looking arrays and objects while SQLite persists source state and StorekeeperDB derives lookup structures behind the scenes.
 
 ## Install posture
 
 This package is still `0.1.0-alpha.0`.
 
-Local development requirements:
-
 ```bash
 npm install
 npm run build
+node --experimental-sqlite your-app.js
 ```
-
-Runtime requirement:
-
-```bash
-node --experimental-sqlite
-```
-
-Node's built-in SQLite API is still behind the experimental flag, so all scripts use `--experimental-sqlite`.
 
 ## Minimal state
 
@@ -43,23 +34,21 @@ tasks[0]!.priority = "urgent";
 sk.close();
 ```
 
-The app code mutates a normal-looking array. StorekeeperDB persists item rows in SQLite.
+Root-state alpha boundary: `state()` currently supports arrays of objects.
 
 ## Source state vs derived state
 
-The core rule is:
-
 ```text
 source state      = user data, do not silently delete
-derived state     = projection / lookup structure, can be evicted and rebuilt
-metadata          = observation counts / magic log, can be compacted
+derived state     = projection / lookup structure, evictable + rebuildable
+metadata          = observation counts / magic log, compactable
 ```
 
-When in doubt, treat source rows as the durable truth.
+`__sk_items` is the durable source of truth.
 
-## Lookup
+## `find()` — query with durable item handles
 
-Use `find()` for supported large-list scalar lookup.
+Use `find()` for supported scalar lookup.
 
 ```ts
 const urgent = sk.find<Task>("tasks", { priority: "urgent" });
@@ -73,60 +62,93 @@ Supported lookup values are scalar JSON values:
 string | number | boolean | null
 ```
 
-Do not expect arbitrary JavaScript predicates to compile into SQL.
+`find()` has an intentional two-level contract:
 
-This is ordinary in-memory JavaScript:
-
-```ts
-const urgent = tasks.filter((task) => task.priority === "urgent");
+```text
+result array -> ordinary local array
+result items -> durable StorekeeperDB handles
 ```
 
-This is StorekeeperDB lookup:
+Therefore query-to-update is direct:
+
+```ts
+const [task] = sk.find<Task>("tasks", { priority: "urgent" });
+if (task) task.done = true; // persists
+```
+
+But changing query-result membership does not change source membership:
 
 ```ts
 const urgent = sk.find<Task>("tasks", { priority: "urgent" });
+urgent.pop(); // only changes this local result array
 ```
 
-## Realtime local view
+`find(key, {})` also returns a new ordinary local array rather than the persistent list proxy itself.
+
+StorekeeperDB does not compile arbitrary JavaScript predicates into SQL:
+
+```ts
+const local = tasks.filter((task) => task.priority === "urgent");
+const projected = sk.find<Task>("tasks", { priority: "urgent" });
+```
+
+## Durable handle lifetime
+
+A handle is writable only while its item belongs to the current loaded state generation.
+
+```text
+active member    -> readable + writable
+reordered member -> same handle remains writable
+rollback         -> old-generation handle is stale
+removed member   -> readable detached reference, writes fail
+close/reopen     -> data survives; JavaScript proxy identity does not
+```
+
+Example removal behavior:
+
+```ts
+const removed = tasks.pop();
+if (removed) {
+  console.log(removed.title); // readable
+  // removed.done = true;     // throws: item is no longer writable
+}
+```
+
+This prevents a stale removed object from silently recreating a deleted persistent row.
+
+## `liveFind()` — stable reactive snapshots
 
 Use `liveFind()` for a live lookup signal.
 
 ```ts
-import { StorekeeperDB, liveFind } from "@storekeeper/db";
+import { liveFind } from "@storekeeper/db";
 
-const sk = new StorekeeperDB("app.sqlite");
-const tasks = sk.state<Task[]>("tasks", []);
 const urgent = liveFind<Task>(sk, "tasks", { priority: "urgent" });
-
 const unsubscribe = urgent.subscribe(() => {
-  console.log(urgent.getSnapshot().value);
+  console.log(urgent.getSnapshot());
 });
-
-tasks.push({ title: "Fix login", done: false, priority: "urgent" });
-unsubscribe();
 ```
 
-`liveFind()` is for local prototype UI flows. It is not remote synchronization.
+`liveFind()` is deliberately not a collection of command-capable handles. It owns detached stable snapshots.
+
+A previously returned snapshot retains its previous content after source mutation; a changed result appears in a new snapshot/version. This avoids proxy aliasing and is the required boundary for React-style external-store consumers.
+
+```text
+state() / find() -> durable command-capable handles
+liveFind()       -> detached stable read snapshots
+```
+
+`liveFind()` is local realtime behavior, not remote synchronization.
 
 ## React adapter
-
-The React adapter is deliberately thin.
 
 ```ts
 import { externalStore } from "@storekeeper/db/react";
 ```
 
-It exposes the shape React's `useSyncExternalStore` expects.
+The adapter exposes the shape expected by React `useSyncExternalStore`. The core runtime itself does not import React.
 
-```ts
-const store = externalStore(urgentSignal);
-```
-
-The core runtime does not import React. React is only used by the test suite to verify adapter behavior.
-
-## Batch
-
-Use `batch()` to group mutations.
+## Batch and rollback
 
 ```ts
 sk.batch(() => {
@@ -135,24 +157,22 @@ sk.batch(() => {
 });
 ```
 
-If an outer `batch()` fails, StorekeeperDB rolls back the database and loaded list state. Item/nested proxy handles captured before the failed batch are stale after rollback. Re-read from the list.
+If an outer `batch()` fails, StorekeeperDB rolls back database and loaded-list state. Item/nested handles captured before the failed batch become stale because the loaded state advances to a new generation.
 
 ```ts
+const captured = tasks[0];
+
 try {
   sk.batch(() => {
-    const task = tasks[0]!;
-    task.title = "temporary";
+    if (captured) captured.done = true;
     throw new Error("fail");
   });
 } catch {
-  // Re-read. Do not keep using old item proxy handles from the failed batch.
-  const fresh = tasks[0];
+  // Re-read from tasks. Do not keep writing through captured.
 }
 ```
 
 ## Debug surface
-
-Magic must be inspectable.
 
 ```ts
 sk.status();
@@ -162,15 +182,11 @@ sk.debug().recentMagic();
 sk.debug().derivations("tasks");
 ```
 
-Use `explain()` to check whether a path is still JSON-only or backed by a projection.
+Use `explain()` to inspect whether a path is JSON-only or backed by a projection.
 
-```ts
-sk.explain("tasks", "priority");
-```
+## Derived lifecycle
 
-## Manual derived lifecycle
-
-Projection rows are derived. They can be evicted and rebuilt.
+Projection rows are derived and may be evicted/rebuilt without deleting source rows.
 
 ```ts
 sk.debug().markCold("tasks", ["priority"]);
@@ -179,34 +195,9 @@ sk.debug().evict("tasks", ["priority"]);
 sk.debug().rebuild("tasks", ["priority"]);
 ```
 
-Evicting a projection does not delete source rows. The next supported `find()` can rebuild it.
-
-## Automatic derived decay
-
-Automatic derived decay is opt-in.
-
-```ts
-const sk = new StorekeeperDB("app.sqlite", {
-  decay: {
-    enabled: true,
-    collectEveryFinds: 4,
-    maxDerivations: 2,
-    markCold: true,
-  },
-});
-```
-
-Current alpha behavior:
-
-- lookup-count-based
-- synchronous after configured `find()` intervals
-- no hidden async background worker
-- current lookup path protected during the same GC pass
-- source rows preserved
+Automatic derived decay is opt-in and currently lookup-count-based. It has no hidden async background worker.
 
 ## Metadata compaction
-
-Magic logs and path observations are metadata.
 
 ```ts
 sk.debug().compactMetadata({
@@ -217,82 +208,45 @@ sk.debug().compactMetadata({
 });
 ```
 
-This may trim old magic logs and reduce/delete low-value non-projection observations.
-
-It does not delete:
-
-- source rows
-- active projection cells
-- projection-backed path observations
+Metadata compaction may reduce debug/planning observations. It must not delete source rows, active projection cells, or projection-backed path observations required by active derivations.
 
 ## Browser boundary
 
 `@storekeeper/db` is the synchronous local SQLite runtime.
 
-Browser-style async storage is represented only by the experimental write-behind model:
-
-```ts
-import {
-  AsyncMemoryStorage,
-  ExperimentalAsyncWriteBehindRuntime,
-} from "@storekeeper/db/experimental";
-
-const storage = new AsyncMemoryStorage();
-const sk = new ExperimentalAsyncWriteBehindRuntime(storage);
-const tasks = await sk.state<Task[]>("tasks", []);
-
-tasks.push({ title: "Draft", done: false });
-
-sk.status(); // dirty
-await sk.flush();
-sk.status(); // clean
-```
-
-Meaning:
+Browser-style async storage is represented only by the experimental write-behind model in `@storekeeper/db/experimental`.
 
 ```text
 mutation returned = memory changed
 flush resolved    = async storage accepted the write
 ```
 
-Do not treat browser async storage as equivalent to the Node SQLite runtime.
+Do not treat the experimental async runtime as a complete browser adapter.
+
+## Unsupported or intentionally loud operations
+
+The alpha rejects shape-breaking persistent-array operations rather than silently diverging from source state, including:
+
+- sparse assignment;
+- `delete tasks[0]`;
+- `fill()`;
+- `copyWithin()`;
+- growing `length` by direct assignment.
 
 ## Benchmark
-
-Run:
 
 ```bash
 npm run benchmark
 ```
 
-The benchmark prints JSON with timings and semantic pass/fail information. See [Benchmarks](./BENCHMARKS.md).
-
-## Unsupported or intentionally loud operations
-
-StorekeeperDB intentionally rejects some shape-breaking array operations in the alpha.
-
-Examples:
-
-- sparse assignment
-- `delete tasks[0]`
-- `fill()`
-- `copyWithin()`
-- growing `length`
-
-The aim is to fail loudly rather than silently diverge from SQLite source state.
+Benchmark timings are observational, not production guarantees.
 
 ## Operational checklist
 
-Before treating a change as release-ready, run:
+Before treating a change as release-ready:
 
 ```bash
 npm run release:check
 ```
 
-This runs build, tests, gate, demo, export checks, and package dry-run.
-
-Run the benchmark separately when evaluating runtime changes:
-
-```bash
-npm run benchmark
-```
+This runs build, tests, deterministic scenarios/experiments, export checks, documentation checks, package dry-run, and consumer smoke.
