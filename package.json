@@ -32,12 +32,14 @@
     "experiment:root-state-semantics:check": "node --experimental-sqlite dist/scripts/root_state_semantics_experiment.js",
     "experiment:singleton-object-surface": "npm run build && node --experimental-sqlite dist/scripts/singleton_object_surface_experiment.js",
     "experiment:singleton-object-surface:check": "node --experimental-sqlite dist/scripts/singleton_object_surface_experiment.js",
+    "experiment:agent-decision-burden": "npm run build && node --experimental-sqlite dist/scripts/agent_decision_burden_experiment.js",
+    "experiment:agent-decision-burden:check": "node --experimental-sqlite dist/scripts/agent_decision_burden_experiment.js",
     "scenario:issue-tracker": "npm run build && node --experimental-sqlite dist/scripts/issue_tracker_scenario.js",
     "scenario:issue-tracker:check": "node --experimental-sqlite dist/scripts/issue_tracker_scenario.js",
     "consumer:smoke": "node --experimental-sqlite scripts/consumer_smoke.mjs",
     "check:exports": "node dist/scripts/release_check.js",
     "pack:dry": "npm pack --dry-run",
-    "release:check": "npm run build && npm test && npm run gate && npm run demo:check && npm run experiment:durable-session:check && npm run experiment:change-amplification:check && npm run experiment:cli-change-amplification:check && npm run experiment:root-state-semantics:check && npm run experiment:singleton-object-surface:check && npm run scenario:issue-tracker:check && npm run check:exports && npm run pack:dry && npm run consumer:smoke"
+    "release:check": "npm run build && npm test && npm run gate && npm run demo:check && npm run experiment:durable-session:check && npm run experiment:change-amplification:check && npm run experiment:cli-change-amplification:check && npm run experiment:root-state-semantics:check && npm run experiment:singleton-object-surface:check && npm run experiment:agent-decision-burden:check && npm run scenario:issue-tracker:check && npm run check:exports && npm run pack:dry && npm run consumer:smoke"
   },
   "engines": {
     "node": ">=22.5"
