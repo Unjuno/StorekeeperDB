@@ -21,34 +21,41 @@ See [Alpha evaluation loop](./EVALUATION_LOOP.md) and [Architecture](./ARCHITECT
 
 ## Active priorities
 
-### 1. Realistic application scenario — #24
+### 1. Decide `find()` snapshot vs durable-handle semantics
 
-Status: scenario implemented; CI validation pending.
+Status: next product/API decision after #24.
 
-The first issue-tracker evaluation now exercises three iterations against one durable database:
-
-1. create a minimal `IssueV1` model;
-2. reopen as `IssueV2` and add optional priority, labels, and comments;
-3. reopen again and verify evolved nested state and durable mutation.
-
-The scenario also deliberately tests a current semantic boundary:
+The realistic issue-tracker scenario passed its compatible shape-evolution hypothesis, but confirmed a least-surprise problem:
 
 ```text
 state proxy mutation -> durable
 find() result mutation -> detached snapshot only
 ```
 
-The PR that first records this result must not change `find()` behavior. If the scenario confirms the boundary is surprising, create a separate product/API decision issue.
+The next PR must not simply make query results mutable. First compare three designs:
 
-Run:
+1. keep `find()` as a snapshot API and make that contract explicit/read-only;
+2. rename or supplement the query surface with explicit snapshot semantics;
+3. return durable handles and accept the resulting identity, lifecycle, live-query, rollback, and cache complexity.
 
-```bash
-npm run scenario:issue-tracker
-```
+Prefer the smallest semantic surface that preserves StorekeeperDB's durable-variable mental model.
+
+### 2. Realistic application scenario — #24
+
+Status: PASS; merge/closure pending for the evaluation PR.
+
+Validated by CI #87 scenario output and final CI #89 full release gate:
+
+- two `IssueV1` rows survived close/reopen;
+- reopening as `IssueV2` required no repository layer, direct SQL, or manual table migration for optional JSON fields;
+- nested `priority`, `labels`, and `comments` persisted after another reopen;
+- scalar lookup created the expected projection;
+- mutation through the state proxy persisted;
+- mutation through a `find()` result was confirmed to be detached.
 
 See [Issue tracker evaluation](./ISSUE_TRACKER_EVALUATION.md).
 
-### 2. Durable variable / session bootstrap experiment — #26
+### 3. Durable variable / session bootstrap experiment — #26
 
 Status: initial cross-process experiment PASS; generalization remains uncertain.
 
@@ -68,21 +75,6 @@ Do not infer that StorekeeperDB should become an agent-memory or orchestration f
 
 Next evidence required: reuse the same bootstrap convention in at least one additional scenario without modifying the core specifically for that scenario.
 
-### 3. Convert findings into small PRs
-
-Status: follows scenario evidence.
-
-For each observed rough edge:
-
-1. classify the finding;
-2. decide whether the smallest fix belongs in runtime, public API, tests, docs, or an application-level convention;
-3. prefer simplification over API growth;
-4. add regression coverage when behavior changes;
-5. run the scenario again;
-6. run `npm run release:check` before merge.
-
-One PR should normally address one observed problem or one tightly related group.
-
 ### 4. Evaluate change amplification
 
 Status: planned.
@@ -100,9 +92,11 @@ For selected scenario changes, record:
 
 The purpose is not to manufacture a favorable line-count comparison. The purpose is to detect whether StorekeeperDB actually moves persistence concerns out of the early prototype loop or merely hides them until failure.
 
-## Architecture questions opened by #26
+## Confirmed architecture boundaries
 
-The session-bootstrap experiment distinguishes four scopes:
+### Variable lifetime
+
+The durable-session experiment distinguishes four scopes:
 
 ```text
 local value
@@ -111,22 +105,20 @@ durable state
 discoverable durable state
 ```
 
-Current working boundary after the first PASS:
+Current working boundary:
 
 - StorekeeperDB core owns durable local state;
 - a bootstrap manifest can provide discoverability above the core for at least one cross-process scenario;
 - checkpoint policy, agent memory, summarization, trust, context selection, and multi-agent coordination remain outside the core;
 - a first-class workspace/bootstrap API is not justified yet.
 
-The next useful falsification attempt is to apply the same convention in a second scenario and see whether the manifest shape remains stable or starts accumulating scenario-specific policy.
+### Application evolution
 
-## API question expected from #24
+The issue-tracker scenario establishes a narrower application result:
 
-If CI confirms the issue-tracker observation, separate the following question from the scenario PR:
-
-> Should `find()` remain a detached snapshot API, become explicitly read-only/snapshot-named, or return durable state handles?
-
-Do not infer the answer solely from implementation convenience. Evaluate least-surprise semantics, identity/lifecycle complexity, live query behavior, and API surface size.
+- compatible optional JSON-field additions can evolve through ordinary durable proxy mutation without a separate migration layer in this scenario;
+- this does not establish incompatible schema evolution semantics;
+- `find()` is currently a snapshot boundary and must be treated as an explicit product decision rather than an implementation detail.
 
 ## Recently completed baseline
 
@@ -147,7 +139,7 @@ The current main branch already includes:
 - alpha evaluation-loop and documentation organization;
 - initial durable-session architecture experiment.
 
-This baseline is sufficient to stop treating missing infrastructure as the default reason to add more infrastructure.
+After the #24 evaluation PR merges, the issue-tracker scenario becomes part of this baseline as well.
 
 ## Deferred research
 
