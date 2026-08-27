@@ -122,7 +122,7 @@ const requiredPublicText: Array<[string, string]> = [
   ["docs/ARCHITECTURE.md", "durable variable runtime"],
   ["docs/ARCHITECTURE.md", "discoverable durable state"],
   ["docs/DURABLE_VARIABLE_EXPERIMENT.md", "two separate Node processes"],
-  ["docs/ISSUE_TRACKER_EVALUATION.md", "find() result mutation semantics"],
+  ["docs/ISSUE_TRACKER_EVALUATION.md", "`find()` result mutation semantics"],
   ["docs/ISSUE_TRACKER_EVALUATION.md", "Do not change runtime behavior in the same PR"],
   ["docs/EVALUATION_LOOP.md", "Simple persistence should feel automatic. Hard persistence problems must remain observable and controllable."],
   ["docs/ALPHA_RELEASE_DECISION.md", "public alpha candidate"],
