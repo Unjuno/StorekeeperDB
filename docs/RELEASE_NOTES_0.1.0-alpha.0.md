@@ -2,22 +2,23 @@
 
 StorekeeperDB is a persistent state runtime for fast local TypeScript prototype loops.
 
-It lets application code mutate ordinary arrays and objects while SQLite persists source state behind the scenes. Useful scalar lookup paths can become SQLite-backed projections when `find()` or `liveFind()` needs them.
+It lets application code mutate ordinary-looking arrays and objects while SQLite persists source state behind the scenes. Useful scalar lookup paths can become SQLite-backed projections when `find()` or `liveFind()` needs them.
 
 ## Highlights
 
 - Ordinary TypeScript array/object mutation with SQLite-backed source persistence.
-- Row-per-item storage model instead of one giant JSON root.
+- Row-per-item durable source storage.
 - Magic scalar lookup projections for supported `find()` calls.
-- Local realtime lookup through `liveFind()`.
+- `find()` returns durable item handles in an ordinary local result array.
+- `liveFind()` owns detached stable snapshots for reactive read flows.
+- Removed durable handles remain readable but reject writes, preventing deleted-row resurrection.
+- Failed outer batches invalidate old-generation handles after rollback.
 - React adapter verified with `useSyncExternalStore` and `react-test-renderer`.
-- Debug surface for explaining what the runtime created or evicted.
-- Derived projection lifecycle APIs: mark cold, collect garbage, evict, rebuild.
-- Opt-in automatic derived decay.
-- Metadata compaction for magic logs and non-projection path observations.
-- Experimental async write-behind boundary model for browser-style durability semantics.
-- Executable demo and benchmark script.
-- Public alpha manual.
+- Debug surface for explaining derived projections and lifecycle actions.
+- Source-preserving projection lifecycle: mark cold, collect garbage, evict, rebuild.
+- Opt-in automatic derived decay and metadata compaction.
+- Experimental async write-behind durability-boundary model.
+- Executable realistic scenarios, architecture experiments, demo, benchmark, and consumer smoke.
 
 ## Install posture
 
@@ -52,12 +53,25 @@ tasks.push({ title: "Write proposal", done: false });
 tasks[0]!.priority = "urgent";
 
 const urgent = sk.find<Task>("tasks", { priority: "urgent" });
+urgent[0]!.done = true; // durable item-handle mutation
+
 const liveUrgent = liveFind<Task>(sk, "tasks", { priority: "urgent" });
 ```
 
-## What the alpha demonstrates
+## Query and reactive semantics
 
-The release demonstrates this boundary:
+```text
+state() item             = durable handle
+find() result item       = durable handle
+find() result array      = ordinary local array
+liveFind() result values = detached stable snapshots
+```
+
+This means a normal query can be followed by a durable item mutation without re-querying through `state()`, while reactive consumers still receive stable previous-value snapshots.
+
+A removed item handle is no longer writable. A handle captured before a failed outer batch is stale after rollback. Close/reopen preserves data, not JavaScript proxy identity.
+
+## What the alpha demonstrates
 
 ```text
 source state rows        = durable user data
@@ -71,6 +85,8 @@ The core rule is:
 Magic by default. Explainable on demand. Source state is never silently deleted.
 ```
 
+The realistic issue-tracker scenario also demonstrates compatible optional JSON-field evolution without a repository layer, direct SQL, or a manual table migration in that controlled scenario. This does not eliminate incompatible-schema migration problems.
+
 ## Verification included
 
 The release branch should pass:
@@ -79,7 +95,7 @@ The release branch should pass:
 npm run release:check
 ```
 
-This includes build, tests, gate, demo, export checks, documentation checks, prepublish wording inspection, and package dry-run.
+This includes build, runtime tests, deterministic scenarios/architecture experiments, export checks, documentation checks, package dry-run, and consumer install smoke.
 
 Benchmark observations are available separately:
 
@@ -87,14 +103,16 @@ Benchmark observations are available separately:
 npm run benchmark
 ```
 
-The benchmark prints timing JSON but does not define production latency guarantees.
+Benchmark timing output does not define production latency guarantees.
 
 ## Known gaps
 
 - API is not frozen.
+- Root `state()` is currently an array-of-objects API, not arbitrary root values.
 - Full browser adapter is not implemented.
-- Remote sync is not implemented.
+- Remote sync and distributed coordination are not implemented.
 - StorekeeperDB does not compile arbitrary JavaScript predicates into SQL.
+- Compatible JSON evolution does not solve incompatible type changes, field renames, or long-lived migration policy.
 - Automatic decay is lookup-count-based, not wall-clock-time-based.
 - Full metadata scoring policy remains follow-up research.
 - The package depends on Node's experimental SQLite flag.
@@ -105,7 +123,10 @@ Start with:
 
 - `README.md`
 - `docs/MANUAL.md`
-- `docs/DEMO.md`
+- `docs/ARCHITECTURE.md`
+- `docs/FIND_SEMANTICS_EVALUATION.md`
+- `docs/ISSUE_TRACKER_EVALUATION.md`
+- `docs/EVALUATION_LOOP.md`
 - `docs/BENCHMARKS.md`
 - `docs/RELEASE.md`
 - `docs/ALPHA_RELEASE_DECISION.md`
