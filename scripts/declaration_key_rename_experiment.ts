@@ -55,7 +55,7 @@ const runCandidateA = (path: string) => {
   const durabilityEstablished = persistedSettings(establish.state.settings) && persistedTasks(establish.state.tasks);
   establish.close();
 
-  const renamed = openProjectStore(path, { // @candidate-a-decision:implicit-property-derived-key
+  const renamed = openProjectStore(path, { // @candidate-a-observation:implicit-property-derived-key
     tasks: list<TaskV1>([]),
     preferences: object<ProjectSettingsV1>(initialSettings()),
   });
@@ -108,7 +108,7 @@ const runCandidateB = (path: string) => {
   let rejectedRename = false;
   let error = "";
   try {
-    const renamed = openStrictRenameProjectStore(path, { // @candidate-b-decision:strict-identity-check
+    const renamed = openStrictRenameProjectStore(path, { // @candidate-b-observation:strict-identity-check
       tasks: renameList<TaskV1>([]),
       preferences: renameObject<ProjectSettingsV1>(initialSettings()),
     });
@@ -293,8 +293,8 @@ try {
 
   const comparison = {
     compatiblePathExtraDecisions: {
-      A: 0,
-      B: 0,
+      A: profiles.A.decisions.length,
+      B: profiles.B.decisions.length,
       C: 0,
       D: profiles.D.decisions.length,
     },
