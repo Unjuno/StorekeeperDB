@@ -1,6 +1,6 @@
 # Realistic issue tracker evaluation
 
-Status: scenario PASS in CI #87; full release gate failed only on an exact wording check and is being re-run after that check was corrected.
+Status: PASS. Scenario passed in CI #87 and the corrected full `npm run release:check` passed in CI #89.
 
 Issue: #24.
 
@@ -96,9 +96,9 @@ UNCERTAIN when:
 - one issue-tracker shape is insufficient to distinguish a general design property from scenario bias;
 - a finding is semantic rather than clearly defective and needs a product decision.
 
-## Initial result — CI #87
+## Result
 
-The scenario itself completed successfully before the later release-document wording check failed.
+CI #87 executed the scenario successfully. CI #89 then passed the corrected complete `npm run release:check` gate.
 
 Observed scenario output:
 
@@ -112,19 +112,20 @@ find() mutation is detached           CONFIRMED
 nested evolved shape persisted        PASS
 durable proxy status persisted        PASS
 scenario                              PASS
+full release gate                     PASS (CI #89)
 ```
 
-The full CI #87 run failed later because `release_check.ts` searched for `find() result mutation semantics` while the document heading contains Markdown backticks around `find()`. That is release-gate wiring, not a scenario failure.
+The first full CI #87 run failed only after the scenario, because `release_check.ts` searched for a Markdown phrase without the backticks used in this document. The wording check was corrected; no runtime or scenario behavior was changed to obtain CI #89.
 
 ### Product decision from this evidence
 
 The compatible-shape-evolution hypothesis passes for this scenario.
 
-However, the scenario also confirms a real semantic rough edge:
+The scenario also confirms a semantic rough edge:
 
 > A value returned by `find()` looks mutable, but mutating it does not mutate the durable state.
 
-This finding should be separated into its own API decision rather than fixed in this evaluation PR.
+This finding is intentionally separated into its own API decision rather than fixed in this evaluation PR.
 
 ## Findings
 
@@ -180,4 +181,4 @@ Major uncertainty after this scenario:
 
 ## Follow-up rule
 
-Record the scenario result first. Any behavioral fix should be a separate small PR with its own regression test and product decision.
+Any behavioral fix should be a separate small PR with its own regression test and product decision. The immediate follow-up is to decide `find()` snapshot versus durable-handle semantics without expanding the API speculatively.
