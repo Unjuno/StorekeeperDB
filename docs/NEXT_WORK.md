@@ -6,45 +6,56 @@ This document tracks current StorekeeperDB priorities. Historical implementation
 
 StorekeeperDB is a public alpha candidate in a product refinement / alpha hardening loop.
 
-The current goal is not promotion and not feature-count growth. The goal is to use realistic application and process-lifecycle scenarios to expose API friction, surprising behavior, unclear failure modes, documentation gaps, persistence-specific change amplification, and reproducible performance roughness.
+The current goal is not promotion and not feature-count growth. The goal is to use realistic scenarios to expose API friction, failure modes, persistence-specific change amplification, and architecture boundaries before expanding the public surface.
 
 See [Alpha evaluation loop](./EVALUATION_LOOP.md) and [Architecture](./ARCHITECTURE.md).
 
 ## Active priorities
 
-### 1. Replicate persistence-specific change amplification
+### 1. Evaluate root-state semantics
 
-Status: **first experiment CANDIDATE PASS; generalization not established.**
+Status: **new product/API decision justified by #38; do not implement a new root API yet.**
 
-CI #116 compared the same Issue V1 -> V2 compatible evolution using:
-
-1. minimal relational `node:sqlite`;
-2. minimal JSON-blob `node:sqlite`;
-3. StorekeeperDB.
-
-Observed persistence-specific changed lines:
+Two compatible-evolution experiments now show lower explicit persistence edit surface vs a minimal JSON-blob SQLite baseline:
 
 ```text
-relational SQLite  20
-JSON-blob SQLite   14
-StorekeeperDB       8
+Issue-list scenario
+  JSON blob       14 changed persistence lines
+  StorekeeperDB    8
+
+CLI metadata singleton
+  JSON blob       12 changed persistence lines
+  StorekeeperDB    8
 ```
 
-Against the strongest JSON-blob baseline, the annotated persistence-specific edit surface decreased from 14 to 8 changed lines (~42.9%). Raw all-source changed lines decreased from 40 to 34 (15%).
+However, the CLI metadata replication was MIXED because one logical metadata record must currently be represented as a one-item persistent list.
 
-However, V2 persistence-concept count was 4 vs 4 for JSON-blob and StorekeeperDB. JSON-blob introduced no new persistence concept in V2, while StorekeeperDB introduced `durable-query`.
+V2 persistence concepts:
 
-Therefore the current evidence supports only the narrower claim:
+```text
+JSON blob       4
+StorekeeperDB   5
+```
 
-> StorekeeperDB reduced explicit persistence edit surface for this compatible prototype evolution; it did not demonstrate a lower persistence-concept count than a deliberately minimal JSON-blob design.
+The additional StorekeeperDB concept is the explicitly counted `singleton-list-boundary`.
 
-See [Change amplification experiment](./CHANGE_AMPLIFICATION_EXPERIMENT.md).
+This is now evidence that the list-only root contract creates real conceptual ceremony, not merely a documentation inconvenience.
 
-Next evidence required: repeat the same measurement method on a structurally different application, preferably small CLI/project metadata state. Do not generalize the percentage from one scenario.
+Next evaluation should compare at least:
+
+1. keep list-only `state()` and formalize a singleton convention;
+2. add a focused singleton/object state API;
+3. generalize `state()` to arbitrary JSON roots.
+
+Evaluate API size, mutation ergonomics, rollback/stale semantics, identity, serialization, migration implications, implementation complexity, and compatibility with signals/reactive reads before choosing.
+
+Do not add arbitrary-root support solely to make the previous benchmark look better.
+
+See [CLI metadata replication](./CLI_METADATA_CHANGE_AMPLIFICATION_EXPERIMENT.md).
 
 ### 2. Evaluate incompatible model evolution
 
-Status: planned after one replication of the compatible-change result.
+Status: planned after the root-state semantic decision is understood.
 
 Test a deliberately incompatible change such as:
 
@@ -53,25 +64,43 @@ Test a deliberately incompatible change such as:
 - enum narrowing;
 - required-field introduction.
 
-The objective is to locate the boundary where persistence can no longer remain implicit and explicit migration/validation must re-enter the application architecture.
+The objective is to locate where persistence can no longer remain implicit and explicit migration/validation must re-enter the application architecture.
 
-Do not optimize for “migration-free.” A clean, observable explicit boundary is preferable to unsafe magic.
+A clean explicit boundary is preferable to unsafe “migration-free” magic.
 
 ### 3. Reuse durable-session bootstrap in a second scenario — #26
 
 Status: initial cross-process experiment PASS; generalization remains uncertain.
 
-Current evidence shows that a writer and reader in separate Node processes can use one known bootstrap key to discover other durable states. This proves one convention, not a general workspace/agent-memory API.
+A writer and reader in separate Node processes can use one known bootstrap key to discover other durable states. This proves one convention, not a general workspace/agent-memory API.
 
-Next evidence required: reuse the same bootstrap convention in a second realistic scenario without modifying StorekeeperDB core specifically for it.
+Reuse the convention in a second realistic scenario without modifying StorekeeperDB core specifically for it before considering a first-class workspace/bootstrap API.
 
-Do not reserve `__workspace` or add a workspace API yet.
+## Current experimental evidence
 
-## Recently resolved product/API decisions
+### Persistence-specific change amplification — #36
+
+Status: CANDIDATE PASS in CI #116 / final gate CI #120.
+
+Against the strongest JSON-blob baseline, persistence-specific changed lines were 14 -> 8 (~42.9% lower) and raw all-source changed lines were 40 -> 34. Concept count was equal at 4 vs 4.
+
+### CLI metadata replication — #38
+
+Status: MIXED in CI #122.
+
+Against JSON-blob SQLite, persistence-specific changed lines were 12 -> 8 (~33.3% lower) and raw all-source changed lines were 35 -> 30. StorekeeperDB concept count was worse at 5 vs 4 because the one-record workload exposed `singleton-list-boundary`.
+
+Interpretation:
+
+> Reduced explicit persistence edit surface now has directionally consistent evidence in two compatible JSON-style scenarios. Lower conceptual complexity does not; the root-list restriction is a measured counterexample.
+
+Do not convert the measured percentages into a general performance/product claim.
+
+## Resolved product/API decisions
 
 ### `find()` durable-handle semantics — #29
 
-Status: implemented in PR #35; final release gate passed in CI #113.
+Implemented in PR #35; final release gate passed in CI #113.
 
 ```text
 state() item             -> durable handle
@@ -82,32 +111,11 @@ liveFind() result values -> detached stable snapshots
 
 ### Removed-handle invalidation — #31
 
-Status: PASS, fixed by PR #33; full release gate passed in CI #98.
-
-```text
-active member    -> readable + writable
-reordered member -> writable
-rollback         -> stale
-removed member   -> readable detached reference, writes fail
-```
+Fixed by PR #33 / CI #98. Removed references remain readable but writes fail; reorder remains valid; rollback invalidates old-generation handles.
 
 ### Reactive snapshot separation — #32
 
-Status: PASS, fixed by PR #34; full release gate passed in CI #101.
-
-`liveFind()` owns detached snapshot cloning independently of `find()`.
-
-### Realistic application scenario — #24
-
-Status: PASS.
-
-Compatible optional JSON-field evolution works in the tested issue tracker without a repository layer, direct SQL, or manual table migration. This does not establish incompatible migration semantics.
-
-### First change-amplification experiment — #36
-
-Status: CANDIDATE PASS in CI #116.
-
-The result is evidence for reduced explicit persistence edit surface in one compatible evolution scenario, not a general benchmark or proof of lower conceptual complexity.
+Fixed by PR #34 / CI #101. `liveFind()` owns detached snapshots independently of mutable `find()` handles.
 
 ## Confirmed architecture boundaries
 
@@ -120,13 +128,9 @@ durable state
 discoverable durable state
 ```
 
-Current boundary:
+StorekeeperDB core owns durable local state. Bootstrap/discovery conventions may live above core. Agent memory, summarization, trust, context selection, and multi-agent coordination remain outside core.
 
-- StorekeeperDB core owns durable local state;
-- a bootstrap convention can provide discoverability above the core in tested cross-process cases;
-- checkpoint policy, agent memory, summarization, trust, context selection, and multi-agent coordination remain outside the core.
-
-### Query / command / read boundary
+### Command / read boundary
 
 ```text
 command-capable durable plane
@@ -137,13 +141,11 @@ reactive read plane
   liveFind()
 ```
 
-A durable item handle is writable only while its item id remains a member of the current loaded state generation.
-
-Close/reopen preserves data, not JavaScript proxy identity.
+A durable item handle is writable only while its durable id remains a member of the current loaded state generation. Close/reopen preserves data, not JavaScript proxy identity.
 
 ### Application evolution
 
-Compatible optional JSON-field additions work in the tested issue-tracker scenario. The first comparison experiment suggests lower explicit persistence edit amplification, including against a JSON-blob direct-SQL baseline. Neither result establishes incompatible schema evolution semantics.
+Compatible JSON-style evolution has now been exercised in two small scenarios. Neither experiment establishes incompatible schema evolution semantics, arbitrary root-state semantics, or general workload performance.
 
 ## Deferred research
 
@@ -161,31 +163,12 @@ Compatible optional JSON-field additions work in the tested issue-tracker scenar
 
 ### Full browser adapter
 
-The experimental async write-behind runtime defines a durability boundary; it is not a complete browser adapter. Browser work should wait until a realistic browser scenario demonstrates the required semantics.
+The experimental async write-behind runtime defines a durability boundary; it is not a complete browser adapter. Browser work should wait for a realistic browser scenario.
 
 ### Agent-specific memory / orchestration
 
 Conversation summarization, agent identity, prompt storage, autonomous checkpoint policy, and multi-agent conflict resolution remain separate architecture layers.
 
-## Publication follow-up
-
-Publishing is not the current optimization target. If `0.1.0-alpha.0` is published later:
-
-- verify registry-installed package behavior from a clean consumer project;
-- confirm release notes match the published tarball;
-- collect concrete user-facing friction;
-- feed those observations back into the evaluation loop.
-
 ## Release posture
 
-`0.1.0-alpha.0` can be treated as a public alpha candidate only when:
-
-- CI passes consistently;
-- README matches actual public implementation;
-- browser gaps are explicit;
-- transaction behavior is stable enough or explicitly scoped as alpha behavior;
-- deterministic realistic scenarios and architecture experiments in `release:check` pass;
-- `npm run release:check` passes on a clean checkout;
-- alpha release decision notes remain accurate.
-
-Passing this checklist does not imply production readiness and does not end the refinement loop.
+`0.1.0-alpha.0` remains a public alpha candidate only when deterministic scenarios/experiments in `release:check` pass and public documentation matches implementation. Passing these checks does not imply production readiness or end the refinement loop.
