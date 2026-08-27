@@ -10,6 +10,7 @@ StorekeeperDB is currently an alpha package. Do not publish a package only becau
 - Required Node flag for tests and runtime experiments: `--experimental-sqlite`
 - Browser runtime: not implemented
 - React runtime verification: covered by the test suite
+- Durable session posture: cross-process bootstrap semantics are exercised by a deterministic architecture experiment
 - Benchmark posture: observational timings, not a hard release gate
 - Consumer install posture: simulated through local `npm pack` tarball install
 - Alpha publish posture: manual only, `npm publish --tag alpha`, never `latest`
@@ -28,11 +29,39 @@ This performs:
 2. Runtime tests.
 3. Gate script.
 4. Demo script.
-5. Export artifact check for all package subpaths.
-6. Public documentation file check.
-7. Prepublish wording inspection for the alpha boundary.
-8. `npm pack --dry-run`.
-9. Consumer install smoke test from a generated local tarball.
+5. Cross-process durable-session bootstrap experiment.
+6. Export artifact check for all package subpaths.
+7. Public documentation file check.
+8. Prepublish wording inspection for the alpha boundary.
+9. `npm pack --dry-run`.
+10. Consumer install smoke test from a generated local tarball.
+
+## Durable session architecture experiment
+
+`release:check` runs:
+
+```bash
+npm run experiment:durable-session:check
+```
+
+The experiment uses one temporary SQLite file and two separate Node processes:
+
+```text
+writer process
+  -> writes __workspace manifest
+  -> writes additional durable states
+  -> closes and exits
+
+reader process
+  -> starts with the database path + __workspace only
+  -> reads manifest
+  -> discovers additional state keys dynamically
+  -> verifies recovered working state
+```
+
+This validates a narrow architecture invariant: StorekeeperDB source state can cross a process boundary, and discoverability can be prototyped above the core through a manifest convention.
+
+It does not validate autonomous agent memory, checkpoint policy, trust, multi-agent coordination, or distributed consistency.
 
 ## Consumer install smoke test
 
@@ -73,6 +102,7 @@ It verifies that the public docs still say:
 - the full browser adapter is not implemented
 - Node's `--experimental-sqlite` flag is required
 - benchmark timings are observational and not a hard release latency gate
+- the durable-variable / bootstrap model does not imply an agent-memory framework
 
 This check is intentionally conservative. It does not replace human review, but it prevents the most important alpha disclaimers from disappearing accidentally.
 
@@ -134,13 +164,15 @@ Before any npm publish:
 
 - Confirm README examples match the current runtime.
 - Confirm `docs/MANUAL.md` matches the current public API.
+- Confirm `docs/ARCHITECTURE.md` matches the implemented runtime boundaries.
+- Confirm `docs/DURABLE_VARIABLE_EXPERIMENT.md` does not overclaim agent/session semantics.
 - Confirm `docs/BENCHMARKS.md` describes the benchmark without overclaiming latency guarantees.
 - Confirm `docs/ALPHA_RELEASE_DECISION.md` still reflects the accepted alpha boundary.
 - Confirm `docs/RELEASE_NOTES_0.1.0-alpha.0.md` is suitable for the GitHub release body.
 - Run `npm run benchmark` manually if release notes will mention runtime observations.
 - Confirm `npm run consumer:smoke` passes if package boundary changes were made.
 - Confirm `CHANGELOG.md` describes the version being published.
-- Confirm open issues for browser, time-based decay, and metadata scoring are still accurately scoped.
+- Confirm open issues for realistic scenarios, durable-session architecture, browser, time-based decay, and metadata scoring are still accurately scoped.
 - Run `npm run release:check` on a clean checkout.
 - Use an alpha tag until the API is intentionally frozen.
 
