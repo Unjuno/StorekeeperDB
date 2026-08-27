@@ -68,6 +68,9 @@ if (!releaseCheck.includes("experiment:durable-session:check")) {
 if (!releaseCheck.includes("experiment:change-amplification:check")) {
   fail("release:check must include experiment:change-amplification:check");
 }
+if (!releaseCheck.includes("experiment:cli-change-amplification:check")) {
+  fail("release:check must include experiment:cli-change-amplification:check");
+}
 if (!releaseCheck.includes("scenario:issue-tracker:check")) {
   fail("release:check must include scenario:issue-tracker:check");
 }
@@ -77,6 +80,7 @@ if (releaseCheck.includes("benchmark:check")) {
 if (typeof pkg.scripts?.["consumer:smoke"] !== "string") fail("missing consumer:smoke script");
 if (typeof pkg.scripts?.["experiment:durable-session"] !== "string") fail("missing durable-session experiment script");
 if (typeof pkg.scripts?.["experiment:change-amplification"] !== "string") fail("missing change-amplification experiment script");
+if (typeof pkg.scripts?.["experiment:cli-change-amplification"] !== "string") fail("missing CLI change-amplification experiment script");
 if (typeof pkg.scripts?.["scenario:issue-tracker"] !== "string") fail("missing issue-tracker scenario script");
 
 const expectedFileEntries = ["dist", "README.md", "LICENSE", "CHANGELOG.md", "docs"];
@@ -101,6 +105,7 @@ const publicDocs = [
   "docs/ISSUE_TRACKER_EVALUATION.md",
   "docs/FIND_SEMANTICS_EVALUATION.md",
   "docs/CHANGE_AMPLIFICATION_EXPERIMENT.md",
+  "docs/CLI_METADATA_CHANGE_AMPLIFICATION_EXPERIMENT.md",
   "docs/MANUAL.md",
   "docs/EVALUATION_LOOP.md",
   "docs/BENCHMARKS.md",
@@ -138,6 +143,9 @@ const requiredPublicText: Array<[string, string]> = [
   ["docs/CHANGE_AMPLIFICATION_EXPERIMENT.md", "CANDIDATE PASS in CI #116"],
   ["docs/CHANGE_AMPLIFICATION_EXPERIMENT.md", "reduced explicit persistence edit surface"],
   ["docs/CHANGE_AMPLIFICATION_EXPERIMENT.md", "JSON-blob"],
+  ["docs/CLI_METADATA_CHANGE_AMPLIFICATION_EXPERIMENT.md", "MIXED in CI #122"],
+  ["docs/CLI_METADATA_CHANGE_AMPLIFICATION_EXPERIMENT.md", "singleton-list-boundary"],
+  ["docs/CLI_METADATA_CHANGE_AMPLIFICATION_EXPERIMENT.md", "MIXED_EDIT_ADVANTAGE_WITH_CONCEPT_COST"],
   ["docs/EVALUATION_LOOP.md", "Simple persistence should feel automatic. Hard persistence problems must remain observable and controllable."],
   ["docs/ALPHA_RELEASE_DECISION.md", "public alpha candidate"],
   ["docs/ALPHA_RELEASE_DECISION.md", "not a stable API release"],
@@ -162,6 +170,7 @@ console.log(JSON.stringify({
   hasConsumerSmoke: true,
   hasDurableSessionExperiment: true,
   hasChangeAmplificationExperiment: true,
+  hasCliChangeAmplificationReplication: true,
   hasIssueTrackerScenario: true,
   hasFindSemanticsDecision: true,
   pass: true,
