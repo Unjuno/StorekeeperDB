@@ -24,12 +24,14 @@
     "benchmark:check": "node --experimental-sqlite dist/scripts/benchmark.js",
     "experiment:durable-session": "npm run build && node --experimental-sqlite dist/scripts/durable_session_experiment.js",
     "experiment:durable-session:check": "node --experimental-sqlite dist/scripts/durable_session_experiment.js",
+    "experiment:change-amplification": "npm run build && node --experimental-sqlite dist/scripts/change_amplification_experiment.js",
+    "experiment:change-amplification:check": "node --experimental-sqlite dist/scripts/change_amplification_experiment.js",
     "scenario:issue-tracker": "npm run build && node --experimental-sqlite dist/scripts/issue_tracker_scenario.js",
     "scenario:issue-tracker:check": "node --experimental-sqlite dist/scripts/issue_tracker_scenario.js",
     "consumer:smoke": "node --experimental-sqlite scripts/consumer_smoke.mjs",
     "check:exports": "node dist/scripts/release_check.js",
     "pack:dry": "npm pack --dry-run",
-    "release:check": "npm run build && npm test && npm run gate && npm run demo:check && npm run experiment:durable-session:check && npm run scenario:issue-tracker:check && npm run check:exports && npm run pack:dry && npm run consumer:smoke"
+    "release:check": "npm run build && npm test && npm run gate && npm run demo:check && npm run experiment:durable-session:check && npm run experiment:change-amplification:check && npm run scenario:issue-tracker:check && npm run check:exports && npm run pack:dry && npm run consumer:smoke"
   },
   "engines": {
     "node": ">=22.5"

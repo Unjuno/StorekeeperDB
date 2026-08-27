@@ -8,8 +8,9 @@ StorekeeperDB is a public alpha candidate. The current priority is product refin
 - [Architecture](./ARCHITECTURE.md) — runtime layers, durable-variable model, and architectural boundaries.
 - [Evaluation loop](./EVALUATION_LOOP.md) — how to evaluate and refine the product during alpha.
 - [Next work](./NEXT_WORK.md) — current priorities and deferred research.
-- [Issue tracker evaluation](./ISSUE_TRACKER_EVALUATION.md) — realistic application-shape evolution and query-semantics scenario.
-- [`find()` semantics evaluation](./FIND_SEMANTICS_EVALUATION.md) — snapshot vs durable-handle design experiment.
+- [Issue tracker evaluation](./ISSUE_TRACKER_EVALUATION.md) — realistic compatible application-shape evolution and query-to-update scenario.
+- [`find()` semantics evaluation](./FIND_SEMANTICS_EVALUATION.md) — durable-handle vs snapshot decision record.
+- [Change amplification experiment](./CHANGE_AMPLIFICATION_EXPERIMENT.md) — direct-SQL baselines vs StorekeeperDB for V1 -> V2 persistence-specific edit surface.
 - [Benchmarks](./BENCHMARKS.md) — reproducible observations; timings are not release guarantees.
 - [Demo](./DEMO.md) — executable runtime walkthrough.
 
@@ -23,8 +24,9 @@ StorekeeperDB is a public alpha candidate. The current priority is product refin
 
 ## Runtime and experiments
 
-These documents explain implementation experiments or narrower runtime behavior. They are useful when evaluating a specific subsystem, but are not the main entry point for new users.
+These documents record experimental evidence and narrower runtime behavior. They are useful for understanding why a contract exists and where it has not yet generalized.
 
+- [Change amplification experiment](./CHANGE_AMPLIFICATION_EXPERIMENT.md)
 - [Durable variable / session bootstrap experiment](./DURABLE_VARIABLE_EXPERIMENT.md)
 - [`find()` semantics evaluation](./FIND_SEMANTICS_EVALUATION.md)
 - [Magic lifecycle](./MAGIC_LIFECYCLE.md)
@@ -44,7 +46,7 @@ Avoid:
 
 - presenting the alpha as production-ready;
 - adding features without a demonstrated scenario;
-- treating benchmark timings as guarantees;
+- treating benchmark timings or one application experiment as general guarantees;
 - implying that the experimental async boundary is a complete browser adapter;
 - growing the public API when simplification or removal would solve the same problem.
 
@@ -55,4 +57,5 @@ The default loop is:
 3. record friction, surprise, failure, documentation gaps, and performance roughness;
 4. make the smallest runtime, API, test, or documentation change that addresses the finding;
 5. run `npm run release:check` and any scenario-specific checks;
-6. record the result in the PR and update [Next work](./NEXT_WORK.md) when priorities change.
+6. record the result and uncertainty in the PR;
+7. update [Next work](./NEXT_WORK.md) before generalizing the result.
