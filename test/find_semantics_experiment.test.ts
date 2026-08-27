@@ -9,6 +9,7 @@ type Task = {
   title: string;
   done: boolean;
   priority?: "low" | "high" | "urgent";
+  meta?: { note: string; labels?: string[] };
 };
 
 function tempDb() {
@@ -112,24 +113,42 @@ test("experiment: durable handle identity survives reorder and rollback invalida
   }
 });
 
-test("experiment: removed durable handles currently can resurrect deleted rows", () => {
+test("removed durable handles become read-only stale references and cannot resurrect rows", () => {
   const t = tempDb();
   try {
     let sk = new StorekeeperDB(t.path);
     const tasks = sk.state<Task[]>("tasks", []);
-    tasks.push({ title: "A", done: false, priority: "urgent" });
+    tasks.push({ title: "A", done: false, priority: "urgent", meta: { note: "a", labels: [] } });
+    tasks.push({ title: "B", done: false, priority: "high", meta: { note: "b", labels: [] } });
+    tasks.push({ title: "C", done: false, priority: "low", meta: { note: "c", labels: [] } });
 
-    const handle = tasks.filter((task) => task.priority === "urgent")[0]!;
-    tasks.splice(0, 1);
+    const shiftedHandle = tasks[0]!;
+    const shiftedMeta = shiftedHandle.meta!;
+    const splicedHandle = tasks[1]!;
+    const poppedHandle = tasks[2]!;
+
+    const popped = tasks.pop()!;
+    assert.equal(popped, poppedHandle);
+    assert.equal(popped.title, "C");
+    assert.throws(() => { poppedHandle.title = "resurrected-pop"; }, /after removal/);
+
+    const shifted = tasks.shift()!;
+    assert.equal(shifted, shiftedHandle);
+    assert.equal(shifted.title, "A");
+    assert.throws(() => { shiftedHandle.title = "resurrected-shift"; }, /after removal/);
+    assert.throws(() => { shiftedMeta.note = "resurrected-nested"; }, /after removal/);
+
+    const [spliced] = tasks.splice(0, 1);
+    assert.equal(spliced, splicedHandle);
+    assert.equal(spliced!.title, "B");
+    assert.throws(() => { splicedHandle.title = "resurrected-splice"; }, /after removal/);
+
     assert.equal(tasks.length, 0);
-
-    handle.title = "resurrected";
     sk.close();
 
     sk = new StorekeeperDB(t.path);
     const reopened = sk.state<Task[]>("tasks", []);
-    assert.equal(reopened.length, 1);
-    assert.equal(reopened[0]!.title, "resurrected");
+    assert.equal(reopened.length, 0);
     sk.close();
   } finally {
     t.cleanup();
