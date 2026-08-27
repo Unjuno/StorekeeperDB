@@ -70,6 +70,7 @@ if (!releaseCheck.includes("experiment:singleton-object-surface:check")) fail("r
 if (!releaseCheck.includes("experiment:agent-decision-burden:check")) fail("release:check must include experiment:agent-decision-burden:check");
 if (!releaseCheck.includes("experiment:agent-project-convention:check")) fail("release:check must include experiment:agent-project-convention:check");
 if (!releaseCheck.includes("experiment:declaration-key-rename:check")) fail("release:check must include experiment:declaration-key-rename:check");
+if (!releaseCheck.includes("experiment:collection-rename-projection:check")) fail("release:check must include experiment:collection-rename-projection:check");
 if (!releaseCheck.includes("scenario:issue-tracker:check")) fail("release:check must include scenario:issue-tracker:check");
 if (releaseCheck.includes("benchmark:check")) fail("release:check must not include benchmark:check while benchmark timing is observational");
 
@@ -83,6 +84,7 @@ const requiredScripts = [
   "experiment:agent-decision-burden",
   "experiment:agent-project-convention",
   "experiment:declaration-key-rename",
+  "experiment:collection-rename-projection",
   "scenario:issue-tracker",
 ];
 for (const script of requiredScripts) {
@@ -116,6 +118,7 @@ const publicDocs = [
   "docs/AGENT_DECISION_BURDEN_EXPERIMENT.md",
   "docs/AGENT_PROJECT_CONVENTION_EXPERIMENT.md",
   "docs/DECLARATION_KEY_RENAME_EXPERIMENT.md",
+  "docs/COLLECTION_RENAME_PROJECTION_EXPERIMENT.md",
   "docs/MANUAL.md",
   "docs/EVALUATION_LOOP.md",
   "docs/BENCHMARKS.md",
@@ -172,9 +175,15 @@ const requiredPublicText: Array<[string, string]> = [
   ["docs/DECLARATION_KEY_RENAME_EXPERIMENT.md", "Naive property rename silently initializes fresh state"],
   ["docs/DECLARATION_KEY_RENAME_EXPERIMENT.md", "The alias does not physically rename the StorekeeperDB state key."],
   ["docs/DECLARATION_KEY_RENAME_EXPERIMENT.md", "No public API decision is made by this experiment."],
+  ["docs/COLLECTION_RENAME_PROJECTION_EXPERIMENT.md", "CANDIDATE PASS"],
+  ["docs/COLLECTION_RENAME_PROJECTION_EXPERIMENT.md", "CANDIDATE_PASS_LOGICAL_RENAME_PRESERVES_PHYSICAL_DERIVED_STATE"],
+  ["docs/COLLECTION_RENAME_PROJECTION_EXPERIMENT.md", "The experiment does **not** show successful migration of projection metadata"],
+  ["docs/COLLECTION_RENAME_PROJECTION_EXPERIMENT.md", "manifest binds workItems -> tasks"],
+  ["docs/COLLECTION_RENAME_PROJECTION_EXPERIMENT.md", "No public API surface is authorized by this result."],
   ["docs/NEXT_WORK.md", "Persistence should normally not enter the coding agent's planning loop."],
   ["docs/NEXT_WORK.md", "CANDIDATE_PREFER_EXPLICIT_RENAME_ALIAS_WITH_IDENTITY_MANIFEST"],
-  ["docs/NEXT_WORK.md", "collection/projection rename has not yet been exercised"],
+  ["docs/NEXT_WORK.md", "CANDIDATE_PASS_LOGICAL_RENAME_PRESERVES_PHYSICAL_DERIVED_STATE"],
+  ["docs/NEXT_WORK.md", "Test a multi-step rename chain"],
   ["docs/EVALUATION_LOOP.md", "Simple persistence should feel automatic. Hard persistence problems must remain observable and controllable."],
   ["docs/ALPHA_RELEASE_DECISION.md", "public alpha candidate"],
   ["docs/ALPHA_RELEASE_DECISION.md", "not a stable API release"],
@@ -205,6 +214,7 @@ console.log(JSON.stringify({
   hasAgentDecisionBurdenExperiment: true,
   hasAgentProjectConventionExperiment: true,
   hasDeclarationKeyRenameExperiment: true,
+  hasCollectionRenameProjectionExperiment: true,
   hasIssueTrackerScenario: true,
   hasFindSemanticsDecision: true,
   pass: true,
