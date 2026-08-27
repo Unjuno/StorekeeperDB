@@ -12,58 +12,61 @@ Working rule:
 
 > **Persistence should normally not enter the coding agent's planning loop. Hard persistence problems must remain observable and controllable.**
 
-See [Alpha evaluation loop](./EVALUATION_LOOP.md), [Architecture](./ARCHITECTURE.md), [Agent project convention experiment](./AGENT_PROJECT_CONVENTION_EXPERIMENT.md), [Declaration key rename experiment](./DECLARATION_KEY_RENAME_EXPERIMENT.md), [Collection rename + projection experiment](./COLLECTION_RENAME_PROJECTION_EXPERIMENT.md), [Multi-step declaration rename experiment](./MULTI_STEP_DECLARATION_RENAME_EXPERIMENT.md), [State split migration boundary experiment](./STATE_SPLIT_MERGE_BOUNDARY_EXPERIMENT.md), and [State merge migration boundary experiment](./STATE_MERGE_BOUNDARY_EXPERIMENT.md).
+See [Alpha evaluation loop](./EVALUATION_LOOP.md), [Architecture](./ARCHITECTURE.md), [State split migration boundary experiment](./STATE_SPLIT_MERGE_BOUNDARY_EXPERIMENT.md), [State merge migration boundary experiment](./STATE_MERGE_BOUNDARY_EXPERIMENT.md), and [Scalar-to-object value evolution experiment](./SCALAR_TO_OBJECT_VALUE_EVOLUTION_EXPERIMENT.md).
 
 ## Active priorities
 
-### 1. Evaluate incompatible value evolution
+### 1. Probe enum narrowing incompatible value evolution
 
-Status: **next hard migration experiment after split and merge boundary confirmation.**
+Status: **next value-semantic replication after scalar-to-object boundary confirmation in CI #211.**
 
-Probe deliberately incompatible value changes in one stable durable state identity:
+Keep durable state identity and the field path unchanged:
 
 ```text
-scalar -> structured object
-enum widening/narrowing
-optional -> required field
-field deletion with dependent query/projection metadata
+V1 mode: "auto" | "manual" | "legacy"
+  ->
+V2 mode: "auto" | "manual"
 ```
 
-The first scenario should keep identity stable and change value meaning, so durable-key rename cannot explain the result.
+Required cases:
 
-Required properties:
-
-1. persisted V1 values must survive reopen before migration;
-2. merely changing the TypeScript declaration must not be counted as a successful migration if stored V1 values remain semantically incompatible;
-3. an explicit transform must run atomically in `batch()`;
-4. source reads/validation must occur inside the transaction when they affect observation metadata;
-5. failure injection must restore values, projections/derivations, and observation counters exactly;
-6. successful retry must reopen in the V2 shape;
-7. narrowing/required-field cases must reject unmappable inputs rather than invent defaults silently;
-8. no new public migration API should be added unless the experiment shows repeated unavoidable ceremony beyond the tested primitives.
+1. persist `"legacy"`, establish a projection on `mode`, close, and reopen under the narrower V2 TypeScript type;
+2. verify declaration-only reopen leaves the runtime value as `"legacy"` rather than validating or transforming it;
+3. require an explicit policy such as `legacy -> manual` for a successful transform;
+4. without a policy, reject atomically and leave value plus metadata unchanged;
+5. inject failure after the value mutation and verify exact rollback of item, path counters/types, derivation, and projection;
+6. after successful transform, verify the existing `mode` scalar projection remains coherent or is explicitly rebuilt if required;
+7. close/reopen and verify only an allowed V2 value remains.
 
 Primary question:
 
-> Where exactly does StorekeeperDB's compatible JSON evolution stop, and what is the minimum explicit migration contract needed once a value's meaning changes?
+> Does enum narrowing confirm the same boundary as scalar-to-object evolution—static type change is not durable validation, while explicit application policy plus current transactional primitives is sufficient?
 
-Candidate first case:
+Candidate decision:
 
 ```text
-V1: retryDelayMs: number
-V2: retryPolicy: { delayMs: number; maxAttempts: number }
+BOUNDARY_CONFIRMED_ENUM_NARROWING_REQUIRES_EXPLICIT_VALUE_POLICY
+MIXED_RUNTIME_SUPPORT_WITH_PROJECTION_GAP
+INVALID_EXPERIMENT
 ```
 
-This forces a semantic scalar-to-object transform and an explicit value for newly required `maxAttempts`.
+Do not add a validation/schema DSL in this experiment.
 
-### 2. Evaluate migration idempotency and crash/retry markers
+### 2. Probe required-field introduction independently
 
-Status: planned after incompatible value transformation.
+Status: planned after enum narrowing.
 
-Split and merge experiments prove transaction rollback inside one process, but do not establish how a migration is recognized, retried, or skipped after process interruption or version skew.
+Scalar-to-object #64 already required an explicit `maxAttempts` value, but that requirement was coupled to a representation change. A separate experiment should add a genuinely required field to otherwise-compatible object shape and determine whether missing persisted values should be rejected, explicitly backfilled, or represented as a versioned migration obligation.
+
+### 3. Evaluate migration idempotency and crash/retry markers
+
+Status: planned after incompatible-value replication.
+
+Split, merge, and scalar-to-object experiments prove in-process transaction rollback. They do not establish how a migration is recognized, retried, or skipped after process interruption or old/new application version skew.
 
 Evaluate whether a minimal migration marker/version convention is sufficient before considering any migration DSL.
 
-### 3. Replicate the project convention in a third topology
+### 4. Replicate the project convention in a third topology
 
 Status: **candidate direction, not public API.**
 
@@ -71,7 +74,7 @@ PR #49 reused the same generic helper unchanged across project-board and editor/
 
 Test a third topology such as agent workspace/checkpoints or a multi-list workflow. The exact `openProjectStore/list/object` names remain experiment placeholders only.
 
-### 4. Reuse durable-session bootstrap with project identity
+### 5. Reuse durable-session bootstrap with project identity
 
 Status: initial cross-process bootstrap PASS; integration unproven.
 
@@ -80,6 +83,44 @@ The existing `__workspace` bootstrap experiment shows that one known key can dis
 Do not add a general workspace/agent-memory API until reuse is demonstrated.
 
 ## Current experimental evidence
+
+### Scalar-to-object incompatible value evolution — #64
+
+Status: **BOUNDARY CONFIRMED in CI #211; experiment-only.**
+
+The test deliberately held stable:
+
+```text
+state key       jobs
+item identity   JOB-1
+field path      retryPolicy
+```
+
+while changing only the field's persisted semantic representation:
+
+```text
+number
+  ->
+{ delayMs: number; maxAttempts: number }
+```
+
+Declaration-only reopen through the V2 TypeScript type left the runtime value as the original number `750`; no automatic object conversion or fresh default occurred, and the old scalar projection remained present.
+
+The explicit migration then performed source read/validation, required-field policy, scalar-to-object replacement, and obsolete projection eviction inside one outer `batch()`. Failure injection restored the complete item/path/derivation/projection snapshot exactly. Retry succeeded, a nested `retryPolicy.delayMs` projection was created by `find()`, the returned item remained a durable handle, and reopen preserved the V2 object.
+
+Missing `maxAttempts` policy rejected atomically rather than inventing a default.
+
+Machine result:
+
+```text
+BOUNDARY_CONFIRMED_SCALAR_TO_OBJECT_REQUIRES_EXPLICIT_VALUE_MIGRATION
+```
+
+Interpretation:
+
+> **TypeScript declaration change alone does not migrate persisted semantic shape.** Durable identity can stay stable while an explicit value migration becomes necessary.
+
+This completes the first case under **Evaluate incompatible value evolution**. It does not justify a public migration API.
 
 ### Many-to-one declared-state merge migration — #60
 
@@ -94,11 +135,9 @@ preferences { compactMode, locale }
 profile { displayName, compactMode, locale }
 ```
 
-Naive merge failed safely before target creation. Misusing one-to-one aliasing as `profile from account` was also rejected because `preferences` remained an unexplained removed source.
+Naive merge failed safely. One-to-one alias misuse was rejected because the second source remained unexplained. Explicit merge placed reads, conflict resolution, target construction, source retirement, manifest transition, and metadata cleanup in one outer `batch()`.
 
-The explicit migration then placed source reads, conflict resolution, target construction, source retirement, manifest mutation, and metadata cleanup inside one outer `batch()`. Failure injected after all mutations restored both source values, target absence, identity bindings, projections/derivations, and exact source path counters. Retry succeeded and reopened with one `profile` state.
-
-With conflicting source locales, merge without a policy failed. Explicit `prefer-account` deterministically persisted `en-US`.
+Failure injection restored source values, target absence, identity bindings, projections/derivations, and exact observation counters. Conflicting locales required an explicit resolution policy.
 
 Machine result:
 
@@ -106,28 +145,11 @@ Machine result:
 BOUNDARY_CONFIRMED_MERGE_REQUIRES_EXPLICIT_CONFLICT_AWARE_MIGRATION
 ```
 
-Interpretation:
-
-> Many-to-one merge is a semantic migration, not identity aliasing. Conflict resolution belongs to explicit application/migration policy, and the atomic unit must include source reads/validation when those reads affect behavior-driving metadata.
-
-No public migration API is authorized by this result.
-
 ### Declared-state split migration boundary — #56
 
 Status: **BOUNDARY CONFIRMED in CI #192; experiment-only.**
 
-Scenario:
-
-```text
-profile { displayName, compactMode }
-  ->
-account { displayName }
-preferences { compactMode }
-```
-
-Naive remove+add failed before target creation and preserved the source/manifest. Misusing `account from profile` plus fresh `preferences` produced a structurally valid but semantically incomplete result: the persisted `compactMode` value was lost.
-
-An explicit migration using `StorekeeperDB.batch()`, durable states, manifest mutation, projection eviction, and source metadata compaction was failure-injected after all writes. Rollback restored source, absent targets, manifest, derivation, and projection; retry succeeded and reopened with both transformed values.
+Naive split failed safely. Misusing one-to-one aliasing could produce a structurally valid but semantically incomplete result, losing persisted source meaning. Explicit transactional transform with source retirement and metadata cleanup succeeded under failure injection and reopen.
 
 Machine result:
 
@@ -139,85 +161,28 @@ BOUNDARY_CONFIRMED_SPLIT_REQUIRES_EXPLICIT_ATOMIC_MIGRATION
 
 Status: **fixed in PR #63 / CI #202.**
 
-The merge experiment exposed that `memorySnapshot()` cloned observable proxies and thereby incremented `__sk_paths.read_count` before transaction start. Internal snapshot reads are now observation-suppressed while callback reads remain observable and rollback correctly.
-
-This is a runtime hardening result, not a migration API change.
+Internal rollback snapshot reads no longer increment application observation counters. Callback reads remain observable and roll back with a failed transaction.
 
 ### `debug().compactMetadata()` static type mismatch — #58
 
 Status: **fixed in PR #59 / CI #199.**
 
-The concrete `StorekeeperDB.debug()` return type now agrees with the already-exported `StorekeeperDebugAPI`, allowing object-form `compactMetadata({ stateKey, ... })` without a cast. Runtime behavior was unchanged.
+The concrete `StorekeeperDB.debug()` type now agrees with the exported `StorekeeperDebugAPI`; runtime behavior was unchanged.
 
-### Multi-step declaration rename — #54
+### Durable identity / rename chain
 
-Status: **CANDIDATE PASS in CI #183; experiment-only.**
+- #50: `CANDIDATE_PREFER_EXPLICIT_RENAME_ALIAS_WITH_IDENTITY_MANIFEST`
+- #52: `CANDIDATE_PASS_LOGICAL_RENAME_PRESERVES_PHYSICAL_DERIVED_STATE`
+- #54: `CANDIDATE_PASS_MULTI_STEP_RENAME_RETAINS_SINGLE_PHYSICAL_IDENTITY`
 
-Tested `settings -> preferences -> configuration` while retaining physical key `settings`. Missing/stale/nonexistent aliases and kind mismatch all failed loudly; current value/manifest remained intact after rejected attempts.
+Together these support one-to-one logical rename over stable physical identity, not general migration inference.
 
-Machine result:
+### Agent-facing and change-amplification evidence
 
-```text
-CANDIDATE_PASS_MULTI_STEP_RENAME_RETAINS_SINGLE_PHYSICAL_IDENTITY
-```
-
-### Collection rename with active projection — #52
-
-Status: **CANDIDATE PASS in CI #175 / final synchronized gate CI #181.**
-
-Logical `tasks -> workItems` retained physical key `tasks`, source rows and projection cells remained in one physical namespace, and projected-field mutation stayed durable and index-consistent.
-
-Machine result:
-
-```text
-CANDIDATE_PASS_LOGICAL_RENAME_PRESERVES_PHYSICAL_DERIVED_STATE
-```
-
-### Declaration property rename / durable identity — #50
-
-Status: **CANDIDATE PASS in CI #168 / final synchronized gate CI #173.**
-
-Naive property-derived identity silently initialized fresh state and duplicated physical state. Fail-loudly manifest and explicit one-shot alias paths avoided this; stable durable ids also worked but added an upfront compatible-path decision.
-
-Machine result:
-
-```text
-CANDIDATE_PREFER_EXPLICIT_RENAME_ALIAS_WITH_IDENTITY_MANIFEST
-```
-
-### Agent-facing durable project convention — #48
-
-Status: **CANDIDATE PASS; final synchronized CI #165.**
-
-The same generic helper was reused unchanged in project-board and editor/workspace scenarios:
-
-```text
-project board      7 -> 5 decisions; 14 -> 8 persistence lines
-editor/workspace   7 -> 5 decisions; 14 -> 8 persistence lines
-```
-
-This supports a project-level architecture direction, not the exact public API.
-
-### Agent persistence decision burden — #46
-
-Status: **CANDIDATE PASS in CI #147 / final synchronized gate CI #153.**
-
-Measured persistence-specific decision categories:
-
-```text
-relational SQLite  8
-JSON-blob SQLite   8
-StorekeeperDB      7
-```
-
-This is an auditable implementation proxy, not a measurement of hidden reasoning.
-
-### Singleton/root and change-amplification evidence
-
-- Singleton-object surface #44: no clear winner; no public API change.
-- First change-amplification scenario #36: StorekeeperDB 8 changed persistence lines vs 14 for strongest JSON-blob baseline, concept count tied 4 vs 4.
-- CLI metadata replication #38: 8 vs 12 changed lines but 5 vs 4 concepts due to singleton-list boundary.
-- Root-state semantics #40/#42: narrow singleton/object adaptation can reuse current lifecycle semantics; broad arbitrary-root `state()` remains unsupported.
+- Agent project convention: 7 -> 5 measured per-prototype persistence decisions in two scenarios.
+- Agent decision burden: relational 8, JSON blob 8, StorekeeperDB 7 decision categories.
+- Compatible change amplification: StorekeeperDB reduced persistence-specific changed lines in two small JSON-style scenarios, but did not generally reduce concept count below the JSON-blob baseline.
+- Singleton/root experiments did not justify a broad arbitrary-root public API.
 
 ## Resolved command/read semantics
 
@@ -232,47 +197,49 @@ Removed references remain readable but cannot write deleted rows back. Rollback 
 
 ## Confirmed architecture boundaries
 
-### Logical vs physical durable identity
+### Identity evolution vs value-semantic evolution
+
+Current evidence separates two independent axes:
 
 ```text
-logical declaration name
-  configuration
-      |
-      v
-current identity binding
-      |
-      v
-physical StorekeeperDB key
-  settings
-```
+logical identity changes, value meaning stable
+  -> explicit one-to-one rename alias
+  -> physical identity can remain stable
 
-For queried collections, the same physical namespace owns source rows, paths, projections, and derivations. The tested manifest keeps only the current logical binding; it is not a rename-history registry.
+logical identity stable, value meaning incompatible
+  -> TypeScript type change is insufficient
+  -> explicit value interpretation/policy
+  -> transactional transform
+  -> derived metadata reconciliation
+```
 
 ### Evolution classes now observed
 
 ```text
-compatible value evolution
-  -> automatic where semantics remain compatible
+compatible additive JSON evolution
+  -> automatic in tested scenarios
 
 one-to-one logical rename
   -> explicit identity alias
-  -> stable physical identity
 
-split / merge / semantic transform
-  -> explicit value transformation
-  -> source reads + validation inside transaction
-  -> explicit conflict policy when required
+split / merge
+  -> explicit semantic transform
   -> explicit source retirement
-  -> derived metadata cleanup
+  -> conflict policy where required
+
+scalar -> structured object
+  -> explicit value transform
+  -> explicit required-field policy
+  -> obsolete projection retirement / nested projection rebuild
 ```
 
-The split and merge experiments show that structural identity validity is insufficient to prove semantic preservation.
+The key boundary is semantic preservation, not merely whether a TypeScript type changed.
 
 ### Hard persistence boundaries
 
 The agent-first goal does not authorize hiding incompatible value transformation, split/merge, durable identity rename, corruption, concurrent writers, transaction failures, or durability uncertainty. When the runtime cannot preserve semantics safely, the persistence problem must become explicit.
 
-Automatic heuristic rename, split, or merge matching based on shape, content, or declaration order is not supported by current evidence.
+Automatic heuristic rename, split, merge, or incompatible-value conversion from declaration shape/content/order is not supported by current evidence.
 
 ## Deferred research
 

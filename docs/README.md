@@ -17,6 +17,7 @@ The current product direction is agent-oriented: reduce the persistence-specific
 - [Multi-step declaration rename experiment](./MULTI_STEP_DECLARATION_RENAME_EXPERIMENT.md) — verifies repeated logical renames retain one physical identity without accumulating rename history.
 - [State split migration boundary experiment](./STATE_SPLIT_MERGE_BOUNDARY_EXPERIMENT.md) — confirms one-to-many split requires explicit value transformation, atomicity, source retirement, and metadata cleanup.
 - [State merge migration boundary experiment](./STATE_MERGE_BOUNDARY_EXPERIMENT.md) — confirms many-to-one merge requires an explicit transactional transform and conflict policy when sources disagree.
+- [Scalar-to-object value evolution experiment](./SCALAR_TO_OBJECT_VALUE_EVOLUTION_EXPERIMENT.md) — confirms that a static TypeScript shape change does not migrate persisted semantic representation and that explicit transform/policy is required.
 - [Issue tracker evaluation](./ISSUE_TRACKER_EVALUATION.md) — realistic compatible application-shape evolution and query-to-update scenario.
 - [`find()` semantics evaluation](./FIND_SEMANTICS_EVALUATION.md) — durable-handle vs snapshot decision record.
 - [Change amplification experiment](./CHANGE_AMPLIFICATION_EXPERIMENT.md) — first direct-SQL comparison for compatible model evolution.
@@ -44,6 +45,7 @@ These documents record experimental evidence and narrower runtime behavior. They
 - [Multi-step declaration rename experiment](./MULTI_STEP_DECLARATION_RENAME_EXPERIMENT.md)
 - [State split migration boundary experiment](./STATE_SPLIT_MERGE_BOUNDARY_EXPERIMENT.md)
 - [State merge migration boundary experiment](./STATE_MERGE_BOUNDARY_EXPERIMENT.md)
+- [Scalar-to-object value evolution experiment](./SCALAR_TO_OBJECT_VALUE_EVOLUTION_EXPERIMENT.md)
 - [Change amplification experiment](./CHANGE_AMPLIFICATION_EXPERIMENT.md)
 - [CLI metadata replication](./CLI_METADATA_CHANGE_AMPLIFICATION_EXPERIMENT.md)
 - [Root-state semantics evaluation](./ROOT_STATE_SEMANTICS_EVALUATION.md)
