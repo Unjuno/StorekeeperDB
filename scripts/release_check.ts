@@ -163,7 +163,7 @@ const requiredPublicText: Array<[string, string]> = [
   ["docs/AGENT_PROJECT_CONVENTION_EXPERIMENT.md", "CANDIDATE PASS in CI #159"],
   ["docs/AGENT_PROJECT_CONVENTION_EXPERIMENT.md", "project board | 7 | **5** | 2"],
   ["docs/AGENT_PROJECT_CONVENTION_EXPERIMENT.md", "property rename is now persistence-significant"],
-  ["docs/AGENT_PROJECT_CONVENTION_EXPERIMENT.md", "find() remains scalar-predicate-only"],
+  ["docs/AGENT_PROJECT_CONVENTION_EXPERIMENT.md", "`find()` remains scalar-predicate-only"],
   ["docs/NEXT_WORK.md", "Persistence should normally not enter the coding agent's planning loop."],
   ["docs/NEXT_WORK.md", "property-name-derived keys make rename persistence-significant"],
   ["docs/EVALUATION_LOOP.md", "Simple persistence should feel automatic. Hard persistence problems must remain observable and controllable."],
