@@ -32,6 +32,7 @@ Initial public alpha baseline plus iterative hardening from realistic evaluation
 - Declaration-property rename experiment comparing naive property-derived keys, fail-loudly identity tracking, one-shot rename aliasing, and stable durable ids without changing public exports.
 - Collection-rename projection experiment verifying logical list rename while retaining one physical source/projection namespace.
 - Multi-step declaration-rename experiment verifying repeated logical renames retain one physical identity and one current manifest binding.
+- Declared-state split migration-boundary experiment confirming one-to-many transformation requires explicit value mapping, atomic target creation/source retirement, and metadata cleanup.
 - Consumer install smoke test through `npm run consumer:smoke`.
 - Real React verification using `useSyncExternalStore` and `react-test-renderer`.
 - Experimental async write-behind durability-boundary model through `@storekeeper/db/experimental`.
@@ -56,7 +57,7 @@ Initial public alpha baseline plus iterative hardening from realistic evaluation
 - Automatic derived GC protects the lookup path used by the current `find()` call from the same collection pass.
 - Metadata compaction preserves source rows, projection cells, and projection-backed observations.
 - Benchmark script performs semantic pass/fail checks while keeping latency observational.
-- Release checks run the cross-process durable-session experiment, change-amplification experiments, root-state/singleton probes, agent decision-burden experiment, agent project-convention experiment, declaration-key rename experiment, collection-rename projection experiment, multi-step declaration-rename experiment, and realistic issue-tracker scenario.
+- Release checks run the cross-process durable-session experiment, change-amplification experiments, root-state/singleton probes, agent decision-burden experiment, agent project-convention experiment, declaration-key rename experiment, collection-rename projection experiment, multi-step declaration-rename experiment, split migration-boundary experiment, and realistic issue-tracker scenario.
 - Release checks install the generated tarball into a temporary consumer project and verify public subpath imports.
 - Release checks inspect key alpha wording and documented semantic boundaries before packaging.
 - README and next-work documentation prioritize realistic evaluation over promotion or speculative feature growth.
@@ -103,7 +104,11 @@ liveFind() result values -> detached stable snapshots
 - Missing alias, stale original alias, nonexistent alias source, object/list kind mismatch, and an expired previous logical source all failed loudly in CI #183; after each rejected attempt the current value and manifest remained intact.
 - CI #183 selected `CANDIDATE_PASS_MULTI_STEP_RENAME_RETAINS_SINGLE_PHYSICAL_IDENTITY`.
 - The multi-step result supports the identity manifest as a current logical-to-physical binding rather than a rename-history registry for the tested one-state chain.
-- Split/merge and incompatible value transformation remain outside the one-to-one alias result and are the next hard migration boundary to test.
+- Split boundary CI #192 confirmed that naive remove+add is rejected safely, while misusing `account from profile` plus fresh `preferences` can produce a structurally valid but semantically incomplete split with the persisted `compactMode` silently lost.
+- CI #192 selected `BOUNDARY_CONFIRMED_SPLIT_REQUIRES_EXPLICIT_ATOMIC_MIGRATION`.
+- The explicit split migration used `batch()` plus durable state, identity-manifest mutation, projection eviction, and metadata compaction. Failure injected after all writes rolled back source retirement, target creation, manifest mutation, projection eviction, and metadata cleanup; retry then succeeded and reopened with both transformed values.
+- One-to-one aliasing is therefore retained as an identity-only mechanism and must not be presented as general migration semantics.
+- CI #191 also exposed a concrete static type mismatch: the exported `StorekeeperDebugAPI` accepts object-form `compactMetadata()` options, while the concrete `StorekeeperDB.debug()` inferred type is narrower. This is queued as a separate minimal fix.
 - The convention's query wrapper was explicitly narrowed to StorekeeperDB's existing scalar-predicate `find()` contract after CI #158 exposed an overly broad prototype type.
 
 ### Boundaries
@@ -120,6 +125,7 @@ liveFind() result values -> detached stable snapshots
 - Previous logical rename names are consumed rather than accumulated in the tested multi-step chain.
 - Logical rename retains the old physical StorekeeperDB key and therefore retains source and derived metadata in that physical namespace.
 - One-to-one rename evidence does not authorize state split/merge, arbitrary value transformation, or source retirement by inference.
+- One-to-many split requires explicit semantic value mapping and an atomic migration boundary; structural identity validity alone does not prove semantic preservation.
 - Automatic heuristic rename, split, or merge inference from shape, content, or declaration order is not supported.
 - The agent-first direction does not authorize hiding incompatible migrations, key renames, corruption, concurrent writers, transaction failures, or durability uncertainty.
 - Durable-session `__workspace` is an experiment convention, not a reserved core API.
