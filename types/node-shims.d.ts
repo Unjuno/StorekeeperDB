@@ -45,6 +45,19 @@ declare module "node:perf_hooks" {
   export const performance: { now(): number };
 }
 
+declare module "node:child_process" {
+  export function execFileSync(
+    command: string,
+    args: string[],
+    options: { encoding: "utf8"; stdio?: "pipe" },
+  ): string;
+  export function execFileSync(
+    command: string,
+    args: string[],
+    options?: { stdio?: "inherit" | "pipe" },
+  ): unknown;
+}
+
 declare const console: {
   log(...args: unknown[]): void;
   error(...args: unknown[]): void;
@@ -55,5 +68,7 @@ declare const process: {
   versions: { node: string };
   platform: string;
   arch: string;
+  execPath: string;
+  argv: string[];
   exit(code?: number): never;
 };
