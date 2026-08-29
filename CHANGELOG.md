@@ -33,6 +33,10 @@ Initial public alpha baseline plus iterative hardening from realistic evaluation
 - Collection-rename projection experiment verifying logical list rename while retaining one physical source/projection namespace.
 - Multi-step declaration-rename experiment verifying repeated logical renames retain one physical identity and one current manifest binding.
 - Declared-state split migration-boundary experiment confirming one-to-many transformation requires explicit value mapping, atomic target creation/source retirement, and metadata cleanup.
+- Many-to-one merge migration-boundary experiment confirming explicit conflict policy, atomic source retirement, and metadata cleanup are required.
+- Scalar-to-object incompatible-value experiment confirming a TypeScript shape change does not migrate persisted representation.
+- Enum-narrowing incompatible-value experiment confirming a narrower TypeScript union does not validate or remap persisted values.
+- Required-field incompatible-value experiment confirming a required TypeScript property/default does not backfill existing durable rows.
 - Consumer install smoke test through `npm run consumer:smoke`.
 - Real React verification using `useSyncExternalStore` and `react-test-renderer`.
 - Experimental async write-behind durability-boundary model through `@storekeeper/db/experimental`.
@@ -57,7 +61,7 @@ Initial public alpha baseline plus iterative hardening from realistic evaluation
 - Automatic derived GC protects the lookup path used by the current `find()` call from the same collection pass.
 - Metadata compaction preserves source rows, projection cells, and projection-backed observations.
 - Benchmark script performs semantic pass/fail checks while keeping latency observational.
-- Release checks run the cross-process durable-session experiment, change-amplification experiments, root-state/singleton probes, agent decision-burden experiment, agent project-convention experiment, declaration-key rename experiment, collection-rename projection experiment, multi-step declaration-rename experiment, split migration-boundary experiment, and realistic issue-tracker scenario.
+- Release checks run the cross-process durable-session experiment, change-amplification experiments, root-state/singleton probes, agent decision-burden experiment, agent project-convention experiment, declaration-key rename experiment, collection-rename projection experiment, multi-step declaration-rename experiment, split/merge migration-boundary experiments, incompatible-value experiments, and realistic issue-tracker scenario.
 - Release checks install the generated tarball into a temporary consumer project and verify public subpath imports.
 - Release checks inspect key alpha wording and documented semantic boundaries before packaging.
 - README and next-work documentation prioritize realistic evaluation over promotion or speculative feature growth.
@@ -110,6 +114,11 @@ liveFind() result values -> detached stable snapshots
 - One-to-one aliasing is therefore retained as an identity-only mechanism and must not be presented as general migration semantics.
 - CI #191 also exposed a concrete static type mismatch: the exported `StorekeeperDebugAPI` accepts object-form `compactMetadata()` options, while the concrete `StorekeeperDB.debug()` inferred type is narrower. This is queued as a separate minimal fix.
 - The convention's query wrapper was explicitly narrowed to StorekeeperDB's existing scalar-predicate `find()` contract after CI #158 exposed an overly broad prototype type.
+- Many-to-one merge CI #205 selected `BOUNDARY_CONFIRMED_MERGE_REQUIRES_EXPLICIT_CONFLICT_AWARE_MIGRATION`: semantic source conflict policy and source retirement remained explicit, while transaction rollback restored source values and behavior-driving metadata exactly.
+- Scalar-to-object CI #211 selected `BOUNDARY_CONFIRMED_SCALAR_TO_OBJECT_REQUIRES_EXPLICIT_VALUE_MIGRATION`: the V2 TypeScript declaration did not transform persisted scalar JSON, explicit `maxAttempts` policy was required, and representation change required obsolete projection retirement plus nested projection rebuild.
+- Enum-narrowing CI #218 selected `BOUNDARY_CONFIRMED_ENUM_NARROWING_REQUIRES_EXPLICIT_VALUE_POLICY`: persisted `legacy` survived the narrower static union until explicit `legacy -> manual` mapping, while the same scalar projection stayed coherent through ordinary durable mutation.
+- Required-field CI #224 selected `BOUNDARY_CONFIRMED_REQUIRED_FIELD_REQUIRES_EXPLICIT_BACKFILL_POLICY`: `maxRetries` remained absent under the V2 type, the initializer value `99` was not merged, explicit backfill `3` rolled back exactly under failure injection, the existing `queue` projection remained coherent, and a new `maxRetries` projection was created normally on demand.
+- Across scalar-to-object, enum narrowing, and required-field introduction, the repeated boundary is semantic rather than syntactic: application policy becomes explicit when meaning is incompatible, while migration-specific metadata work is needed only when an existing persisted/queryable representation is invalidated.
 
 ### Boundaries
 
@@ -118,6 +127,7 @@ liveFind() result values -> detached stable snapshots
 - Durable item writability requires current loaded generation, durable-id membership, and exact current proxy identity.
 - Close/reopen preserves durable data, not JavaScript proxy identity.
 - Compatible optional-field evolution is separate from incompatible schema migration semantics.
+- Static TypeScript declarations and initializer/default values are not runtime durable validation or migration for existing rows.
 - Decision-burden annotations are an auditable implementation proxy, not access to model chain-of-thought, reasoning tokens, or a universal cognitive metric.
 - Reusable framework concepts and per-prototype persistence decisions are reported separately; amortization does not make framework machinery free.
 - Deriving durable keys from declaration property names reduces normal key bookkeeping but makes property rename an incompatible persistence boundary unless alias/migration identity is specified.
@@ -125,8 +135,8 @@ liveFind() result values -> detached stable snapshots
 - Previous logical rename names are consumed rather than accumulated in the tested multi-step chain.
 - Logical rename retains the old physical StorekeeperDB key and therefore retains source and derived metadata in that physical namespace.
 - One-to-one rename evidence does not authorize state split/merge, arbitrary value transformation, or source retirement by inference.
-- One-to-many split requires explicit semantic value mapping and an atomic migration boundary; structural identity validity alone does not prove semantic preservation.
-- Automatic heuristic rename, split, or merge inference from shape, content, or declaration order is not supported.
+- One-to-many split and many-to-one merge require explicit semantic value mapping and an atomic migration boundary; structural identity validity alone does not prove semantic preservation.
+- Automatic heuristic rename, split, merge, enum mapping, required-field defaulting, or incompatible-value conversion from shape, content, or declaration order is not supported.
 - The agent-first direction does not authorize hiding incompatible migrations, key renames, corruption, concurrent writers, transaction failures, or durability uncertainty.
 - Durable-session `__workspace` is an experiment convention, not a reserved core API.
 - The durable-variable experiment does not implement agent memory, checkpoint policy, trust, context selection, or multi-agent coordination.
