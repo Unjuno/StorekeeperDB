@@ -19,6 +19,7 @@ The current product direction is agent-oriented: reduce the persistence-specific
 - [State merge migration boundary experiment](./STATE_MERGE_BOUNDARY_EXPERIMENT.md) — confirms many-to-one merge requires an explicit transactional transform and conflict policy when sources disagree.
 - [Scalar-to-object value evolution experiment](./SCALAR_TO_OBJECT_VALUE_EVOLUTION_EXPERIMENT.md) — confirms that a static TypeScript shape change does not migrate persisted semantic representation and that explicit transform/policy is required.
 - [Enum narrowing value evolution experiment](./ENUM_NARROWING_VALUE_EVOLUTION_EXPERIMENT.md) — confirms that a narrower TypeScript union does not validate persisted values and that explicit mapping policy is required.
+- [Required-field value evolution experiment](./REQUIRED_FIELD_VALUE_EVOLUTION_EXPERIMENT.md) — confirms that a required TypeScript property/default does not backfill existing durable rows and that explicit backfill policy is required.
 - [Issue tracker evaluation](./ISSUE_TRACKER_EVALUATION.md) — realistic compatible application-shape evolution and query-to-update scenario.
 - [`find()` semantics evaluation](./FIND_SEMANTICS_EVALUATION.md) — durable-handle vs snapshot decision record.
 - [Change amplification experiment](./CHANGE_AMPLIFICATION_EXPERIMENT.md) — first direct-SQL comparison for compatible model evolution.
@@ -48,6 +49,7 @@ These documents record experimental evidence and narrower runtime behavior. They
 - [State merge migration boundary experiment](./STATE_MERGE_BOUNDARY_EXPERIMENT.md)
 - [Scalar-to-object value evolution experiment](./SCALAR_TO_OBJECT_VALUE_EVOLUTION_EXPERIMENT.md)
 - [Enum narrowing value evolution experiment](./ENUM_NARROWING_VALUE_EVOLUTION_EXPERIMENT.md)
+- [Required-field value evolution experiment](./REQUIRED_FIELD_VALUE_EVOLUTION_EXPERIMENT.md)
 - [Change amplification experiment](./CHANGE_AMPLIFICATION_EXPERIMENT.md)
 - [CLI metadata replication](./CLI_METADATA_CHANGE_AMPLIFICATION_EXPERIMENT.md)
 - [Root-state semantics evaluation](./ROOT_STATE_SEMANTICS_EVALUATION.md)
