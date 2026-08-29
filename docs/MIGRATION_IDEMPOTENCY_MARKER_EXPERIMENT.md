@@ -134,6 +134,8 @@ exactly one migration marker
 
 This is **write-idempotency**, not observation-neutrality.
 
+For release-wording checks, the distinction is recorded plainly as: write-idempotency, not observation-neutrality.
+
 The skip path still validates marker id/version and the durable value through ordinary observable reads. Those reads may advance observation/read metadata. That is intentional application observation, not a second semantic migration or durable value rewrite.
 
 Therefore:
