@@ -74,6 +74,8 @@ Test whether the project declaration/identity manifest can also provide durable-
 
 Status: **CANDIDATE PASS in CI #232; experiment-only.**
 
+This closes the prior **Evaluate migration idempotency and crash/retry markers** priority for the tested local SQLite scope.
+
 Experiment-only convention:
 
 ```text
