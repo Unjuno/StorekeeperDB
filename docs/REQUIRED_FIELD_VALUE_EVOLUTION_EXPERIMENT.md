@@ -126,7 +126,7 @@ Immediately after backfill, the persisted item was:
 {"id":"JOB-1","queue":"bulk","maxRetries":3}
 ```
 
-The unrelated `queue` projection remained intact. No `maxRetries` projection existed until the new field was queried.
+The existing `queue` projection remained intact. No `maxRetries` projection existed until the new field was queried.
 
 ### C. Missing-policy negative control
 
