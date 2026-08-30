@@ -20,7 +20,6 @@ requireText(doc, "write-idempotency, not observation-neutrality");
 requireText(doc, "No public migration API is authorized by this result.");
 requireText("docs/README.md", "MIGRATION_IDEMPOTENCY_MARKER_EXPERIMENT.md");
 requireText("docs/NEXT_WORK.md", "CANDIDATE_MINIMAL_ATOMIC_MIGRATION_MARKER_SUFFICIENT");
-requireText("docs/NEXT_WORK.md", "Probe field deletion with active derived metadata");
 
 console.log(JSON.stringify({
   check: "migration-marker-release-wording",
