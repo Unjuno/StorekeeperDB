@@ -14,47 +14,54 @@ Working rule:
 
 ## Active priorities
 
-### 1. Probe field deletion with active derived metadata
+### 1. Replicate field deletion on a partial-row topology
 
-Status: **next incompatible-value experiment after migration-marker candidate pass in CI #232.**
+Status: **next falsification target after field-deletion boundary confirmation in CI #241.**
+
+The single-row experiment proved that ordinary durable property deletion can remove the source field and its projection cell while preserving unrelated projections. It did not prove item-selective behavior when the same path remains present on other rows.
 
 Scenario:
 
 ```text
 V1 jobs
-{ id, queue, legacyTag }
+JOB-1 { id, queue, legacyTag }
+JOB-2 { id, queue, legacyTag }
 
-  ->
+  -> delete legacyTag from JOB-1 only ->
 
-V2 jobs
-{ id, queue }
+mixed durable topology
+JOB-1 { id, queue }
+JOB-2 { id, queue, legacyTag }
 ```
 
-Before migration, create active scalar projections for both `queue` and `legacyTag`.
+Before mutation, create active scalar projections for both `queue` and `legacyTag`.
 
 Required cases:
 
-1. declaration-only reopen under the V2 TypeScript type must show whether `legacyTag` remains durably present;
-2. explicit `delete job.legacyTag` inside one outer `batch()` with failure injection;
-3. exact rollback of item/path/derivation/projection state;
-4. after successful delete, `find({ legacyTag: oldValue })` must return zero;
-5. determine whether the old projection cell disappears automatically;
-6. separately determine whether `__sk_paths` / `__sk_derivations` metadata for `legacyTag` remains and whether explicit lifecycle cleanup is needed;
-7. unrelated `queue` projection must remain coherent;
-8. close/reopen must preserve field absence;
-9. no public migration API unless a repeated unavoidable mechanism gap appears.
+1. both rows initially have `legacyTag` projection cells;
+2. delete `legacyTag` from only JOB-1 through its durable handle;
+3. failure injection after the delete must restore exact item/path/derivation/projection state;
+4. successful delete must remove only JOB-1's `legacyTag` cell;
+5. JOB-2's `legacyTag` cell must remain present and queryable;
+6. `find({ legacyTag: oldValueForJob1 })` must exclude JOB-1;
+7. query for JOB-2's retained legacy value must still return a durable handle;
+8. `queue` projection cells for both rows must remain coherent;
+9. item identities and order must remain stable;
+10. close/reopen must preserve the mixed topology;
+11. derivation/path metadata retention must be reported separately from current-state correctness.
 
 Candidate decisions:
 
 ```text
-BOUNDARY_CONFIRMED_FIELD_DELETION_REQUIRES_EXPLICIT_VALUE_POLICY
-MIXED_FIELD_DELETE_REQUIRES_METADATA_CLEANUP
+REPLICATION_PASS_PARTIAL_ROW_FIELD_DELETE_IS_SELECTIVE
+MIXED_PARTIAL_ROW_DELETE_REBUILDS_PATH_BUT_STAYS_CORRECT
+FAIL_PARTIAL_ROW_DELETE_CORRUPTS_SURVIVING_PROJECTION
 INVALID_EXPERIMENT
 ```
 
 Critical question:
 
-> Does ordinary durable property deletion fully retire value-specific derived state, or only make the source/projection cell correct while leaving metadata that explicit migration cleanup should retire?
+> Does the projection update remain item-selective when a field exists on only a subset of rows, or did the single-row experiment hide a whole-path rebuild or retirement bug?
 
 ### 2. Replicate the project convention in a third topology
 
@@ -70,11 +77,41 @@ Test whether the project declaration/identity manifest can also provide durable-
 
 ## Current experimental evidence
 
+### Field deletion with active derived metadata — #72
+
+Status: **BOUNDARY CONFIRMED in CI #241; experiment-only.**
+
+CI #241 selected:
+
+```text
+BOUNDARY_CONFIRMED_FIELD_DELETE_CURRENT_STATE_COHERENT_METADATA_RETAINED
+```
+
+The V2 TypeScript declaration alone did not remove persisted `legacyTag`. Explicit ordinary durable mutation:
+
+```ts
+delete job.legacyTag;
+```
+
+worked inside `batch()`. Failure injection restored item/path/derivation/projection state exactly. A successful delete removed the source field and its projection cell, preserved the unrelated `queue` projection, made the old-value query return zero rows, and remained absent after reopen.
+
+Historical metadata behaved differently:
+
+```text
+legacyTag projection cell -> removed automatically
+legacyTag derivation row   -> retained until explicit evict
+legacyTag path row         -> retained after evict as observation history
+```
+
+Interpretation:
+
+> Current-value correctness and historical metadata retirement are separate concerns. Retained derivation/path rows are not current-state corruption when source/query/projection behavior is correct.
+
+The result is only single-row evidence. Partial-row deletion is the next falsification target.
+
 ### Migration idempotency and crash/retry marker — #70
 
 Status: **CANDIDATE PASS in CI #232; experiment-only.**
-
-This closes the prior **Evaluate migration idempotency and crash/retry markers** priority for the tested local SQLite scope.
 
 Experiment-only convention:
 
@@ -208,6 +245,12 @@ required-field introduction
   -> unrelated projections preserved
   -> new projection created on demand
 
+field deletion
+  -> declaration alone does not delete persisted data
+  -> explicit durable property delete is mechanically sufficient in single-row test
+  -> deleted projection cell disappears automatically
+  -> derivation/path history may remain as lifecycle metadata
+
 migration execution / restart
   -> transform + applied marker in one transaction
   -> strict marker/value pair validation
@@ -221,10 +264,12 @@ The key boundary is semantic preservation, not merely whether a TypeScript type 
 
 The agent-first direction does not authorize hiding incompatible value transformation, split/merge, durable identity rename, corruption, concurrent writers, transaction failures, durability uncertainty, migration-version ambiguity, or inconsistent marker/value state.
 
-Automatic heuristic rename, split, merge, enum remapping, required-field default inference, migration provenance inference, or incompatible-value conversion from declaration shape/content/order is not supported by current evidence.
+Automatic heuristic rename, split, merge, enum remapping, required-field default inference, field-deletion policy inference, migration provenance inference, or incompatible-value conversion from declaration shape/content/order is not supported by current evidence.
 
 ## Deferred research
 
+- nested field deletion and field reintroduction after deletion;
+- automatic decay/compaction policy for obsolete derivation/path metadata;
 - concurrent old/new process migration behavior and multiple writers;
 - migration dependency ordering / marker scope;
 - time-based lifecycle decay (#16);
