@@ -113,6 +113,8 @@ The result is only single-row evidence. Partial-row deletion is the next falsifi
 
 Status: **CANDIDATE PASS in CI #232; experiment-only.**
 
+Historical task: **Evaluate migration idempotency and crash/retry markers** — completed by #70 / CI #232.
+
 Experiment-only convention:
 
 ```text
