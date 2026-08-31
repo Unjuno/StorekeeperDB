@@ -1,17 +1,17 @@
-import { spawnSync } from "node:child_process";
+import * as childProcess from "node:child_process";
 
 const expectedDecision =
   "MIXED_PARTIAL_ROW_DELETE_REBUILDS_ITEM_PROJECTIONS_BUT_STAYS_CORRECT";
 
-const child = spawnSync(
+const child = (childProcess as any).spawnSync(
   process.execPath,
   ["--experimental-sqlite", "dist/scripts/partial_row_field_deletion_experiment.js"],
   { encoding: "utf8" },
-);
+) as { status: number | null; stdout?: string; stderr?: string };
 
 if (child.status !== 0) {
-  process.stdout.write(child.stdout ?? "");
-  process.stderr.write(child.stderr ?? "");
+  if (child.stdout) console.log(child.stdout);
+  if (child.stderr) console.error(child.stderr);
   throw new Error(`partial-row field-deletion experiment exited with status ${child.status}`);
 }
 
@@ -43,7 +43,7 @@ const expectedChecks =
   checks.minimalDeletedCellOnly === false;
 
 if (result.decision !== expectedDecision || !expectedChecks) {
-  process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+  console.log(JSON.stringify(result, null, 2));
   throw new Error(
     `unexpected partial-row field-deletion result: ${String(result.decision)}`,
   );
