@@ -22,6 +22,7 @@ The current product direction is agent-oriented: reduce the persistence-specific
 - [Required-field value evolution experiment](./REQUIRED_FIELD_VALUE_EVOLUTION_EXPERIMENT.md) — confirms that a required TypeScript property/default does not backfill existing durable rows and that explicit backfill policy is required.
 - [Migration idempotency marker experiment](./MIGRATION_IDEMPOTENCY_MARKER_EXPERIMENT.md) — tests atomic applied-version markers, strict marker/value preconditions, restart-safe reruns, and split-commit failure modes.
 - [Field deletion + derived metadata experiment](./FIELD_DELETION_DERIVED_METADATA_EXPERIMENT.md) — confirms ordinary durable property deletion fixes current source/query/projection state while derivation/path history remains a separate lifecycle concern.
+- [Partial-row field deletion experiment](./PARTIAL_ROW_FIELD_DELETION_EXPERIMENT.md) — replicates deletion correctness on mixed rows and records item-local projection rebuild write amplification.
 - [Issue tracker evaluation](./ISSUE_TRACKER_EVALUATION.md) — realistic compatible application-shape evolution and query-to-update scenario.
 - [`find()` semantics evaluation](./FIND_SEMANTICS_EVALUATION.md) — durable-handle vs snapshot decision record.
 - [Change amplification experiment](./CHANGE_AMPLIFICATION_EXPERIMENT.md) — first direct-SQL comparison for compatible model evolution.
@@ -54,6 +55,7 @@ These documents record experimental evidence and narrower runtime behavior. They
 - [Required-field value evolution experiment](./REQUIRED_FIELD_VALUE_EVOLUTION_EXPERIMENT.md)
 - [Migration idempotency marker experiment](./MIGRATION_IDEMPOTENCY_MARKER_EXPERIMENT.md)
 - [Field deletion + derived metadata experiment](./FIELD_DELETION_DERIVED_METADATA_EXPERIMENT.md)
+- [Partial-row field deletion experiment](./PARTIAL_ROW_FIELD_DELETION_EXPERIMENT.md)
 - [Change amplification experiment](./CHANGE_AMPLIFICATION_EXPERIMENT.md)
 - [CLI metadata replication](./CLI_METADATA_CHANGE_AMPLIFICATION_EXPERIMENT.md)
 - [Root-state semantics evaluation](./ROOT_STATE_SEMANTICS_EVALUATION.md)
