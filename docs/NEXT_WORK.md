@@ -1,6 +1,6 @@
 # Next work
 
-This document tracks current StorekeeperDB priorities. Historical details belong in the changelog, merged pull requests, and subsystem notes; this file should answer: **what should be evaluated or changed next?**
+This document tracks current StorekeeperDB priorities. Historical details belong in experiment notes and merged pull requests; this file should answer: **what should be evaluated or changed next?**
 
 ## Current phase
 
@@ -14,54 +14,49 @@ Working rule:
 
 ## Active priorities
 
-### 1. Replicate field deletion on a partial-row topology
+### 1. Measure projection-maintenance write amplification
 
-Status: **next falsification target after field-deletion boundary confirmation in CI #241.**
+Status: **next falsification target after #74 / CI #252. Do not optimize first.**
 
-The single-row experiment proved that ordinary durable property deletion can remove the source field and its projection cell while preserving unrelated projections. It did not prove item-selective behavior when the same path remains present on other rows.
-
-Scenario:
+The partial-row field-deletion experiment replicated current-state correctness but showed that projection maintenance for a changed item is item-local rather than deleted-cell-only:
 
 ```text
-V1 jobs
-JOB-1 { id, queue, legacyTag }
-JOB-2 { id, queue, legacyTag }
-
-  -> delete legacyTag from JOB-1 only ->
-
-mixed durable topology
-JOB-1 { id, queue }
-JOB-2 { id, queue, legacyTag }
+MIXED_PARTIAL_ROW_DELETE_REBUILDS_ITEM_PROJECTIONS_BUT_STAYS_CORRECT
 ```
 
-Before mutation, create active scalar projections for both `queue` and `legacyTag`.
+For the changed item, each active derivation cell is deleted and still-present scalar cells are reinserted. The next experiment must determine whether that deterministic write amplification is materially relevant at prototype scale.
 
-Required cases:
+Hypothesis:
 
-1. both rows initially have `legacyTag` projection cells;
-2. delete `legacyTag` from only JOB-1 through its durable handle;
-3. failure injection after the delete must restore exact item/path/derivation/projection state;
-4. successful delete must remove only JOB-1's `legacyTag` cell;
-5. JOB-2's `legacyTag` cell must remain present and queryable;
-6. `find({ legacyTag: oldValueForJob1 })` must exclude JOB-1;
-7. query for JOB-2's retained legacy value must still return a durable handle;
-8. `queue` projection cells for both rows must remain coherent;
-9. item identities and order must remain stable;
-10. close/reopen must preserve the mixed topology;
-11. derivation/path metadata retention must be reported separately from current-state correctness.
+> If mutation rebuilds all active projection cells for a changed item, projection row writes grow approximately linearly with projected-path count `P`; practical wall-time impact may still be negligible for prototype-scale `P`.
 
-Candidate decisions:
+Candidate points:
 
 ```text
-REPLICATION_PASS_PARTIAL_ROW_FIELD_DELETE_IS_SELECTIVE
-MIXED_PARTIAL_ROW_DELETE_REBUILDS_PATH_BUT_STAYS_CORRECT
-FAIL_PARTIAL_ROW_DELETE_CORRUPTS_SURVIVING_PROJECTION
-INVALID_EXPERIMENT
+P = 1, 4, 16, 64
 ```
+
+Measure:
+
+```text
+P     active projected paths / item
+W(P)  projection row writes / mutation
+t(P)  mutation wall time / operation
+```
+
+Requirements:
+
+1. mutate one item while keeping row count fixed;
+2. count projection INSERT/DELETE/UPDATE deterministically with trigger audit;
+3. verify source/query/reopen correctness separately from write count;
+4. use warmup plus repeated iterations for timing;
+5. report median and range/quantiles rather than a single timing;
+6. do not add timing to a brittle release latency gate;
+7. do not implement cell-diff optimization in the measurement PR.
 
 Critical question:
 
-> Does the projection update remain item-selective when a field exists on only a subset of rows, or did the single-row experiment hide a whole-path rebuild or retirement bug?
+> Even if `W(P)` is linear, is the absolute cost large enough to justify more complex incremental maintenance, or is it only internal churn without meaningful user impact?
 
 ### 2. Replicate the project convention in a third topology
 
@@ -77,37 +72,41 @@ Test whether the project declaration/identity manifest can also provide durable-
 
 ## Current experimental evidence
 
+### Partial-row field deletion — #74
+
+Status: **MIXED in CI #252; experiment-only.**
+
+Historical task: **Replicate field deletion on a partial-row topology** — completed by #74 / CI #252.
+
+```text
+MIXED_PARTIAL_ROW_DELETE_REBUILDS_ITEM_PROJECTIONS_BUT_STAYS_CORRECT
+```
+
+The mixed topology remained correct: deleted source field absent, surviving row/query intact, durable `find()` handle coherent, rollback exact, identity/order stable, and reopen coherent. Projection writes remained isolated from the surviving row.
+
+The projection audit showed item-local maintenance on JOB-1:
+
+```text
+queue      DELETE + INSERT
+legacyTag  DELETE
+JOB-2      no projection writes during JOB-1 deletion
+```
+
+Interpretation:
+
+> Field deletion correctness replicated beyond the single-row case, but minimal cell-level write granularity did not. This is a measured write-amplification mechanism, not a correctness defect.
+
+No runtime optimization is authorized until scaling cost is measured.
+
 ### Field deletion with active derived metadata — #72
 
-Status: **BOUNDARY CONFIRMED in CI #241; experiment-only.**
-
-CI #241 selected:
+Status: **BOUNDARY CONFIRMED; experiment-only.**
 
 ```text
 BOUNDARY_CONFIRMED_FIELD_DELETE_CURRENT_STATE_COHERENT_METADATA_RETAINED
 ```
 
-The V2 TypeScript declaration alone did not remove persisted `legacyTag`. Explicit ordinary durable mutation:
-
-```ts
-delete job.legacyTag;
-```
-
-worked inside `batch()`. Failure injection restored item/path/derivation/projection state exactly. A successful delete removed the source field and its projection cell, preserved the unrelated `queue` projection, made the old-value query return zero rows, and remained absent after reopen.
-
-Historical metadata behaved differently:
-
-```text
-legacyTag projection cell -> removed automatically
-legacyTag derivation row   -> retained until explicit evict
-legacyTag path row         -> retained after evict as observation history
-```
-
-Interpretation:
-
-> Current-value correctness and historical metadata retirement are separate concerns. Retained derivation/path rows are not current-state corruption when source/query/projection behavior is correct.
-
-The result is only single-row evidence. Partial-row deletion is the next falsification target.
+Ordinary durable `delete job.legacyTag` removed the current source field and projection cell, rolled back exactly under failure injection, and stayed absent after reopen. Historical derivation/path metadata may remain; current-state correctness and metadata retirement are separate concerns.
 
 ### Migration idempotency and crash/retry marker — #70
 
@@ -115,72 +114,21 @@ Status: **CANDIDATE PASS in CI #232; experiment-only.**
 
 Historical task: **Evaluate migration idempotency and crash/retry markers** — completed by #70 / CI #232.
 
-Experiment-only convention:
-
-```text
-semantic value transform
-+
-applied-version marker
-+
-strict marker/value preconditions
-+
-one outer batch()
-```
-
-CI #232 selected:
-
 ```text
 CANDIDATE_MINIMAL_ATOMIC_MIGRATION_MARKER_SUFFICIENT
 ```
 
-Both failure points—after value mutation and after marker mutation—rolled back the value/marker durability unit exactly. A later reopen/retry committed once. The next reopen returned `already-applied`, retained one marker, left source item rows unchanged, and did not increase path write counts.
+The semantic transform and applied marker must be one atomic durability unit, with strict marker/value validation on every run. Rerun can be write-idempotent while validation reads remain observable. No public migration API is authorized by this result.
 
-The rerun is write-idempotent, not observation-neutral: normal validation reads remain observable and may advance read-observation metadata.
-
-Strict pair validation rejected both inconsistent states:
-
-```text
-marker present + value unmigrated
-marker absent  + value migrated
-```
-
-Two split-commit negative controls demonstrated that committing the value and marker separately can strand exactly those mismatch states.
-
-Interpretation:
-
-> In the tested local SQLite scope, the semantic transform and applied marker must be one atomic durability unit, and marker/value consistency is a precondition on every run.
-
-A marker alone does not prove semantic state. No public migration API is authorized by this result.
-
-### Required-field incompatible value evolution — #68
-
-Status: **BOUNDARY CONFIRMED in CI #224; experiment-only.**
+### Incompatible value evolution
 
 ```text
 BOUNDARY_CONFIRMED_REQUIRED_FIELD_REQUIRES_EXPLICIT_BACKFILL_POLICY
-```
-
-A V2 required property and initializer did not backfill an existing V1 row. Explicit `maxRetries = 3` policy rolled back exactly under failure injection, preserved the existing `queue` projection, and created the new projection only on demand.
-
-### Enum narrowing incompatible value evolution — #66
-
-Status: **BOUNDARY CONFIRMED in CI #218; experiment-only.**
-
-```text
 BOUNDARY_CONFIRMED_ENUM_NARROWING_REQUIRES_EXPLICIT_VALUE_POLICY
-```
-
-Persisted `legacy` survived a narrower TypeScript union until explicit `legacy -> manual` mapping. The same scalar projection stayed coherent through ordinary durable mutation.
-
-### Scalar-to-object incompatible value evolution — #64
-
-Status: **BOUNDARY CONFIRMED in CI #211; experiment-only.**
-
-```text
 BOUNDARY_CONFIRMED_SCALAR_TO_OBJECT_REQUIRES_EXPLICIT_VALUE_MIGRATION
 ```
 
-The V2 TypeScript declaration did not transform persisted scalar JSON. Explicit policy was required, and the representation change required obsolete projection retirement plus nested projection rebuild.
+Required-field introduction needs explicit backfill policy; enum narrowing needs explicit mapping; scalar-to-object needs explicit semantic transformation and metadata reconciliation. Static TypeScript declarations are not migrations.
 
 ### Split / merge boundaries
 
@@ -249,8 +197,10 @@ required-field introduction
 
 field deletion
   -> declaration alone does not delete persisted data
-  -> explicit durable property delete is mechanically sufficient in single-row test
+  -> explicit durable property delete is mechanically sufficient in tested single- and mixed-row cases
   -> deleted projection cell disappears automatically
+  -> changed-item active projections are currently rebuilt item-locally
+  -> surviving rows remain isolated in the tested mixed topology
   -> derivation/path history may remain as lifecycle metadata
 
 migration execution / restart
