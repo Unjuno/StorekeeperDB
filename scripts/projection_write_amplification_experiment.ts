@@ -288,7 +288,7 @@ const decision = !validExperiment
     ? "MEASURED_LINEAR_ITEM_REBUILD_WRITES_TIMING_OBSERVATIONAL"
     : "MEASURED_DIFFERENT_PROJECTION_WRITE_SHAPE";
 
-const output = {
+export const projectionWriteAmplificationResult = {
   experiment: "projection-maintenance-write-amplification",
   variables: {
     projectedPathCounts: PATH_COUNTS,
@@ -320,6 +320,6 @@ const output = {
   },
 };
 
-console.log(JSON.stringify(output, null, 2));
+console.log(JSON.stringify(projectionWriteAmplificationResult, null, 2));
 
 if (!validExperiment) process.exit(1);
