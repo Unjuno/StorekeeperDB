@@ -45,6 +45,8 @@ const WARMUP_MUTATIONS = 20;
 const TIMED_MUTATIONS = 80;
 const STATE_KEY = "items";
 const ITEM_ID = "ITEM-1";
+const EXPECTED_DECISION =
+  "MEASURED_LINEAR_ITEM_REBUILD_WRITES_TIMING_OBSERVATIONAL";
 
 const fieldName = (index: number): string => `p${index}`;
 const initialValue = (index: number): string => `v${index}`;
@@ -285,7 +287,7 @@ const validExperiment = deterministicCorrectness && results.every((result) => re
 const decision = !validExperiment
   ? "INVALID_EXPERIMENT"
   : exactTwoWritesPerProjectedPath && constantWriteRatio
-    ? "MEASURED_LINEAR_ITEM_REBUILD_WRITES_TIMING_OBSERVATIONAL"
+    ? EXPECTED_DECISION
     : "MEASURED_DIFFERENT_PROJECTION_WRITE_SHAPE";
 
 export const projectionWriteAmplificationResult = {
@@ -306,7 +308,7 @@ export const projectionWriteAmplificationResult = {
   results,
   decision,
   interpretation:
-    decision === "MEASURED_LINEAR_ITEM_REBUILD_WRITES_TIMING_OBSERVATIONAL"
+    decision === EXPECTED_DECISION
       ? "Projection maintenance produced exactly one DELETE and one INSERT per active projected path for a one-field durable item mutation. Deterministic write amplification is W(P)=2P in this scenario. Timing is observational only and is not used as a release threshold."
       : decision === "MEASURED_DIFFERENT_PROJECTION_WRITE_SHAPE"
         ? "The measured projection-write shape differs from the expected item-local rebuild signature; inspect per-P audit rows before generalizing."
@@ -322,4 +324,4 @@ export const projectionWriteAmplificationResult = {
 
 console.log(JSON.stringify(projectionWriteAmplificationResult, null, 2));
 
-if (!validExperiment) process.exit(1);
+if (decision !== EXPECTED_DECISION) process.exit(1);
