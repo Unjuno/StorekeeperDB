@@ -15,5 +15,6 @@ test("partial-row field-deletion result stays synchronized with public docs", ()
   assert.ok(resultDoc.includes("item-local rather than cell-selective"));
   assert.ok(docsIndex.includes("PARTIAL_ROW_FIELD_DELETION_EXPERIMENT.md"));
   assert.ok(nextWork.includes(decision));
-  assert.ok(nextWork.includes("Measure projection-maintenance write amplification"));
+  assert.ok(nextWork.includes("MEASURED_LINEAR_ITEM_REBUILD_WRITES_TIMING_OBSERVATIONAL"));
+  assert.ok(nextWork.includes("Test nested field deletion before optimizing projection maintenance"));
 });
