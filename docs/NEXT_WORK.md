@@ -14,49 +14,58 @@ Working rule:
 
 ## Active priorities
 
-### 1. Measure projection-maintenance write amplification
+### 1. Test nested field deletion before optimizing projection maintenance
 
-Status: **next falsification target after #74 / CI #252. Do not optimize first.**
+Status: **next correctness falsification target after #76 / CI #258.**
 
-The partial-row field-deletion experiment replicated current-state correctness but showed that projection maintenance for a changed item is item-local rather than deleted-cell-only:
-
-```text
-MIXED_PARTIAL_ROW_DELETE_REBUILDS_ITEM_PROJECTIONS_BUT_STAYS_CORRECT
-```
-
-For the changed item, each active derivation cell is deleted and still-present scalar cells are reinserted. The next experiment must determine whether that deterministic write amplification is materially relevant at prototype scale.
-
-Hypothesis:
-
-> If mutation rebuilds all active projection cells for a changed item, projection row writes grow approximately linearly with projected-path count `P`; practical wall-time impact may still be negligible for prototype-scale `P`.
-
-Candidate points:
+The projection-write experiment quantified the current changed-item maintenance shape exactly:
 
 ```text
-P = 1, 4, 16, 64
+W(P) = 2P
 ```
 
-Measure:
+for one-field replacement with `P` active scalar projections. CI #258 observed medians from about `0.070 ms/op` at `P = 1` to about `1.33 ms/op` at `P = 64`, but timing remains environment-specific and observational.
+
+That is enough evidence to record a real `O(P)` internal write-amplification mechanism, but not enough evidence to justify a more complex cell-diff implementation. The next priority should therefore remain on correctness boundaries rather than premature optimization.
+
+Next scenario:
 
 ```text
-P     active projected paths / item
-W(P)  projection row writes / mutation
-t(P)  mutation wall time / operation
+V1 job
+{
+  id,
+  routing: {
+    queue,
+    legacyTag
+  }
+}
+
+  -> delete routing.legacyTag ->
+
+V2 job
+{
+  id,
+  routing: {
+    queue
+  }
+}
 ```
 
-Requirements:
+Required checks:
 
-1. mutate one item while keeping row count fixed;
-2. count projection INSERT/DELETE/UPDATE deterministically with trigger audit;
-3. verify source/query/reopen correctness separately from write count;
-4. use warmup plus repeated iterations for timing;
-5. report median and range/quantiles rather than a single timing;
-6. do not add timing to a brittle release latency gate;
-7. do not implement cell-diff optimization in the measurement PR.
+1. activate projections for `routing.queue` and `routing.legacyTag`;
+2. delete only the nested `routing.legacyTag` through a durable handle;
+3. inject failure and require exact source/projection/metadata rollback;
+4. require old-value query exclusion after success;
+5. require retained nested projection/query correctness for `routing.queue`;
+6. close/reopen and verify nested absence;
+7. reintroduce `routing.legacyTag` in a later mutation and verify projection/query recovery without stale-cell duplication;
+8. report derivation/path history separately from current-state correctness;
+9. do not implement projection cell-diff optimization in the same experiment.
 
 Critical question:
 
-> Even if `W(P)` is linear, is the absolute cost large enough to justify more complex incremental maintenance, or is it only internal churn without meaningful user impact?
+> Does the current deletion/rebuild model remain mechanically correct when the disappearing field is nested and later reintroduced, or do path-level observation and projection lifecycle semantics create a stale-cell boundary that the root-field experiments did not expose?
 
 ### 2. Replicate the project convention in a third topology
 
@@ -71,6 +80,38 @@ Status: initial cross-process bootstrap PASS; integration unproven.
 Test whether the project declaration/identity manifest can also provide durable-state discovery without creating a second registry. Do not add a general workspace/agent-memory API until reuse is demonstrated.
 
 ## Current experimental evidence
+
+### Projection-maintenance write amplification — #76
+
+Status: **MEASURED in CI #258; experiment-only.**
+
+```text
+MEASURED_LINEAR_ITEM_REBUILD_WRITES_TIMING_OBSERVATIONAL
+```
+
+For a one-field replacement with all active projected scalar paths retained:
+
+```text
+D(P) = P
+I(P) = P
+U(P) = 0
+W(P) = 2P
+```
+
+Observed deterministic write counts:
+
+| `P` | writes/op |
+|---:|---:|
+| 1 | 2 |
+| 4 | 8 |
+| 16 | 32 |
+| 64 | 128 |
+
+Source, projection, query, and reopen correctness passed for all four cases. Timing was measured separately without audit triggers and is observational only; no latency threshold was added to the release gate.
+
+Interpretation:
+
+> The current projection update path has exact changed-item `O(P)` write amplification in this scenario, but one CI environment does not establish that the absolute cost is product-significant. Keep the simple rebuild until a realistic workload demonstrates that incremental cell maintenance is worth its additional stale-cell and rollback complexity.
 
 ### Partial-row field deletion — #74
 
@@ -197,11 +238,17 @@ required-field introduction
 
 field deletion
   -> declaration alone does not delete persisted data
-  -> explicit durable property delete is mechanically sufficient in tested single- and mixed-row cases
+  -> explicit durable property delete is mechanically sufficient in tested single- and mixed-row root-field cases
   -> deleted projection cell disappears automatically
   -> changed-item active projections are currently rebuilt item-locally
   -> surviving rows remain isolated in the tested mixed topology
   -> derivation/path history may remain as lifecycle metadata
+  -> nested deletion/reintroduction remains unproven
+
+projection maintenance
+  -> one-field replacement with P active scalar projections measured W(P) = 2P writes/op
+  -> timing remains observational and environment-specific
+  -> no incremental cell-diff optimization justified yet
 
 migration execution / restart
   -> transform + applied marker in one transaction
@@ -220,10 +267,10 @@ Automatic heuristic rename, split, merge, enum remapping, required-field default
 
 ## Deferred research
 
-- nested field deletion and field reintroduction after deletion;
 - automatic decay/compaction policy for obsolete derivation/path metadata;
 - concurrent old/new process migration behavior and multiple writers;
 - migration dependency ordering / marker scope;
+- realistic active-projection-count distributions before any cell-diff optimization;
 - time-based lifecycle decay (#16);
 - richer metadata scoring policy (#17);
 - full browser adapter after a realistic browser scenario;
