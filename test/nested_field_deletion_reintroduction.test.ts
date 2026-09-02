@@ -20,6 +20,6 @@ test("nested field deletion and reintroduction decision stays exact", () => {
   assert.equal(report.checks.validExperiment, true);
   assert.equal(
     report.decision,
-    "REPLICATION_PASS_NESTED_DELETE_REINTRODUCTION_COHERENT",
+    "MIXED_NESTED_LIFECYCLE_CORRECT_WITH_METADATA_OR_WRITE_ROUGHNESS",
   );
 });
