@@ -28,6 +28,6 @@ test("nested field deletion and reintroduction decision stays exact", async () =
   assert.equal(report.checks.validExperiment, true);
   assert.equal(
     report.decision,
-    "MIXED_NESTED_LIFECYCLE_CORRECT_WITH_METADATA_OR_WRITE_ROUGHNESS",
+    "FAIL_NESTED_DELETE_OR_REINTRODUCTION_CORRUPTS_CURRENT_STATE",
   );
 });
