@@ -1,7 +1,33 @@
+import assert from "node:assert/strict";
 import { test } from "node:test";
-import "../scripts/nested_field_deletion_reintroduction_experiment.js";
 
-test("nested field deletion and reintroduction experiment completes validly", () => {
-  // The experiment exits non-zero only when fixture/rollback/audit validity fails.
-  // Valid product PASS/MIXED/FAIL decisions remain observable on the first run.
+test("nested field deletion and reintroduction remains exactly coherent", async () => {
+  const output: string[] = [];
+  const originalLog = console.log;
+  console.log = (...args: unknown[]) => {
+    output.push(args.map(String).join(" "));
+    originalLog(...args);
+  };
+
+  try {
+    await import("../scripts/nested_field_deletion_reintroduction_experiment.js");
+  } finally {
+    console.log = originalLog;
+  }
+
+  const reportText = output.find((line) =>
+    line.includes('"experiment": "nested-field-deletion-reintroduction-projection-lifecycle"'),
+  );
+  assert.ok(reportText, "experiment JSON report was not emitted");
+
+  const report = JSON.parse(reportText) as {
+    decision: string;
+    checks: { validExperiment: boolean };
+  };
+
+  assert.equal(report.checks.validExperiment, true);
+  assert.equal(
+    report.decision,
+    "REPLICATION_PASS_NESTED_DELETE_REINTRODUCTION_COHERENT",
+  );
 });
