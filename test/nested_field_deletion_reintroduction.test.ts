@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 
 const KNOWN_DECISIONS = new Set([
@@ -10,12 +9,9 @@ const KNOWN_DECISIONS = new Set([
 ]);
 
 test("nested field deletion and reintroduction emits a valid decision", () => {
-  const scriptPath = fileURLToPath(
-    new URL("../scripts/nested_field_deletion_reintroduction_experiment.js", import.meta.url),
-  );
   const stdout = execFileSync(
     process.execPath,
-    ["--experimental-sqlite", scriptPath],
+    ["--experimental-sqlite", "dist/scripts/nested_field_deletion_reintroduction_experiment.js"],
     { encoding: "utf8" },
   );
   const report = JSON.parse(stdout) as {
@@ -23,6 +19,7 @@ test("nested field deletion and reintroduction emits a valid decision", () => {
     checks: { validExperiment: boolean };
   };
 
+  console.log(JSON.stringify({ capturedDecision: report.decision }));
   assert.equal(report.checks.validExperiment, true);
   assert.equal(KNOWN_DECISIONS.has(report.decision), true, `unexpected decision: ${report.decision}`);
 });
