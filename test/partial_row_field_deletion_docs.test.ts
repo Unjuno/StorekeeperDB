@@ -4,6 +4,7 @@ import { test } from "node:test";
 
 const decision =
   "MIXED_PARTIAL_ROW_DELETE_REBUILDS_ITEM_PROJECTIONS_BUT_STAYS_CORRECT";
+const nestedDecision = "REPLICATION_PASS_NESTED_DELETE_REINTRODUCTION_COHERENT";
 
 test("partial-row field-deletion result stays synchronized with public docs", () => {
   const resultDoc = readFileSync("docs/PARTIAL_ROW_FIELD_DELETION_EXPERIMENT.md", "utf8");
@@ -16,5 +17,6 @@ test("partial-row field-deletion result stays synchronized with public docs", ()
   assert.ok(docsIndex.includes("PARTIAL_ROW_FIELD_DELETION_EXPERIMENT.md"));
   assert.ok(nextWork.includes(decision));
   assert.ok(nextWork.includes("MEASURED_LINEAR_ITEM_REBUILD_WRITES_TIMING_OBSERVATIONAL"));
-  assert.ok(nextWork.includes("Test nested field deletion before optimizing projection maintenance"));
+  assert.ok(nextWork.includes(nestedDecision));
+  assert.ok(nextWork.includes("Test projected parent/subtree deletion after nested-leaf lifecycle PASS"));
 });
