@@ -14,19 +14,27 @@ Working rule:
 
 ## Active priorities
 
-### 1. Test nested field deletion before optimizing projection maintenance
+### 1. Test projected parent/subtree deletion after nested-leaf lifecycle PASS
 
-Status: **next correctness falsification target after #76 / CI #258.**
+Status: **next correctness falsification target after #78 / CI #280.**
 
-The projection-write experiment quantified the current changed-item maintenance shape exactly:
+The nested projected-leaf experiment now has an exact regression gate and observed:
 
 ```text
-W(P) = 2P
+REPLICATION_PASS_NESTED_DELETE_REINTRODUCTION_COHERENT
 ```
 
-for one-field replacement with `P` active scalar projections. CI #258 observed medians from about `0.070 ms/op` at `P = 1` to about `1.33 ms/op` at `P = 64`, but timing remains environment-specific and observational.
+for:
 
-That is enough evidence to record a real `O(P)` internal write-amplification mechanism, but not enough evidence to justify a more complex cell-diff implementation. The next priority should therefore remain on correctness boundaries rather than premature optimization.
+```text
+routing.legacyTag present
+-> delete nested leaf
+-> close/reopen
+-> reintroduce nested leaf
+-> close/reopen
+```
+
+Source state, sibling `routing.queue` projection, query semantics, rollback, item identity, metadata reuse, and the expected changed-item projection rebuild shape stayed coherent. This closes the leaf-level stale-cell question but does not prove subtree deletion.
 
 Next scenario:
 
@@ -37,15 +45,18 @@ V1 job
   routing: {
     queue,
     legacyTag
+  },
+  routingBackup: {
+    queue
   }
 }
 
-  -> delete routing.legacyTag ->
+  -> delete routing ->
 
 V2 job
 {
   id,
-  routing: {
+  routingBackup: {
     queue
   }
 }
@@ -53,19 +64,20 @@ V2 job
 
 Required checks:
 
-1. activate projections for `routing.queue` and `routing.legacyTag`;
-2. delete only the nested `routing.legacyTag` through a durable handle;
+1. activate projections for multiple descendants under `routing` plus an unrelated similarly named subtree;
+2. delete the parent object through a durable handle;
 3. inject failure and require exact source/projection/metadata rollback;
-4. require old-value query exclusion after success;
-5. require retained nested projection/query correctness for `routing.queue`;
-6. close/reopen and verify nested absence;
-7. reintroduce `routing.legacyTag` in a later mutation and verify projection/query recovery without stale-cell duplication;
-8. report derivation/path history separately from current-state correctness;
-9. do not implement projection cell-diff optimization in the same experiment.
+4. inspect physical projection storage before any query can rebuild it;
+5. require all removed descendant queries to exclude the deleted subtree;
+6. require `routingBackup` and unrelated rows to remain untouched;
+7. close/reopen and verify parent absence;
+8. reintroduce `routing` and verify descendant projection/query recovery without stale or duplicate cells;
+9. test stale parent/child handles captured before parent deletion so they cannot resurrect removed state;
+10. keep projection cell-diff optimization out of the same experiment.
 
 Critical question:
 
-> Does the current deletion/rebuild model remain mechanically correct when the disappearing field is nested and later reintroduced, or do path-level observation and projection lifecycle semantics create a stale-cell boundary that the root-field experiments did not expose?
+> Does correctness still hold when one mutation removes and later reintroduces an entire projected subtree, including multiple descendant paths and stale nested handles, or was the nested-leaf PASS too narrow?
 
 ### 2. Replicate the project convention in a third topology
 
@@ -80,6 +92,29 @@ Status: initial cross-process bootstrap PASS; integration unproven.
 Test whether the project declaration/identity manifest can also provide durable-state discovery without creating a second registry. Do not add a general workspace/agent-memory API until reuse is demonstrated.
 
 ## Current experimental evidence
+
+### Nested field deletion and reintroduction — #78
+
+Status: **REPLICATION PASS in CI #280; experiment-only.**
+
+```text
+REPLICATION_PASS_NESTED_DELETE_REINTRODUCTION_COHERENT
+```
+
+The regression gate now requires that exact decision plus the observed correctness checks; FAIL or MIXED decisions no longer pass merely because they are known labels.
+
+The tested nested leaf lifecycle preserved:
+
+- exact rollback under injected failure;
+- source and sibling projection correctness immediately after delete;
+- old-value query exclusion;
+- physical projection correctness before query execution;
+- item id/position across both reopen boundaries;
+- reintroduction without stale/duplicate cells;
+- derivation/path metadata coherence and reuse;
+- the expected item-local projection rebuild pattern.
+
+This is evidence for nested scalar-leaf lifecycle correctness, not parent/subtree deletion, nested-array deletion, or concurrent writers.
 
 ### Projection-maintenance write amplification — #76
 
@@ -238,12 +273,12 @@ required-field introduction
 
 field deletion
   -> declaration alone does not delete persisted data
-  -> explicit durable property delete is mechanically sufficient in tested single- and mixed-row root-field cases
+  -> explicit durable property delete is mechanically sufficient in tested single-row, mixed-row, and nested-leaf cases
   -> deleted projection cell disappears automatically
   -> changed-item active projections are currently rebuilt item-locally
-  -> surviving rows remain isolated in the tested mixed topology
-  -> derivation/path history may remain as lifecycle metadata
-  -> nested deletion/reintroduction remains unproven
+  -> surviving rows and sibling nested projections remain isolated/coherent in tested scenarios
+  -> derivation/path history may remain as lifecycle metadata and can be reused on reintroduction
+  -> projected parent/subtree deletion remains unproven
 
 projection maintenance
   -> one-field replacement with P active scalar projections measured W(P) = 2P writes/op
