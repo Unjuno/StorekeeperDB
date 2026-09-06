@@ -2,13 +2,43 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { test } from "node:test";
 
-const KNOWN_DECISIONS = new Set([
-  "REPLICATION_PASS_NESTED_DELETE_REINTRODUCTION_COHERENT",
-  "MIXED_NESTED_LIFECYCLE_CORRECT_WITH_METADATA_OR_WRITE_ROUGHNESS",
-  "FAIL_NESTED_DELETE_OR_REINTRODUCTION_CORRUPTS_CURRENT_STATE",
-]);
+const EXPECTED_DECISION = "REPLICATION_PASS_NESTED_DELETE_REINTRODUCTION_COHERENT";
 
-test("nested field deletion and reintroduction emits a valid decision", () => {
+const EXPECTED_TRUE_CHECKS = [
+  "initialTopologyValid",
+  "deleteTrapReached",
+  "exactPhysicalRollback",
+  "loadedMemoryRollback",
+  "failureAuditRolledBack",
+  "deleteSourceCorrect",
+  "deleteProjectionCorrect",
+  "deleteQueriesCorrect",
+  "identityStableAfterDelete",
+  "firstReopenSourceCorrect",
+  "firstReopenProjectionCorrect",
+  "identityStableAfterFirstReopen",
+  "reintroductionSourceCorrect",
+  "reintroductionProjectionCorrect",
+  "noDuplicateProjectionCells",
+  "reintroductionQueriesCorrect",
+  "identityStableAfterReintroduction",
+  "secondReopenCorrect",
+  "metadataLifecycleCoherent",
+  "deleteWriteShapeExpected",
+  "reintroductionWriteShapeExpected",
+  "expectedItemLocalWriteShape",
+  "currentStateCorrect",
+  "queriesAndHandlesCorrect",
+  "identityAndReopenCorrect",
+  "validExperiment",
+] as const;
+
+const EXPECTED_FALSE_CHECKS = [
+  "deleteSuccessRejected",
+  "reintroductionRejected",
+] as const;
+
+test("nested field deletion and reintroduction stays on the observed PASS contract", () => {
   const stdout = execFileSync(
     process.execPath,
     ["--experimental-sqlite", "dist/scripts/nested_field_deletion_reintroduction_experiment.js"],
@@ -16,10 +46,21 @@ test("nested field deletion and reintroduction emits a valid decision", () => {
   );
   const report = JSON.parse(stdout) as {
     decision: string;
-    checks: { validExperiment: boolean };
+    checks: Record<string, boolean>;
   };
 
   console.log(JSON.stringify({ capturedDecision: report.decision }));
-  assert.equal(report.checks.validExperiment, true);
-  assert.equal(KNOWN_DECISIONS.has(report.decision), true, `unexpected decision: ${report.decision}`);
+
+  assert.equal(
+    report.decision,
+    EXPECTED_DECISION,
+    `nested lifecycle decision regressed: ${report.decision}`,
+  );
+
+  for (const key of EXPECTED_TRUE_CHECKS) {
+    assert.equal(report.checks[key], true, `expected checks.${key} to stay true`);
+  }
+  for (const key of EXPECTED_FALSE_CHECKS) {
+    assert.equal(report.checks[key], false, `expected checks.${key} to stay false`);
+  }
 });
