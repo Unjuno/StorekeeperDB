@@ -41,6 +41,7 @@ Initial public alpha baseline plus iterative hardening from realistic evaluation
 - Real React verification using `useSyncExternalStore` and `react-test-renderer`.
 - Experimental async write-behind durability-boundary model through `@storekeeper/db/experimental`.
 - GitHub Actions CI running the complete release gate.
+- Parent/subtree deletion lifecycle experiment (#80) reproducing correct source/projection/reopen behavior and an accepted stale child-handle write with redundant persistence side effects; documented as MIXED, runtime fix deferred.
 
 ### Hardened
 
