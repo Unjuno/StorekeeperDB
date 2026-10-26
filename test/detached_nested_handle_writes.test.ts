@@ -66,7 +66,7 @@ test("detached nested proxies reject writes without source, metadata or projecti
     assert.throws(() => { capturedRouting.queue = "stale"; }, /Stale Storekeeper nested proxy/);
     assert.throws(() => { capturedDetails.code = "stale"; }, /Stale Storekeeper nested proxy/);
     assert.throws(() => { capturedTags.push("stale"); }, /Stale Storekeeper nested proxy/);
-    assert.throws(() => { delete capturedRouting.details; }, /Stale Storekeeper nested proxy/);
+    assert.throws(() => { Reflect.deleteProperty(capturedRouting, "details"); }, /Stale Storekeeper nested proxy/);
     assert.equal(physicalSnapshot(path), baselineAfterDeletion);
     assert.equal(audit(path, false), auditBefore);
     assert.equal(capturedRouting.queue, "critical");
