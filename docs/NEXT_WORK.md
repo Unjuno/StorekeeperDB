@@ -14,33 +14,33 @@ Working rule:
 
 ## Active priorities
 
-### 1. Fix stale nested handle writes after parent deletion
+### 1. Replicate the project convention in a third, agent-workspace topology
 
-Status: **observed lifecycle defect in #80 / CI #287; product result MIXED**.
+Status: **next agent-facing product evaluation after #82 / CI #300**.
 
-```text
-MIXED_PARENT_SUBTREE_CURRENT_STATE_CORRECT_BUT_STALE_CHILD_WRITE_ACCEPTED
-```
+Reuse the same declaration-layer helper from PR #49 without scenario-specific branching. Build a realistic workspace/checkpoint flow; close the writer process and recover from a fresh reader that has the database path and an explicit bootstrap key. Record persistence-specific decisions, modified lines, manual state-key discovery, and any second registry that the convention might require. Do not add a public workspace or memory API on hypothesis alone.
 
-Deleting `routing` correctly removes its source subtree and both descendant projection cells. The prefix-neighbor `routingBackup.queue`, rollback, identity, queries, and two reopen boundaries remain coherent. However, a captured `routing` child proxy remains writable after parent removal: its detached target changes and the attempted write unnecessarily re-persists the surviving source/projections.
+### 2. Reuse durable-session bootstrap with project identity
 
-Next smallest fix: reject writes from a nested proxy if its ancestor chain is no longer the currently attached one. Preserve ordinary writes through active nested handles. Regression requirements: stale child `set`/`delete` must fail before mutation or observation, no projection writes may occur on rejection, valid nested writes still persist, and replacement/rollback invalidation must remain intact. Keep public APIs unchanged.
+Status: **initial cross-process durability/discovery PASS; manifest integration unproven**.
 
-Historical task: **Test projected parent/subtree deletion after nested-leaf lifecycle PASS** — experiment #80 confirmed current-state correctness but exposed this stale-handle boundary.
+Test whether the existing declaration/identity manifest and the existing `__workspace` bootstrap convention can identify all needed durable states without a parallel registry. Treat durability, discoverability, and checkpoint correctness as separate checks. Fail loudly on incompatible or ambiguous state rather than automatically initializing a new one.
 
-### 2. Replicate the project convention in a third topology
+### 3. Probe stronger structural lifecycle boundaries only when justified
 
-Status: candidate direction, not public API.
-
-PR #49 reused the same generic helper unchanged across project-board and editor/workspace scenarios and reduced measured per-prototype persistence decisions from 7 to 5 in both. Test a third topology such as agent workspace/checkpoints or a multi-list workflow.
-
-### 3. Reuse durable-session bootstrap with project identity
-
-Status: initial cross-process bootstrap PASS; integration unproven.
-
-Test whether the project declaration/identity manifest can also provide durable-state discovery without creating a second registry. Do not add a general workspace/agent-memory API until reuse is demonstrated.
+The single-item parent subtree scenario now has an exact fixed PASS regression. Multi-row deletion, nested arrays/index shifts, and concurrent processes remain outside its scope. Extend the experiment when a realistic prototype requires those shapes; do not infer universal subtree correctness from #80.
 
 ## Current experimental evidence
+
+### Detached nested proxy write invalidation — #82
+
+Status: **FIXED in CI #300 (34 tests PASS); minimal internal change, no new public API.**
+
+```text
+REPLICATION_PASS_PARENT_SUBTREE_DELETE_REINTRODUCTION_COHERENT
+```
+
+Nested proxy writes now require current owner-item membership and an exact live parent-object identity chain. A removed/replaced nested proxy rejects `set`, `deleteProperty`, and mutating array operations before touching local target state or durable/observation metadata. New tests cover detached root children, deeper objects, arrays, replacement, valid active updates, and reopen.
 
 ### Parent/subtree deletion and reintroduction — #80
 
@@ -50,7 +50,7 @@ Status: **MIXED in CI #287; experiment-only.**
 MIXED_PARENT_SUBTREE_CURRENT_STATE_CORRECT_BUT_STALE_CHILD_WRITE_ACCEPTED
 ```
 
-Parent deletion and reintroduction preserved source/projection/query/rollback/reopen correctness and prefix-neighbor isolation. The child proxy captured before parent deletion accepted a detached write with persistence side effects, without resurrecting the subtree. A previously overcounted reintroduction audit was corrected: absent descendant cells produce INSERTs but no trigger events for zero-row DELETEs. This requires a separate nested-proxy lifetime fix, not a migration API or projection cell-diff optimization.
+Parent deletion and reintroduction preserved source/projection/query/rollback/reopen correctness and prefix-neighbor isolation. The child proxy captured before parent deletion accepted a detached write with persistence side effects, without resurrecting the subtree. A previously overcounted reintroduction audit was corrected: absent descendant cells produce INSERTs but no trigger events for zero-row DELETEs. This finding was corrected independently in #82 / CI #300; the historical MIXED result remains recorded. Neither a migration API nor a projection cell-diff optimization was required.
 
 ### Nested field deletion and reintroduction — #78
 
