@@ -237,7 +237,7 @@ field deletion
   -> changed-item active projections are currently rebuilt item-locally
   -> surviving rows and sibling nested projections remain isolated/coherent in tested scenarios
   -> derivation/path history may remain as lifecycle metadata and can be reused on reintroduction
-  -> projected parent/subtree deletion remains unproven
+  -> parent/subtree deletion physical correctness observed in #80; stale child writes still accepted (MIXED)
 
 projection maintenance
   -> one-field replacement with P active scalar projections measured W(P) = 2P writes/op
