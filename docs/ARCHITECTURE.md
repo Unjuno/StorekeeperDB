@@ -70,22 +70,26 @@ This keeps query-to-update natural without turning temporary query-result member
 
 ### Handle validity
 
-A durable handle is writable only while both of these conditions hold:
+A durable item handle is writable only when:
 
-1. it belongs to the current loaded state generation; and
-2. its durable item id is still a member of that loaded state.
+1. its loaded-state generation is current;
+2. its durable item id remains a member of that loaded state; and
+3. it is the **exact current proxy identity** for that member (not a displaced proxy).
+
+A nested object or array handle additionally requires every captured parent identity to remain attached at the same path. Deleting or replacing an ancestor invalidates writes through an older nested handle, even when the owner item remains writable. The check runs **before local target mutation, observation, or persistence**.
 
 Operationally:
 
 ```text
-active member    -> readable + writable
-reordered member -> same handle remains writable
-rollback         -> old-generation handle is stale
-removed member   -> readable detached reference, writes fail
-close/reopen     -> durable data survives, JavaScript identity does not
+active member / attached child -> readable + writable
+reordered item member          -> same item handle remains writable
+rollback                       -> old-generation item and child handles are stale
+removed/replaced item          -> displaced handles readable, writes fail
+removed/replaced nested parent -> detached child readable, writes fail
+close/reopen                   -> durable data survives, JavaScript identity does not
 ```
 
-No separate public identity registry is required for the current Node runtime. Existing internal item ids, loaded-state membership, and generation checks are sufficient for the tested semantics.
+The current runtime does not need a separate public identity registry; generation, membership, item proxy identity, and captured parent-value identity checks suffice for the tested single-writer Node semantics.
 
 ## Reactive read plane
 

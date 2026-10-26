@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import { test } from "node:test";
 
 const EXPECTED_DECISION =
-  "MIXED_PARENT_SUBTREE_CURRENT_STATE_CORRECT_BUT_STALE_CHILD_WRITE_ACCEPTED";
+  "REPLICATION_PASS_PARENT_SUBTREE_DELETE_REINTRODUCTION_COHERENT";
 
 const EXPECTED_CHECKS: Record<string, boolean> = {
   initialTopologyValid: true,
@@ -17,10 +17,10 @@ const EXPECTED_CHECKS: Record<string, boolean> = {
   prefixNeighborPreserved: true,
   identityStableAfterDelete: true,
   deleteWriteShapeExpected: true,
-  staleChildWriteRejected: false,
-  staleChildLocalTargetMutated: true,
+  staleChildWriteRejected: true,
+  staleChildLocalTargetMutated: false,
   staleChildDidNotResurrect: true,
-  staleChildWriteHadPersistenceSideEffects: true,
+  staleChildWriteHadPersistenceSideEffects: false,
   deleteQueriesCorrect: true,
   firstReopenCorrect: true,
   reintroductionRejected: false,
@@ -36,7 +36,7 @@ const EXPECTED_CHECKS: Record<string, boolean> = {
   validExperiment: true,
 };
 
-test("parent subtree lifecycle stays on the observed MIXED contract", () => {
+test("parent subtree lifecycle stays on the fixed PASS contract", () => {
   const stdout = execFileSync(
     process.execPath,
     ["--experimental-sqlite", "dist/scripts/parent_subtree_deletion_reintroduction_experiment.js"],

@@ -18,7 +18,9 @@ test("parent subtree MIXED result and next work stay synchronized", () => {
   assert.ok(doc.includes("Stale child write rejected"));
   assert.ok(index.includes("PARENT_SUBTREE_DELETION_REINTRODUCTION_EXPERIMENT.md"));
   assert.ok(next.includes(MIXED));
-  assert.ok(next.includes("Fix stale nested handle writes after parent deletion"));
+  assert.ok(next.includes("REPLICATION_PASS_PARENT_SUBTREE_DELETE_REINTRODUCTION_COHERENT"));
+  assert.ok(doc.includes("FIXED in CI #300"));
+  assert.ok(next.includes("third, agent-workspace topology"));
   assert.ok(pkg.scripts?.["release:check"]?.includes("experiment:parent-subtree-lifecycle:check"));
   assert.ok(pkg.scripts?.["experiment:parent-subtree-lifecycle:check"]);
 });

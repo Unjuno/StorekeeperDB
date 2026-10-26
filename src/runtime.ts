@@ -364,7 +364,7 @@ export class StorekeeperDB {
         if (typeof property === "string") this.observe(key, property, value, "read");
         if ((isObjectRecord(value) || Array.isArray(value)) && typeof property === "string") {
           const context: MutationContext = { key, id, root: item, generation, ownerProxy: proxy };
-          return this.wrapNested(context, value as JsonValue, property);
+          return this.wrapNested(context, value as JsonValue, property, () => Reflect.get(target, property) === value);
         }
         return value;
       },
@@ -387,11 +387,22 @@ export class StorekeeperDB {
     return proxy;
   }
 
-  private wrapNested(context: MutationContext, value: JsonValue, basePath: string): JsonValue {
+  private wrapNested(
+    context: MutationContext,
+    value: JsonValue,
+    basePath: string,
+    isAttached: () => boolean,
+  ): JsonValue {
     if (!isObjectRecord(value) && !Array.isArray(value)) return value;
 
-    const assertWritable = () =>
+    const assertWritable = () => {
       this.assertWritableProxy(context.key, context.generation, context.id, context.ownerProxy);
+      // An item can outlive a deleted/replaced nested subtree. Detached children
+      // stay readable as JavaScript objects, but must never perform durable writes.
+      if (!isAttached()) {
+        throw new Error("Stale Storekeeper nested proxy after parent removal or replacement; re-read from the current state.");
+      }
+    };
     const commitNested = (path: string, observedValue: unknown) => {
       assertWritable();
       this.observe(context.key, path, observedValue, "write");
@@ -453,7 +464,7 @@ export class StorekeeperDB {
         };
 
         if ((isObjectRecord(current) || Array.isArray(current)) && typeof property === "string") {
-          return this.wrapNested(context, current, `${basePath}.${property}`);
+          return this.wrapNested(context, current, `${basePath}.${property}`, () => isAttached() && Reflect.get(target, property) === current);
         }
         return current;
       },

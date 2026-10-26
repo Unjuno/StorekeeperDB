@@ -45,6 +45,7 @@ Initial public alpha baseline plus iterative hardening from realistic evaluation
 
 ### Hardened
 
+- Captured nested proxies now reject writes after ancestor deletion/replacement before local mutation, persistence, observation, or notifications; live nested handles continue to work (CI #300).
 - Failed outer `batch()` calls invalidate item and nested handles captured from the old loaded generation.
 - Removed item handles can still be read as detached JavaScript references but cannot write deleted rows back into persistence.
 - Direct item replacement now invalidates the displaced item proxy and nested handles even when the replacement intentionally reuses the same durable row id.

@@ -62,8 +62,18 @@ After these corrections, the experiment must be guarded with the **exact MIXED d
 - Extra projection writes could be a broken write-shape prediction rather than a runtime regression; compare actual triggered rows with old-row membership and do not count zero-row DELETE statements.
 - Retained path/derivation rows are history, not stale current cells.
 
+## Follow-up correction — #82 / PR #83
+
+Status: **FIXED in CI #300; full `npm run release:check` PASS (34 tests).**
+
+```text
+REPLICATION_PASS_PARENT_SUBTREE_DELETE_REINTRODUCTION_COHERENT
+```
+
+The nested proxy now checks both its owner-item lifetime and captured parent/child identity links before any mutation. Deleting or replacing an ancestor invalidates all captured descendant writes, while detached values remain readable. The previously accepted stale child write is now rejected; its local target stays unchanged and no source/projection/path/derivation/magic-log writes or trigger events occur. Live nested objects, nested arrays, projection queries, and reopen remain valid. The original CI #287 MIXED result is retained above as the falsifying baseline.
+
 ## U — remaining uncertainty
 
-The tested fixture has one source item, two projected descendants, one prefix-neighbor projection, and one synchronous SQLite writer. Multi-row parent deletion, nested arrays, old/new process overlap, cross-process concurrency, and crash recovery are not established. The runtime fix must be evaluated separately; this PR does not authorize a new API.
+The parent/subtree fixture has one source item, two projected descendants, one prefix-neighbor projection, and one synchronous SQLite writer. The follow-up unit regression also tests captured deeper objects, nested array mutators, and ancestor replacement, but does not establish general nested-array element deletion/index-shift behavior. Multi-row parent deletion, old/new process overlap, cross-process concurrency, and crash recovery remain untested.
 
-**Next step:** Add subtree-membership/identity invalidation to nested proxy writes, with dedicated tests that an active child still writes durably, a displaced child fails loudly, and no stale write triggers source/projection/observation changes. Run the existing leaf, rollback, and projection regression suites after the fix.
+The runtime correction is independently reviewed in #82 / PR #83 and does not add a public API. The next product evaluation prioritizes agent workspace/checkpoint handoff and project-identity discovery; further nested topology tests remain available if a realistic application requires them.
