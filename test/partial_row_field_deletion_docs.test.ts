@@ -18,5 +18,5 @@ test("partial-row field-deletion result stays synchronized with public docs", ()
   assert.ok(nextWork.includes(decision));
   assert.ok(nextWork.includes("MEASURED_LINEAR_ITEM_REBUILD_WRITES_TIMING_OBSERVATIONAL"));
   assert.ok(nextWork.includes(nestedDecision));
-  assert.ok(nextWork.includes("Test projected parent/subtree deletion after nested-leaf lifecycle PASS"));
+  assert.ok(nextWork.includes("Fix stale nested handle writes after parent deletion"));
 });
