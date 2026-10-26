@@ -17,5 +17,5 @@ test("nested field lifecycle result stays synchronized with public docs", () => 
   assert.ok(resultDoc.includes("The regression test now requires that exact decision"));
   assert.ok(docsIndex.includes("NESTED_FIELD_DELETION_REINTRODUCTION_EXPERIMENT.md"));
   assert.ok(nextWork.includes(decision));
-  assert.ok(nextWork.includes("projected parent/subtree deletion remains unproven"));
+  assert.ok(nextWork.includes("MIXED_PARENT_SUBTREE_CURRENT_STATE_CORRECT_BUT_STALE_CHILD_WRITE_ACCEPTED"));
 });
