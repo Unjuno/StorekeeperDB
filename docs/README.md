@@ -24,7 +24,8 @@ The current product direction is agent-oriented: reduce the persistence-specific
 - [Field deletion + derived metadata experiment](./FIELD_DELETION_DERIVED_METADATA_EXPERIMENT.md) — confirms ordinary durable property deletion fixes current source/query/projection state while derivation/path history remains a separate lifecycle concern.
 - [Partial-row field deletion experiment](./PARTIAL_ROW_FIELD_DELETION_EXPERIMENT.md) — replicates deletion correctness on mixed rows and records item-local projection rebuild write amplification.
 - [Projection write amplification experiment](./PROJECTION_WRITE_AMPLIFICATION_EXPERIMENT.md) — measures deterministic changed-item projection writes as active projected-path count grows and keeps latency observational.
-- [Nested field deletion/reintroduction experiment](./NESTED_FIELD_DELETION_REINTRODUCTION_EXPERIMENT.md) — verifies nested projected-leaf delete -> reopen -> reintroduce -> reopen coherence and exact regression gating.
+- [Nested field deletion/reintroduction experiment](./NESTED_FIELD_DELETION_REINTRODUCTION_EXPERIMENT.md)
+- [Parent/subtree deletion and reintroduction experiment](./PARENT_SUBTREE_DELETION_REINTRODUCTION_EXPERIMENT.md) — confirms preserved physical state but exposes accepted stale child writes after parent deletion. — verifies nested projected-leaf delete -> reopen -> reintroduce -> reopen coherence and exact regression gating.
 - [Issue tracker evaluation](./ISSUE_TRACKER_EVALUATION.md) — realistic compatible application-shape evolution and query-to-update scenario.
 - [`find()` semantics evaluation](./FIND_SEMANTICS_EVALUATION.md) — durable-handle vs snapshot decision record.
 - [Change amplification experiment](./CHANGE_AMPLIFICATION_EXPERIMENT.md) — first direct-SQL comparison for compatible model evolution.
@@ -60,6 +61,7 @@ These documents record experimental evidence and narrower runtime behavior. They
 - [Partial-row field deletion experiment](./PARTIAL_ROW_FIELD_DELETION_EXPERIMENT.md)
 - [Projection write amplification experiment](./PROJECTION_WRITE_AMPLIFICATION_EXPERIMENT.md)
 - [Nested field deletion/reintroduction experiment](./NESTED_FIELD_DELETION_REINTRODUCTION_EXPERIMENT.md)
+- [Parent/subtree deletion and reintroduction experiment](./PARENT_SUBTREE_DELETION_REINTRODUCTION_EXPERIMENT.md) — confirms preserved physical state but exposes accepted stale child writes after parent deletion.
 - [Change amplification experiment](./CHANGE_AMPLIFICATION_EXPERIMENT.md)
 - [CLI metadata replication](./CLI_METADATA_CHANGE_AMPLIFICATION_EXPERIMENT.md)
 - [Root-state semantics evaluation](./ROOT_STATE_SEMANTICS_EVALUATION.md)
