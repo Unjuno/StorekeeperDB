@@ -312,12 +312,14 @@ try {
     projectionCells(afterReintroductionBeforeQueries, QUEUE_PATH).length === 1 &&
     projectionCells(afterReintroductionBeforeQueries, LEGACY_PATH).length === 1 &&
     projectionCells(afterReintroductionBeforeQueries, BACKUP_PATH).length === 1;
+  // Removed descendants have no old rows to DELETE. The trigger records
+  // only actual SQLite row operations, not DELETE statements matching zero rows.
   const reintroductionWriteShapeExpected =
-    reintroductionAudit.length === 6 &&
+    reintroductionAudit.length === 4 &&
     reintroductionAudit.every((row) => row.item_id === initialItemId) &&
-    operationCount(reintroductionAudit, "delete", QUEUE_PATH) === 1 &&
+    operationCount(reintroductionAudit, "delete", QUEUE_PATH) === 0 &&
     operationCount(reintroductionAudit, "insert", QUEUE_PATH) === 1 &&
-    operationCount(reintroductionAudit, "delete", LEGACY_PATH) === 1 &&
+    operationCount(reintroductionAudit, "delete", LEGACY_PATH) === 0 &&
     operationCount(reintroductionAudit, "insert", LEGACY_PATH) === 1 &&
     operationCount(reintroductionAudit, "delete", BACKUP_PATH) === 1 &&
     operationCount(reintroductionAudit, "insert", BACKUP_PATH) === 1;
