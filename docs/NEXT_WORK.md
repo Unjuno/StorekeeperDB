@@ -14,70 +14,19 @@ Working rule:
 
 ## Active priorities
 
-### 1. Test projected parent/subtree deletion after nested-leaf lifecycle PASS
+### 1. Fix stale nested handle writes after parent deletion
 
-Status: **next correctness falsification target after #78 / CI #280.**
-
-The nested projected-leaf experiment now has an exact regression gate and observed:
+Status: **observed lifecycle defect in #80 / CI #287; product result MIXED**.
 
 ```text
-REPLICATION_PASS_NESTED_DELETE_REINTRODUCTION_COHERENT
+MIXED_PARENT_SUBTREE_CURRENT_STATE_CORRECT_BUT_STALE_CHILD_WRITE_ACCEPTED
 ```
 
-for:
+Deleting `routing` correctly removes its source subtree and both descendant projection cells. The prefix-neighbor `routingBackup.queue`, rollback, identity, queries, and two reopen boundaries remain coherent. However, a captured `routing` child proxy remains writable after parent removal: its detached target changes and the attempted write unnecessarily re-persists the surviving source/projections.
 
-```text
-routing.legacyTag present
--> delete nested leaf
--> close/reopen
--> reintroduce nested leaf
--> close/reopen
-```
+Next smallest fix: reject writes from a nested proxy if its ancestor chain is no longer the currently attached one. Preserve ordinary writes through active nested handles. Regression requirements: stale child `set`/`delete` must fail before mutation or observation, no projection writes may occur on rejection, valid nested writes still persist, and replacement/rollback invalidation must remain intact. Keep public APIs unchanged.
 
-Source state, sibling `routing.queue` projection, query semantics, rollback, item identity, metadata reuse, and the expected changed-item projection rebuild shape stayed coherent. This closes the leaf-level stale-cell question but does not prove subtree deletion.
-
-Next scenario:
-
-```text
-V1 job
-{
-  id,
-  routing: {
-    queue,
-    legacyTag
-  },
-  routingBackup: {
-    queue
-  }
-}
-
-  -> delete routing ->
-
-V2 job
-{
-  id,
-  routingBackup: {
-    queue
-  }
-}
-```
-
-Required checks:
-
-1. activate projections for multiple descendants under `routing` plus an unrelated similarly named subtree;
-2. delete the parent object through a durable handle;
-3. inject failure and require exact source/projection/metadata rollback;
-4. inspect physical projection storage before any query can rebuild it;
-5. require all removed descendant queries to exclude the deleted subtree;
-6. require `routingBackup` and unrelated rows to remain untouched;
-7. close/reopen and verify parent absence;
-8. reintroduce `routing` and verify descendant projection/query recovery without stale or duplicate cells;
-9. test stale parent/child handles captured before parent deletion so they cannot resurrect removed state;
-10. keep projection cell-diff optimization out of the same experiment.
-
-Critical question:
-
-> Does correctness still hold when one mutation removes and later reintroduces an entire projected subtree, including multiple descendant paths and stale nested handles, or was the nested-leaf PASS too narrow?
+Historical task: **Test projected parent/subtree deletion after nested-leaf lifecycle PASS** — experiment #80 confirmed current-state correctness but exposed this stale-handle boundary.
 
 ### 2. Replicate the project convention in a third topology
 
@@ -92,6 +41,16 @@ Status: initial cross-process bootstrap PASS; integration unproven.
 Test whether the project declaration/identity manifest can also provide durable-state discovery without creating a second registry. Do not add a general workspace/agent-memory API until reuse is demonstrated.
 
 ## Current experimental evidence
+
+### Parent/subtree deletion and reintroduction — #80
+
+Status: **MIXED in CI #287; experiment-only.**
+
+```text
+MIXED_PARENT_SUBTREE_CURRENT_STATE_CORRECT_BUT_STALE_CHILD_WRITE_ACCEPTED
+```
+
+Parent deletion and reintroduction preserved source/projection/query/rollback/reopen correctness and prefix-neighbor isolation. The child proxy captured before parent deletion accepted a detached write with persistence side effects, without resurrecting the subtree. A previously overcounted reintroduction audit was corrected: absent descendant cells produce INSERTs but no trigger events for zero-row DELETEs. This requires a separate nested-proxy lifetime fix, not a migration API or projection cell-diff optimization.
 
 ### Nested field deletion and reintroduction — #78
 
@@ -278,7 +237,7 @@ field deletion
   -> changed-item active projections are currently rebuilt item-locally
   -> surviving rows and sibling nested projections remain isolated/coherent in tested scenarios
   -> derivation/path history may remain as lifecycle metadata and can be reused on reintroduction
-  -> projected parent/subtree deletion remains unproven
+  -> parent/subtree deletion physical correctness observed in #80; stale child writes still accepted (MIXED)
 
 projection maintenance
   -> one-field replacement with P active scalar projections measured W(P) = 2P writes/op
