@@ -74,6 +74,6 @@ The nested proxy now checks both its owner-item lifetime and captured parent/chi
 
 ## U — remaining uncertainty
 
-The tested fixture has one source item, two projected descendants, one prefix-neighbor projection, and one synchronous SQLite writer. Multi-row parent deletion, nested arrays, old/new process overlap, cross-process concurrency, and crash recovery are not established. The runtime fix must be evaluated separately; this PR does not authorize a new API.
+The parent/subtree fixture has one source item, two projected descendants, one prefix-neighbor projection, and one synchronous SQLite writer. The follow-up unit regression also tests captured deeper objects, nested array mutators, and ancestor replacement, but does not establish general nested-array element deletion/index-shift behavior. Multi-row parent deletion, old/new process overlap, cross-process concurrency, and crash recovery remain untested.
 
-**Next step:** Add subtree-membership/identity invalidation to nested proxy writes, with dedicated tests that an active child still writes durably, a displaced child fails loudly, and no stale write triggers source/projection/observation changes. Run the existing leaf, rollback, and projection regression suites after the fix.
+The runtime correction is independently reviewed in #82 / PR #83 and does not add a public API. The next product evaluation prioritizes agent workspace/checkpoint handoff and project-identity discovery; further nested topology tests remain available if a realistic application requires them.
