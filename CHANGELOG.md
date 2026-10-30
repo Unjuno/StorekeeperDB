@@ -30,6 +30,7 @@ Initial public alpha baseline plus iterative hardening from realistic evaluation
 - Agent persistence decision-burden experiment comparing relational SQLite, JSON-blob SQLite, and StorekeeperDB through auditable `@decision` markers.
 - Agent-facing project-convention experiment reusing one generic declaration layer across project-board and editor/workspace scenarios without changing public exports.
 - Agent-workspace checkpoint convention experiment reusing the same helper in a third cross-process topology; measured 9 -> 7 persistence-decision categories and 24 -> 14 persistence-marked lines while exposing a separate multi-state checkpoint atomicity gap.
+- Project-checkpoint atomicity escape-hatch experiment comparing raw StorekeeperDB fallback with one experiment-only project `batch()` delegation; both restored rollback, while the thin candidate measured 7 decisions / 15 persistence lines vs raw fallback 11 / 22.
 - Declaration-property rename experiment comparing naive property-derived keys, fail-loudly identity tracking, one-shot rename aliasing, and stable durable ids without changing public exports.
 - Collection-rename projection experiment verifying logical list rename while retaining one physical source/projection namespace.
 - Multi-step declaration-rename experiment verifying repeated logical renames retain one physical identity and one current manifest binding.
@@ -98,6 +99,10 @@ liveFind() result values -> detached stable snapshots
 - The third topology measured current 9 decisions / 24 persistence lines vs convention 7 decisions / 14 lines, removing per-prototype `state-keying` and `singleton-list-adaptation` while retaining the explicit bootstrap-key decision.
 - CI #312 selected `MIXED_CONVENTION_REDUCES_DECISIONS_BUT_CHECKPOINT_ATOMICITY_GAP`: direct `StorekeeperDB.batch()` rolled back the injected pre-checkpoint task mutation, while the unchanged convention durably split task completion from checkpoint sequence until explicit recovery.
 - This result does not authorize a public workspace/memory API or a project transaction API; the next experiment compares the smallest explicit transaction escape hatches in a separate PR.
+- CI #323 selected `CANDIDATE_PREFER_THIN_PROJECT_BATCH_ESCAPE_HATCH`: raw fallback and thin project batch both preserved exact thrown-failure rollback, final cross-process reader recovery, and single-registry discovery.
+- The raw fallback measured 11 decision categories / 22 persistence lines and reintroduced `state-keying`, `singleton-list-adaptation`, raw runtime lifecycle, and raw StorekeeperDB fallback. The thin project-batch candidate measured 7 decisions / 15 lines.
+- The experiment-only batch variant adds one incremental framework concept (`project-batch`) while keeping `multi-state-atomicity` explicit. No public API/export change is authorized by this candidate result.
+- Process termination, power loss, concurrent writers, and version skew remain untested; the next durability probe must terminate a writer while the transaction is open.
 - The reusable convention reports two agent-facing concepts (`project-store`, `shape-descriptor`) and four internal mechanisms separately; helper implementation cost is not treated as free.
 - The convention candidate removes feature-level `state-keying` and `singleton-list-adaptation` by deriving keys from declaration property names and adapting singleton objects internally.
 - The exact `openProjectStore/list/object` API is **not** authorized for export. The result supports a project-level architecture direction only.

@@ -14,28 +14,27 @@ Working rule:
 
 ## Active priorities
 
-### 1. Probe the smallest project-level atomic checkpoint escape hatch
+### 1. Test process-termination checkpoint durability before authorizing a project transaction surface
 
-Status: **next hard-boundary evaluation after #84 / CI #312**.
+Status: **next durability-boundary experiment after #87 / CI #323**.
 
-The third agent-workspace topology replicated the convention's routine-decision reduction but exposed a durable task/checkpoint split when failure occurred between two state mutations. Do not add a workspace API. Compare the smallest ways to surface atomicity without moving persistence back into every prototype:
+CI #323 showed that both raw `StorekeeperDB.batch()` fallback and an experiment-only thin project `batch()` delegation roll back exactly under a thrown failure, while the thin project candidate avoids four per-prototype decision categories relative to raw fallback.
 
-1. keep the project convention unchanged and explicitly fall back to raw `StorekeeperDB.batch()` for atomic checkpoints;
-2. add an experiment-only thin `project.batch(() => ...)` delegation;
-3. test a transaction callback shape only if it removes an additional lifecycle/runtime decision rather than adding one.
+That is not yet a process-crash guarantee.
 
-Required checks:
+Next scenario:
 
-- exact rollback of task + checkpoint under injected failure;
-- final cross-process reader correctness;
-- no second runtime or persistent registry;
-- persistence-decision categories and marked lines for each candidate;
-- framework concepts reported separately;
-- no StorekeeperDB core/API change in the comparison PR.
+1. seed the same `__workspace` / `tasks` / `decisions` topology;
+2. run the writer in a child process;
+3. enter a transaction;
+4. persist the task mutation;
+5. terminate the writer process before checkpoint advancement and before normal transaction return;
+6. start a fresh reader process;
+7. require the reader to observe the pre-transaction task and checkpoint;
+8. compare raw `StorekeeperDB.batch()` and the thin project delegation under the same termination point;
+9. record SQLite journal/synchronous assumptions and do not generalize process termination to power-loss guarantees.
 
-Critical question:
-
-> Can the project convention expose a hard transaction boundary with one obvious escape hatch, without turning routine persistence back into an architectural planning problem?
+Do not publish a project transaction API from the thrown-failure result alone.
 
 ### 2. Integrate bootstrap discovery with durable identity only if it removes a real second registry
 
@@ -50,6 +49,30 @@ Test whether existing durable identity metadata can supply discovery/identity in
 The single-item parent subtree scenario has an exact fixed PASS regression after #82 / CI #300. Multi-row deletion, nested arrays/index shifts, and concurrent processes remain outside its scope. Extend the lifecycle experiment only when a realistic prototype requires those shapes; do not infer universal subtree correctness from #80.
 
 ## Current experimental evidence
+
+### Project checkpoint atomicity escape hatch — #87
+
+Status: **CANDIDATE in CI #323; experiment-only.**
+
+```text
+CANDIDATE_PREFER_THIN_PROJECT_BATCH_ESCAPE_HATCH
+```
+
+Both compared candidates restored exact task + checkpoint rollback under injected thrown failure and both recovered through a fresh reader process with no second registry.
+
+Measured per-prototype source obligations:
+
+| candidate | persistence-marked lines | decision categories |
+|---|---:|---:|
+| unchanged convention + raw StorekeeperDB fallback | 22 | 11 |
+| experiment-only thin project batch | 15 | 7 |
+
+Raw fallback reintroduced `state-keying`, `singleton-list-adaptation`, raw runtime lifecycle, and raw StorekeeperDB fallback decisions. The thin candidate kept `multi-state-atomicity` explicit and added one incremental experiment-framework concept: `project-batch`.
+
+Interpretation:
+
+> The hard transaction boundary should remain explicit, but dropping to raw StorekeeperDB for each checkpoint throws away much of the convention's routine simplification. A thin project-level delegation is the smaller candidate; public API naming/authorization remains unproven.
+
 
 ### Agent workspace checkpoint convention — #84
 
@@ -231,7 +254,7 @@ These support one-to-one logical rename over stable physical identity, not gener
 
 ### Agent-facing and change-amplification evidence
 
-- Agent project convention: 7 -> 5 measured per-prototype persistence decisions in two earlier scenarios; the third agent-workspace topology measured 9 -> 7 while exposing a separate checkpoint-atomicity boundary.
+- Agent project convention: 7 -> 5 measured per-prototype persistence decisions in two earlier scenarios; the third agent-workspace topology measured 9 -> 7 while exposing a checkpoint-atomicity boundary. The #87 escape-hatch comparison then measured raw fallback 11 decisions vs thin project batch 7 while preserving explicit multi-state atomicity.
 - Agent decision burden: relational 8, JSON blob 8, StorekeeperDB 7 decision categories.
 - Compatible change amplification: lower explicit persistence edit surface in two small JSON-style scenarios, but no general concept-count advantage over a minimal JSON-blob baseline.
 - Singleton/root experiments did not justify a broad arbitrary-root public API.
