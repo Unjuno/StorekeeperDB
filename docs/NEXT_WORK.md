@@ -36,19 +36,29 @@ Next scenario:
 
 Do not publish a project transaction API from the thrown-failure result alone.
 
-### 2. Integrate bootstrap discovery with durable identity only if it removes a real second registry
+### 2. Validate identity-manifest bootstrap under damaged or skewed declarations
 
-Status: **cross-process bootstrap without a second registry replicated in #84; declaration-identity integration still unproven**.
+Status: **candidate PASS for one stable-physical-identity rename in #89 / CI #331**.
 
-CI #312 showed that both candidates could start a fresh reader from DB path + explicit `__workspace`, discover `tasks` and `decisions`, and retain only `__workspace` as a registry-like durable state key. That does not yet prove integration with the declaration/rename identity manifest.
+The earlier cross-process bootstrap without a second registry replicated in #84, but it depended on the explicit `__workspace` state-reference registry. The #89 experiment now shows that when a project already has `__project_identity` declaration bindings, a new process can discover current logical states and their original physical keys from that **one existing manifest**, including after `tasks -> workItems`.
 
-Test whether existing durable identity metadata can supply discovery/identity information without duplicating `__workspace` state references. Fail loudly on incompatible or ambiguous identity; do not infer rename or migration from state content.
+Do not generalize this successful sequential checkpoint to crash-atomicity; #87 and the higher-priority process-termination experiment own that boundary. Future identity-bootstrap work should probe damaged manifest rows, stale process versions, concurrent readers, and semantic role ambiguity before turning the convention into any public API.
 
 ### 3. Probe stronger structural lifecycle boundaries only when justified
 
 The single-item parent subtree scenario has an exact fixed PASS regression after #82 / CI #300. Multi-row deletion, nested arrays/index shifts, and concurrent processes remain outside its scope. Extend the lifecycle experiment only when a realistic prototype requires those shapes; do not infer universal subtree correctness from #80.
 
 ## Current experimental evidence
+
+### Identity-manifest discovery bootstrap — #89
+
+Status: **CANDIDATE PASS in CI #331; experiment-only.**
+
+```text
+CANDIDATE_PASS_IDENTITY_MANIFEST_REPLACES_PARALLEL_DISCOVERY_REGISTRY
+```
+
+An independent reader with DB path + `__project_identity` recovered logical names `workspace`, `workItems`, and `decisions`; `workItems` retained physical key `tasks`, its scalar projection, compatible metadata, and checkpoint sequence 2. The stale logical declaration and wrong bootstrap were rejected, and no second `__workspace` registry was needed. This reuses **one existing registry** rather than eliminating the need for a known bootstrap key or application-level checkpoint policy. It does not prove atomic multi-state checkpoints or concurrent-version safety.
 
 ### Project checkpoint atomicity escape hatch — #87
 
