@@ -25,8 +25,16 @@ test("agent workspace convention result stays synchronized with public docs", ()
   assert.ok(docsIndex.includes("AGENT_WORKSPACE_CONVENTION_EXPERIMENT.md"));
 
   assert.ok(nextWork.includes(decision));
-  assert.ok(nextWork.includes("Probe the smallest project-level atomic checkpoint escape hatch"));
-  assert.ok(nextWork.includes("cross-process bootstrap without a second registry replicated in #84"));
+  assert.ok(
+    nextWork.includes(
+      "Test process-termination checkpoint durability before authorizing a project transaction surface",
+    ),
+  );
+  assert.ok(
+    nextWork.includes(
+      "cross-process bootstrap without a second registry replicated in #84",
+    ),
+  );
 
   assert.ok(changelog.includes(decision));
   assert.ok(changelog.includes("9 decisions / 24 persistence lines"));
