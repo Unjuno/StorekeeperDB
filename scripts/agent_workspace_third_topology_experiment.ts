@@ -207,7 +207,7 @@ try {
   console.log(JSON.stringify({
     experiment: "agent-workspace-third-topology-cross-process",
     issue: 84,
-    environment: { node: process.version, backend: "node:sqlite", flag: "--experimental-sqlite", writerReaderProcesses: 4 },
+    environment: { node: process.versions.node, backend: "node:sqlite", flag: "--experimental-sqlite", writerReaderProcesses: 4 },
     candidates: {
       current: { writer: currentWriter, reader: currentReader },
       convention: { writer: conventionWriter, reader: conventionReader },
