@@ -14,13 +14,13 @@ import {
 } from "./workspace_model.js";
 
 const write = (path: string): WriterResult => {
-  let project = openProjectStore(path, { // @persist @decision:durable-declaration @decision:bootstrap-key
+  const projectV1 = openProjectStore(path, { // @persist @decision:durable-declaration @decision:bootstrap-key
     [BOOTSTRAP_KEY]: object(initialWorkspace()),
     tasks: list<TaskV1>([initialTask()]),
     decisions: list<Decision>([initialDecision()]),
   });
-  project.state[BOOTSTRAP_KEY].checkpoint.sequence = 1;
-  project.state[BOOTSTRAP_KEY].checkpoint.note = "writer established durable workspace";
+  projectV1.state[BOOTSTRAP_KEY].checkpoint.sequence = 1;
+  projectV1.state[BOOTSTRAP_KEY].checkpoint.note = "writer established durable workspace";
   project.close(); // @persist @decision:project-lifecycle
 
   project = openProjectStore(path, { // @persist @decision:durable-declaration @decision:bootstrap-key @decision:compatible-state-evolution
@@ -28,11 +28,11 @@ const write = (path: string): WriterResult => {
     tasks: list<TaskV2>([]),
     decisions: list<Decision>([]),
   });
-  project.state.tasks[0]!.tags = ["checkpoint"];
+  projectV2.state.tasks[0]!.tags = ["checkpoint"];
 
   let injectedFailureRejected = false;
   try {
-    project.state.tasks[0]!.status = "done";
+    projectV2.state.tasks[0]!.status = "done";
     throw new Error("injected convention checkpoint failure before checkpoint advance");
   } catch (caught) {
     injectedFailureRejected =
@@ -48,26 +48,26 @@ const write = (path: string): WriterResult => {
   });
   const splitDurableStateObserved =
     injectedFailureRejected &&
-    project.state.tasks[0]?.status === "done" &&
-    project.state[BOOTSTRAP_KEY].checkpoint.sequence === 1 &&
-    project.state.tasks[0]?.tags?.[0] === "checkpoint";
+    recovered.state.tasks[0]?.status === "done" &&
+    recovered.state[BOOTSTRAP_KEY].checkpoint.sequence === 1 &&
+    recovered.state.tasks[0]?.tags?.[0] === "checkpoint";
 
-  project.state[BOOTSTRAP_KEY].checkpoint.sequence = 2; // @persist @decision:checkpoint-recovery-policy
-  project.state[BOOTSTRAP_KEY].checkpoint.note = "repaired checkpoint after split durable write";
+  recovered.state[BOOTSTRAP_KEY].checkpoint.sequence = 2; // @persist @decision:checkpoint-recovery-policy
+  recovered.state[BOOTSTRAP_KEY].checkpoint.note = "repaired checkpoint after split durable write";
   const result: WriterResult = {
     phase: "writer",
     candidate: "convention",
-    checkpointSequence: project.state[BOOTSTRAP_KEY].checkpoint.sequence,
-    taskStatus: project.state.tasks[0]!.status,
-    compatibleMetadataPersisted: project.state.tasks[0]!.tags?.[0] === "checkpoint",
+    checkpointSequence: recovered.state[BOOTSTRAP_KEY].checkpoint.sequence,
+    taskStatus: recovered.state.tasks[0]!.status,
+    compatibleMetadataPersisted: recovered.state.tasks[0]!.tags?.[0] === "checkpoint",
     splitDurableStateObserved,
     finalStateCoherent:
-      project.state.tasks[0]!.status === "done" &&
-      project.state[BOOTSTRAP_KEY].checkpoint.sequence === 2,
+      recovered.state.tasks[0]!.status === "done" &&
+      recovered.state[BOOTSTRAP_KEY].checkpoint.sequence === 2,
     pass:
       splitDurableStateObserved &&
-      project.state.tasks[0]!.status === "done" &&
-      project.state[BOOTSTRAP_KEY].checkpoint.sequence === 2,
+      recovered.state.tasks[0]!.status === "done" &&
+      recovered.state[BOOTSTRAP_KEY].checkpoint.sequence === 2,
   };
   project.close(); // @persist @decision:project-lifecycle
   return result;
