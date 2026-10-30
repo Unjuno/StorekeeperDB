@@ -14,23 +14,68 @@ Working rule:
 
 ## Active priorities
 
-### 1. Replicate the project convention in a third, agent-workspace topology
+### 1. Probe the smallest project-level atomic checkpoint escape hatch
 
-Status: **next agent-facing product evaluation after #82 / CI #300**.
+Status: **next hard-boundary evaluation after #84 / CI #312**.
 
-Reuse the same declaration-layer helper from PR #49 without scenario-specific branching. Build a realistic workspace/checkpoint flow; close the writer process and recover from a fresh reader that has the database path and an explicit bootstrap key. Record persistence-specific decisions, modified lines, manual state-key discovery, and any second registry that the convention might require. Do not add a public workspace or memory API on hypothesis alone.
+The third agent-workspace topology replicated the convention's routine-decision reduction but exposed a durable task/checkpoint split when failure occurred between two state mutations. Do not add a workspace API. Compare the smallest ways to surface atomicity without moving persistence back into every prototype:
 
-### 2. Reuse durable-session bootstrap with project identity
+1. keep the project convention unchanged and explicitly fall back to raw `StorekeeperDB.batch()` for atomic checkpoints;
+2. add an experiment-only thin `project.batch(() => ...)` delegation;
+3. test a transaction callback shape only if it removes an additional lifecycle/runtime decision rather than adding one.
 
-Status: **initial cross-process durability/discovery PASS; manifest integration unproven**.
+Required checks:
 
-Test whether the existing declaration/identity manifest and the existing `__workspace` bootstrap convention can identify all needed durable states without a parallel registry. Treat durability, discoverability, and checkpoint correctness as separate checks. Fail loudly on incompatible or ambiguous state rather than automatically initializing a new one.
+- exact rollback of task + checkpoint under injected failure;
+- final cross-process reader correctness;
+- no second runtime or persistent registry;
+- persistence-decision categories and marked lines for each candidate;
+- framework concepts reported separately;
+- no StorekeeperDB core/API change in the comparison PR.
+
+Critical question:
+
+> Can the project convention expose a hard transaction boundary with one obvious escape hatch, without turning routine persistence back into an architectural planning problem?
+
+### 2. Integrate bootstrap discovery with durable identity only if it removes a real second registry
+
+Status: **cross-process bootstrap without a second registry replicated in #84; declaration-identity integration still unproven**.
+
+CI #312 showed that both candidates could start a fresh reader from DB path + explicit `__workspace`, discover `tasks` and `decisions`, and retain only `__workspace` as a registry-like durable state key. That does not yet prove integration with the declaration/rename identity manifest.
+
+Test whether existing durable identity metadata can supply discovery/identity information without duplicating `__workspace` state references. Fail loudly on incompatible or ambiguous identity; do not infer rename or migration from state content.
 
 ### 3. Probe stronger structural lifecycle boundaries only when justified
 
-The single-item parent subtree scenario now has an exact fixed PASS regression. Multi-row deletion, nested arrays/index shifts, and concurrent processes remain outside its scope. Extend the experiment when a realistic prototype requires those shapes; do not infer universal subtree correctness from #80.
+The single-item parent subtree scenario has an exact fixed PASS regression after #82 / CI #300. Multi-row deletion, nested arrays/index shifts, and concurrent processes remain outside its scope. Extend the lifecycle experiment only when a realistic prototype requires those shapes; do not infer universal subtree correctness from #80.
 
 ## Current experimental evidence
+
+### Agent workspace checkpoint convention — #84
+
+Status: **MIXED in CI #312; experiment-only.**
+
+```text
+MIXED_CONVENTION_REDUCES_DECISIONS_BUT_CHECKPOINT_ATOMICITY_GAP
+```
+
+The unchanged project convention was reused in a third, agent-workspace topology. Writer and reader ran as separate Node processes. A fresh reader started with DB path + explicit `__workspace`, discovered `tasks` and `decisions`, preserved compatible optional task metadata, and found no second registry-like durable state.
+
+Measured source obligations:
+
+| candidate | persistence-marked lines | decision categories |
+|---|---:|---:|
+| explicit current | 24 | 9 |
+| unchanged project convention | 14 | 7 |
+
+The convention removed per-prototype `state-keying` and `singleton-list-adaptation`, while the explicit bootstrap-key decision remained visible. The existing two framework concepts are still reported separately.
+
+The hard boundary was checkpoint atomicity. Direct StorekeeperDB `batch()` rolled back a task mutation injected before checkpoint advancement. The unchanged project-convention surface durably committed the task while checkpoint sequence remained 1, and the split was observed after reopen before explicit repair.
+
+Interpretation:
+
+> Routine persistence decisions can stay reduced in a third topology, but a multi-state durability unit must re-enter the plan explicitly. The evidence supports a narrow transaction escape-hatch experiment, not a public workspace/memory API.
+
 
 ### Detached nested proxy write invalidation — #82
 
@@ -186,7 +231,7 @@ These support one-to-one logical rename over stable physical identity, not gener
 
 ### Agent-facing and change-amplification evidence
 
-- Agent project convention: 7 -> 5 measured per-prototype persistence decisions in two scenarios.
+- Agent project convention: 7 -> 5 measured per-prototype persistence decisions in two earlier scenarios; the third agent-workspace topology measured 9 -> 7 while exposing a separate checkpoint-atomicity boundary.
 - Agent decision burden: relational 8, JSON blob 8, StorekeeperDB 7 decision categories.
 - Compatible change amplification: lower explicit persistence edit surface in two small JSON-style scenarios, but no general concept-count advantage over a minimal JSON-blob baseline.
 - Singleton/root experiments did not justify a broad arbitrary-root public API.
