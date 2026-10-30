@@ -9,7 +9,6 @@ import {
   type ReaderResult,
   type TaskV1,
   type TaskV2,
-  type WorkspaceManifest,
   type WriterResult,
 } from "./workspace_model.js";
 
@@ -21,9 +20,9 @@ const write = (path: string): WriterResult => {
   });
   projectV1.state[BOOTSTRAP_KEY].checkpoint.sequence = 1;
   projectV1.state[BOOTSTRAP_KEY].checkpoint.note = "writer established durable workspace";
-  project.close(); // @persist @decision:project-lifecycle
+  projectV1.close(); // @persist @decision:project-lifecycle
 
-  project = openProjectStore(path, { // @persist @decision:durable-declaration @decision:bootstrap-key @decision:compatible-state-evolution
+  const projectV2 = openProjectStore(path, { // @persist @decision:durable-declaration @decision:bootstrap-key @decision:compatible-state-evolution
     [BOOTSTRAP_KEY]: object(initialWorkspace()),
     tasks: list<TaskV2>([]),
     decisions: list<Decision>([]),
@@ -39,9 +38,9 @@ const write = (path: string): WriterResult => {
       caught instanceof Error &&
       caught.message.includes("injected convention checkpoint failure before checkpoint advance");
   }
-  project.close(); // @persist @decision:project-lifecycle
+  projectV2.close(); // @persist @decision:project-lifecycle
 
-  project = openProjectStore(path, { // @persist @decision:durable-declaration @decision:bootstrap-key
+  const recovered = openProjectStore(path, { // @persist @decision:durable-declaration @decision:bootstrap-key
     [BOOTSTRAP_KEY]: object(initialWorkspace()),
     tasks: list<TaskV2>([]),
     decisions: list<Decision>([]),
@@ -54,6 +53,7 @@ const write = (path: string): WriterResult => {
 
   recovered.state[BOOTSTRAP_KEY].checkpoint.sequence = 2; // @persist @decision:checkpoint-recovery-policy
   recovered.state[BOOTSTRAP_KEY].checkpoint.note = "repaired checkpoint after split durable write";
+
   const result: WriterResult = {
     phase: "writer",
     candidate: "convention",
@@ -69,7 +69,7 @@ const write = (path: string): WriterResult => {
       recovered.state.tasks[0]!.status === "done" &&
       recovered.state[BOOTSTRAP_KEY].checkpoint.sequence === 2,
   };
-  project.close(); // @persist @decision:project-lifecycle
+  recovered.close(); // @persist @decision:project-lifecycle
   return result;
 };
 
