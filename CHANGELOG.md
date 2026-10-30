@@ -29,6 +29,7 @@ Initial public alpha baseline plus iterative hardening from realistic evaluation
 - Singleton-object surface experiment comparing current list syntax, paired object state/signal helpers, and a combined handle without changing exports.
 - Agent persistence decision-burden experiment comparing relational SQLite, JSON-blob SQLite, and StorekeeperDB through auditable `@decision` markers.
 - Agent-facing project-convention experiment reusing one generic declaration layer across project-board and editor/workspace scenarios without changing public exports.
+- Agent-workspace checkpoint convention experiment reusing the same helper in a third cross-process topology; measured 9 -> 7 persistence-decision categories and 24 -> 14 persistence-marked lines while exposing a separate multi-state checkpoint atomicity gap.
 - Declaration-property rename experiment comparing naive property-derived keys, fail-loudly identity tracking, one-shot rename aliasing, and stable durable ids without changing public exports.
 - Collection-rename projection experiment verifying logical list rename while retaining one physical source/projection namespace.
 - Multi-step declaration-rename experiment verifying repeated logical renames retain one physical identity and one current manifest binding.
@@ -93,6 +94,10 @@ liveFind() result values -> detached stable snapshots
 - `singleton-list-adaptation` remained an explicit StorekeeperDB decision cost after #46.
 - Agent project-convention experiment CI #159 reused one generic helper unchanged across project-board and editor/workspace scenarios and reduced per-prototype decisions from 7 to 5 in both; persistence-marked lines changed from 14 to 8 in both.
 - PR #49 was finalized by CI #165 and squash-merged as `881782341562ce070e65a300beb51a90784434a8`.
+- CI #312 reused the unchanged project convention in an agent-workspace/checkpoint topology: both candidates recovered through separate reader processes from DB path + explicit `__workspace`, no second registry-like durable state was observed, and compatible optional task metadata persisted.
+- The third topology measured current 9 decisions / 24 persistence lines vs convention 7 decisions / 14 lines, removing per-prototype `state-keying` and `singleton-list-adaptation` while retaining the explicit bootstrap-key decision.
+- CI #312 selected `MIXED_CONVENTION_REDUCES_DECISIONS_BUT_CHECKPOINT_ATOMICITY_GAP`: direct `StorekeeperDB.batch()` rolled back the injected pre-checkpoint task mutation, while the unchanged convention durably split task completion from checkpoint sequence until explicit recovery.
+- This result does not authorize a public workspace/memory API or a project transaction API; the next experiment compares the smallest explicit transaction escape hatches in a separate PR.
 - The reusable convention reports two agent-facing concepts (`project-store`, `shape-descriptor`) and four internal mechanisms separately; helper implementation cost is not treated as free.
 - The convention candidate removes feature-level `state-keying` and `singleton-list-adaptation` by deriving keys from declaration property names and adapting singleton objects internally.
 - The exact `openProjectStore/list/object` API is **not** authorized for export. The result supports a project-level architecture direction only.
