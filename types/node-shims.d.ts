@@ -29,6 +29,7 @@ declare module "node:test" {
 declare module "node:fs" {
   export function existsSync(path: string): boolean;
   export function readFileSync(path: string, encoding: "utf8" | "utf-8"): string;
+  export function writeFileSync(path: string, data: string, encoding: "utf8" | "utf-8"): void;
   export function mkdtempSync(prefix: string): string;
   export function rmSync(path: string, options?: { recursive?: boolean; force?: boolean }): void;
 }
