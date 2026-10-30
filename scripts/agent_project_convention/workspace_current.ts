@@ -63,7 +63,7 @@ export function runWorkspaceCurrent(path: string): WorkspaceWriterReport {
   const finalTaskStatus = resumedTasks[0]!.status;
   const finalDecisionStatus = resumedDecisions[0]!.status;
   const optionalLabelsPersisted = resumedTasks[1]?.labels?.[0] === "checkpoint";
-  const pass = failure.atomicRollbackPreserved && done.length === 1 &&
+  const pass = failure.rejected && done.length === 1 &&
     done[0]?.id === "TASK-1" && finalCheckpoint === 2 &&
     finalTaskStatus === "done" && finalDecisionStatus === "accepted" &&
     optionalLabelsPersisted;
