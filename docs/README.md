@@ -11,7 +11,9 @@ The current product direction is agent-oriented: reduce the persistence-specific
 - [Evaluation loop](./EVALUATION_LOOP.md) — how to evaluate and refine the product during alpha.
 - [Next work](./NEXT_WORK.md) — current priorities and deferred research.
 - [Agent decision-burden experiment](./AGENT_DECISION_BURDEN_EXPERIMENT.md) — auditable comparison of persistence-specific implementation decisions for agent-driven prototyping.
-- [Agent project convention experiment](./AGENT_PROJECT_CONVENTION_EXPERIMENT.md) — reusable declaration-layer experiment that reduces per-prototype state-key/singleton decisions in two scenarios.
+- [Agent project convention experiment](./AGENT_PROJECT_CONVENTION_EXPERIMENT.md)
+- [Agent workspace checkpoint convention experiment](./AGENT_WORKSPACE_CONVENTION_EXPERIMENT.md) — reusable declaration-layer experiment that reduces per-prototype state-key/singleton decisions in two scenarios.
+- [Agent workspace checkpoint convention experiment](./AGENT_WORKSPACE_CONVENTION_EXPERIMENT.md) — third-topology cross-process replication: 9 -> 7 decisions, no second registry, with an explicit multi-state checkpoint atomicity gap.
 - [Declaration key rename experiment](./DECLARATION_KEY_RENAME_EXPERIMENT.md) — incompatible property-rename probe comparing silent reset, fail-loudly identity tracking, one-shot aliasing, and stable ids.
 - [Collection rename + projection experiment](./COLLECTION_RENAME_PROJECTION_EXPERIMENT.md) — verifies that a logical collection rename can retain one physical source/projection namespace.
 - [Multi-step declaration rename experiment](./MULTI_STEP_DECLARATION_RENAME_EXPERIMENT.md) — verifies repeated logical renames retain one physical identity without accumulating rename history.
