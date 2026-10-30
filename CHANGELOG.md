@@ -31,6 +31,7 @@ Initial public alpha baseline plus iterative hardening from realistic evaluation
 - Agent-facing project-convention experiment reusing one generic declaration layer across project-board and editor/workspace scenarios without changing public exports.
 - Agent-workspace checkpoint convention experiment reusing the same helper in a third cross-process topology; measured 9 -> 7 persistence-decision categories and 24 -> 14 persistence-marked lines while exposing a separate multi-state checkpoint atomicity gap.
 - Project-checkpoint atomicity escape-hatch experiment comparing raw StorekeeperDB fallback with one experiment-only project `batch()` delegation; both restored rollback, while the thin candidate measured 7 decisions / 15 persistence lines vs raw fallback 11 / 22.
+- Identity-manifest bootstrap experiment confirming current logical-state discovery after one-shot rename over stable physical identity without adding an `__workspace` registry; `CANDIDATE_PASS_IDENTITY_MANIFEST_REPLACES_PARALLEL_DISCOVERY_REGISTRY` in CI #331, experiment-only.
 - Declaration-property rename experiment comparing naive property-derived keys, fail-loudly identity tracking, one-shot rename aliasing, and stable durable ids without changing public exports.
 - Collection-rename projection experiment verifying logical list rename while retaining one physical source/projection namespace.
 - Multi-step declaration-rename experiment verifying repeated logical renames retain one physical identity and one current manifest binding.
