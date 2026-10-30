@@ -194,15 +194,33 @@ try {
     !profiles.convention.decisions.includes("state-keying") &&
     !profiles.convention.decisions.includes("singleton-list-adaptation");
 
-  validExperiment = finalRuntimeValid && currentAtomic && conventionGap &&
+  validExperiment = finalRuntimeValid &&
+    currentWriter.failure.rejected && conventionWriter.failure.rejected &&
     profiles.framework.publicConcepts.length === 2 &&
+    profiles.framework.internalMechanisms.length === 4 &&
     profiles.sharedReader.persistenceLines > 0;
 
+  const reducedDecisions = reduction > 0 && fewerPersistenceLines &&
+    removedStateKeyAndSingletonDecisions;
   const decision = !validExperiment
     ? "INVALID_EXPERIMENT"
-    : reduction > 0 && fewerPersistenceLines && removedStateKeyAndSingletonDecisions
+    : reducedDecisions && currentAtomic && conventionGap
       ? "MIXED_CONVENTION_REDUCES_DECISIONS_BUT_CHECKPOINT_ATOMICITY_GAP"
-      : "REJECT_NO_THIRD_TOPOLOGY_REDUCTION";
+      : reducedDecisions && currentAtomic && conventionWriter.failure.atomicRollbackPreserved
+        ? "CANDIDATE_PASS_THIRD_TOPOLOGY_REDUCES_PERSISTENCE_DECISIONS"
+        : "REJECT_NO_THIRD_TOPOLOGY_REDUCTION";
+
+  // CI must prove the observed result, not merely that the experiment ran.
+  const exactResultGate = validExperiment &&
+    decision === "MIXED_CONVENTION_REDUCES_DECISIONS_BUT_CHECKPOINT_ATOMICITY_GAP" &&
+    profiles.current.decisionCount === 10 &&
+    profiles.convention.decisionCount === 8 &&
+    profiles.current.persistenceLines === 19 &&
+    profiles.convention.persistenceLines === 11 &&
+    profiles.sharedReader.decisionCount === 6 &&
+    profiles.sharedReader.persistenceLines === 8 &&
+    currentAtomic && conventionGap &&
+    noSecondRegistry && bootstrapNegativeControl;
 
   console.log(JSON.stringify({
     experiment: "agent-workspace-third-topology-cross-process",
@@ -222,7 +240,7 @@ try {
       sharedReaderCostCountedSeparately: true,
       frameworkCostCountedSeparately: true,
     },
-    decision, validExperiment,
+    decision, validExperiment, exactResultGate,
     interpretation: "Convention removes declaration/keying ceremony in a third topology, but its unchanged surface cannot atomically commit a task mutation with checkpoint advancement. Bootstrap discovery is still an explicit application convention.",
     uncertainty: {
       actualAgentRunUntested: true,
@@ -237,4 +255,4 @@ try {
 } finally {
   rmSync(root, { recursive: true, force: true });
 }
-if (!validExperiment) process.exit(1);
+if (!exactResultGate) process.exit(1);
